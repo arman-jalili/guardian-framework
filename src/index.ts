@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
-import { intro, outro, text, select, multiselect, isCancel } from "@clack/prompts";
+import { intro, isCancel, outro } from "@clack/prompts";
+import { runInit } from "./commands/init.js";
 
 const VERSION = "0.1.0";
 
@@ -10,6 +11,12 @@ async function main() {
 		options: {
 			version: { type: "boolean", short: "v" },
 			help: { type: "boolean", short: "h" },
+			dir: { type: "string", short: "d" },
+			tool: { type: "string", short: "t" },
+			lang: { type: "string", short: "l" },
+			validators: { type: "string" },
+			workflows: { type: "string" },
+			nonInteractive: { type: "boolean" },
 		},
 	});
 
@@ -30,8 +37,16 @@ Usage:
   guardian-cli info          Display manifest information
 
 Options:
-  -v, --version    Show version
-  -h, --help       Show help
+  -v, --version              Show version
+  -h, --help                 Show help
+  -d, --dir <path>           Target directory (default: current)
+
+Init options:
+  -t, --tool <name>          AI tool (pi, claude, opencode, agents)
+  -l, --lang <name>          Language (typescript, rust, python, go)
+  --validators <list>        Validators (comma-separated, ci always included)
+  --workflows <list>         Workflows (comma-separated)
+  --nonInteractive           Use defaults/flags, skip prompts
 `);
 		return;
 	}
@@ -39,35 +54,23 @@ Options:
 	const command = args.positionals[0];
 
 	if (!command) {
-		intro(`guardian-cli v${VERSION}`);
-
-		const action = await select({
-			message: "What would you like to do?",
-			options: [
-				{ value: "init", label: "Initialize framework" },
-				{ value: "generate", label: "Generate exports" },
-				{ value: "update", label: "Update framework" },
-				{ value: "info", label: "View manifest info" },
-			],
-		});
-
-		if (isCancel(action)) {
-			outro("Cancelled");
-			return;
-		}
-
-		await runCommand(action as string);
-		outro("Done!");
+		// No command specified, run init interactively
+		await runInit(args.values.dir || process.cwd());
 		return;
 	}
 
-	await runCommand(command);
+	await runCommand(command, args);
 }
 
-async function runCommand(command: string) {
+async function runCommand(
+	command: string,
+	args: { values: Record<string, unknown>; positionals: string[] },
+) {
+	const targetDir = (args.values.dir as string) || process.cwd();
+
 	switch (command) {
 		case "init":
-			console.log("Init command - TODO");
+			await runInit(targetDir);
 			break;
 		case "generate":
 			console.log("Generate command - TODO");
