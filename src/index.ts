@@ -2,6 +2,7 @@
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
 import { runInit } from "./commands/init.js";
+import { runGenerate } from "./commands/generate.js";
 
 const VERSION = "0.1.0";
 
@@ -17,6 +18,8 @@ async function main() {
 			validators: { type: "string" },
 			workflows: { type: "string" },
 			nonInteractive: { type: "boolean" },
+			dryRun: { type: "boolean" },
+			force: { type: "boolean" },
 		},
 	});
 
@@ -47,6 +50,11 @@ Init options:
   --validators <list>        Validators (comma-separated, ci always included)
   --workflows <list>         Workflows (comma-separated)
   --nonInteractive           Use defaults/flags, skip prompts
+
+Generate options:
+  --tool <name>              Target tool or "all" (default: all configured tools)
+  --dryRun                   Show changes without writing
+  --force                    Overwrite existing files
 `);
 		return;
 	}
@@ -73,7 +81,11 @@ async function runCommand(
 			await runInit(targetDir);
 			break;
 		case "generate":
-			console.log("Generate command - TODO");
+			await runGenerate(targetDir, {
+				tool: args.values.tool as string | undefined,
+				dryRun: args.values.dryRun as boolean | undefined,
+				force: args.values.force as boolean | undefined,
+			});
 			break;
 		case "update":
 			console.log("Update command - TODO");
