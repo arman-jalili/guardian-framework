@@ -3,6 +3,8 @@ import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
 import { runInit } from "./commands/init.js";
 import { runGenerate } from "./commands/generate.js";
+import { runUpdate } from "./commands/update.js";
+import { runInfo } from "./commands/info.js";
 
 const VERSION = "0.1.0";
 
@@ -20,6 +22,7 @@ async function main() {
 			nonInteractive: { type: "boolean" },
 			dryRun: { type: "boolean" },
 			force: { type: "boolean" },
+			regenerate: { type: "boolean" },
 		},
 	});
 
@@ -45,7 +48,7 @@ Options:
   -d, --dir <path>           Target directory (default: current)
 
 Init options:
-  -t, --tool <name>          AI tool (pi, claude, opencode, agents)
+  -t, --tool <name>          AI tool (pi, claude, opencode, agents, github)
   -l, --lang <name>          Language (typescript, rust, python, go)
   --validators <list>        Validators (comma-separated, ci always included)
   --workflows <list>         Workflows (comma-separated)
@@ -55,6 +58,11 @@ Generate options:
   --tool <name>              Target tool or "all" (default: all configured tools)
   --dryRun                   Show changes without writing
   --force                    Overwrite existing files
+
+Update options:
+  --dryRun                   Show changes without applying
+  --force                    Overwrite user-editable files (dangerous)
+  --regenerate               Regenerate exports after update
 `);
 		return;
 	}
@@ -88,13 +96,17 @@ async function runCommand(
 			});
 			break;
 		case "update":
-			console.log("Update command - TODO");
+			await runUpdate(targetDir, {
+				dryRun: args.values.dryRun as boolean | undefined,
+				force: args.values.force as boolean | undefined,
+				regenerate: args.values.regenerate as boolean | undefined,
+			});
 			break;
 		case "upgrade":
 			console.log("Upgrade command - TODO");
 			break;
 		case "info":
-			console.log("Info command - TODO");
+			await runInfo(targetDir);
 			break;
 		default:
 			console.error(`Unknown command: ${command}`);
