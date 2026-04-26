@@ -1,4 +1,4 @@
-# GuardianCLI
+# Guardian Framework CLI
 
 **Token-Optimized Agentic Framework Scaffolder**
 
@@ -62,14 +62,14 @@ Run `/blueprint-update` after implementing these changes
 
 ```bash
 # Run directly with npx (no installation required)
-npx guardian-cli init
+npx guardian-framework-cli init
 
 # Or with bun
-bunx guardian-cli init
+bunx guardian-framework-cli init
 
 # Or install globally
-npm install -g guardian-cli
-guardian-cli init
+npm install -g guardian-framework-cli
+guardian-framework-cli init
 ```
 
 ---
@@ -79,7 +79,7 @@ guardian-cli init
 ### 1. Initialize Framework
 
 ```bash
-npx guardian-cli init
+npx guardian-framework-cli init
 ```
 
 Interactive prompts guide you through:
@@ -106,7 +106,7 @@ biome check .
 ### 3. Generate Exports
 
 ```bash
-npx guardian-cli generate
+npx guardian-framework-cli generate
 ```
 
 Creates `.claude/`, `.opencode/`, `.agents/` from `.pi/` templates.
@@ -230,7 +230,7 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 Initialize the framework in your project.
 
 ```bash
-npx guardian-cli init [options]
+npx guardian-framework-cli init [options]
 
 Options:
   -d, --dir <path>           Target directory (default: current)
@@ -257,7 +257,7 @@ Options:
 Regenerate exports from `.pi/` source after edits.
 
 ```bash
-npx guardian-cli generate [options]
+npx guardian-framework-cli generate [options]
 
 Options:
   --tool <name>              Target tool or "all"
@@ -276,7 +276,7 @@ Options:
 Smart merge framework updates preserving user edits.
 
 ```bash
-npx guardian-cli update [options]
+npx guardian-framework-cli update [options]
 
 Options:
   --dry-run                  Show changes without applying
@@ -298,7 +298,7 @@ Options:
 Migrate to new framework version.
 
 ```bash
-npx guardian-cli upgrade <version>
+npx guardian-framework-cli upgrade <version>
 
 Arguments:
   v2.0                       Upgrade to specific version
@@ -310,7 +310,7 @@ Arguments:
 Display manifest and framework status.
 
 ```bash
-npx guardian-cli info
+npx guardian-framework-cli info
 ```
 
 Shows:
@@ -576,7 +576,7 @@ guardian-cli/
 ### Scaffold a TypeScript Project with GitHub
 
 ```bash
-npx guardian-cli init --lang typescript --repo-tool gh --tool pi,claude
+npx guardian-framework-cli init --lang typescript --repo-tool gh --tool pi,claude
 ```
 
 Creates:
@@ -588,7 +588,7 @@ Creates:
 ### Scaffold a Rust Project with GitLab
 
 ```bash
-npx guardian-cli init --lang rust --repo-tool glab
+npx guardian-framework-cli init --lang rust --repo-tool glab
 ```
 
 Creates `.pi/` with:
@@ -599,7 +599,7 @@ Creates `.pi/` with:
 ### Non-Interactive Scaffold
 
 ```bash
-npx guardian-cli init \
+npx guardian-framework-cli init \
   --lang typescript \
   --repo-tool gh \
   --tool pi \

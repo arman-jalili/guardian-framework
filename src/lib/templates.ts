@@ -9,10 +9,45 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Template directory paths
+// Template directory paths - resolve from package root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const TEMPLATE_DIR = path.join(__dirname, "..", "..", "templates");
+
+// When bundled, we need to find the package root
+// Try multiple paths to handle both dev and linked/published scenarios
+function findTemplateDir(): string {
+	const possiblePaths = [
+		// From dist/index.js -> project root
+		path.join(__dirname, "..", "..", "templates"),
+		// From src/lib/templates.ts -> project root (dev mode)
+		path.join(__dirname, "..", "..", "..", "templates"),
+		// From linked bin - resolve symlink
+		path.resolve(path.dirname(fs.realpathSync(__filename)), "..", "templates"),
+	];
+
+	for (const p of possiblePaths) {
+		if (fs.existsSync(p)) {
+			return p;
+		}
+	}
+
+	// Fallback: try to find via package.json resolution
+	try {
+		// @ts-ignore - bun specific
+		const pkgPath = require.resolve("guardian-framework-cli/package.json");
+		return path.join(path.dirname(pkgPath), "templates");
+	} catch {
+		// Last resort - check common locations
+		const cwdTemplates = path.join(process.cwd(), "templates");
+		if (fs.existsSync(cwdTemplates)) {
+			return cwdTemplates;
+		}
+	}
+
+	throw new Error("Templates not found. Ensure templates/pi/ exists in package.");
+}
+
+const TEMPLATE_DIR = findTemplateDir();
 const PI_TEMPLATE_DIR = path.join(TEMPLATE_DIR, "pi");
 const LANGUAGES_DIR = path.join(TEMPLATE_DIR, "languages");
 

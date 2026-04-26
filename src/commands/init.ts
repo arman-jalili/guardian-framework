@@ -165,7 +165,7 @@ Scaffolded GuardianCLI framework:
 Next steps:
   1. Edit .pi/agent/AGENTS.md to customize project context
   2. Edit .pi/scripts/*.sh to set build/test/lint commands
-  3. Run: npx guardian-cli generate (after editing .pi/)
+  3. Run: npx guardian-framework-cli generate (after editing .pi/)
 `);
 	} catch (error) {
 		s.stop("Scaffold failed!");
@@ -477,8 +477,8 @@ See INDEX.md for framework structure.
 
 ## Commands
 
-- \`npx guardian-cli generate --tool ${tool}\` — Regenerate from .pi/
-- \`npx guardian-cli update\` — Update .pi/ source
+- \`npx guardian-framework-cli generate --tool ${tool}\` — Regenerate from .pi/
+- \`npx guardian-framework-cli update\` — Update .pi/ source
 
 ---
 

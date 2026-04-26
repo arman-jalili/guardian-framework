@@ -1,12 +1,16 @@
 {
-	"name": "guardian-cli",
+	"name": "guardian-framework-cli",
 	"version": "0.1.0",
-	"description": "Token-optimized agentic framework scaffolder",
+	"description": "Token-optimized agentic framework scaffolder with pi-first architecture",
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {
-		"guardian-cli": "./dist/index.js"
+		"guardian-framework-cli": "./dist/index.js"
 	},
+	"files": [
+		"dist/",
+		"templates/"
+	],
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
 		"test": "bun test",
@@ -23,7 +27,7 @@
 		"@types/bun": "latest",
 		"typescript": "^5.0.0"
 	},
-	"keywords": ["cli", "agentic", "framework", "ai", "scaffold"],
+	"keywords": ["cli", "agentic", "framework", "ai", "scaffold", "pi-first", "token-optimized"],
 	"author": "",
 	"license": "MIT"
 }

@@ -21,20 +21,20 @@ async function main() {
 	});
 
 	if (args.values.version) {
-		console.log(`guardian-cli v${VERSION}`);
+		console.log(`guardian-framework-cli v${VERSION}`);
 		return;
 	}
 
 	if (args.values.help) {
 		console.log(`
-guardian-cli - Token-optimized agentic framework scaffolder
+guardian-framework-cli - Token-optimized agentic framework scaffolder
 
 Usage:
-  guardian-cli init          Initialize framework in current directory
-  guardian-cli generate      Generate exports from .pi source
-  guardian-cli update        Smart merge framework updates
-  guardian-cli upgrade       Migrate to new version
-  guardian-cli info          Display manifest information
+  guardian-framework-cli init          Initialize framework in current directory
+  guardian-framework-cli generate      Generate exports from .pi source
+  guardian-framework-cli update        Smart merge framework updates
+  guardian-framework-cli upgrade       Migrate to new version
+  guardian-framework-cli info          Display manifest information
 
 Options:
   -v, --version              Show version
@@ -86,7 +86,7 @@ async function runCommand(
 			break;
 		default:
 			console.error(`Unknown command: ${command}`);
-			console.log("Run 'guardian-cli --help' for usage");
+			console.log("Run 'guardian-framework-cli --help' for usage");
 	}
 }
 

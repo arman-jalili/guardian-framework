@@ -1,4 +1,4 @@
-# GuardianCLI Agent Framework
+# Guardian Framework Agent Framework
 
 **Version:** 1.0.0
 **Status:** Template
