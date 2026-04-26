@@ -91,6 +91,8 @@ export const AVAILABLE_WORKFLOWS = [
 	"git-issues",
 	"issue-closeout",
 	"issue-merge",
+	// Plan Conversion
+	"plan-to-issues",
 	// Blueprint Management
 	"blueprint-validate",
 	"sync-check",

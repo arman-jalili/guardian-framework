@@ -184,6 +184,7 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 │   ├── git-issues.md
 │   ├── issue-closeout.md
 │   ├── issue-merge.md
+│   ├── plan-to-issues.md      # Plan conversion
 │   ├── blueprint-validate.md  # Blueprint management (NEW)
 │   ├── sync-check.md
 │   ├── context-refresh.md
@@ -369,10 +370,15 @@ Shows:
 | Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
 | Issue Closeout | `prompts/issue-closeout.md` | Verify AC → validators → canonical refs → compliance MR |
 | Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic |
+| Plan to Issues | `prompts/plan-to-issues.md` | Convert superpowers plan to GitHub/GitLab issues |
 
 **Workflow Sequence:**
 
 ```
+# From superpowers plan:
+/plan-to-issues → /git-issues → [implement] → /issue-closeout → /issue-merge
+
+# From scratch:
 /epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
                                     ↑                                          ↓
                                     └────────────── next issue ────────────────┘

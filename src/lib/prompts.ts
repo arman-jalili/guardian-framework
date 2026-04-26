@@ -271,6 +271,12 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				label: "Issue Merge",
 				hint: "Merge MR + close issue + update tracking",
 			},
+			// Plan conversion workflows
+			{
+				value: "plan-to-issues",
+				label: "Plan to Issues",
+				hint: "Convert superpowers plan to GitHub/GitLab issues",
+			},
 			// Blueprint management workflows
 			{
 				value: "blueprint-validate",

@@ -114,6 +114,7 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── git-issues.md          # Create epics/issues in GitHub/GitLab
 │   ├── issue-closeout.md      # Validate + create compliance MR
 │   ├── issue-merge.md         # Merge MR + close issue + update tracking
+│   ├── plan-to-issues.md      # Convert superpowers plan to issues
 │   ├── blueprint-validate.md  # Validate blueprint integrity
 │   ├── sync-check.md          # Check exports in sync with blueprint
 │   ├── context-refresh.md     # Update context from codebase state
@@ -272,6 +273,7 @@ Selected during `guardian init` and used in all git-related workflows.
 | Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
 | Issue Closeout | `prompts/issue-closeout.md` | Verify AC → validators → canonical → compliance MR |
 | Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic |
+| Plan to Issues | `prompts/plan-to-issues.md` | Convert superpowers plan to GitHub/GitLab issues |
 
 ### Blueprint Management Workflows
 
@@ -290,7 +292,12 @@ Selected during `guardian init` and used in all git-related workflows.
 Blueprint Setup (one-time):
 /blueprint-validate → /sync-check → [ready for implementation]
 
-Epic/Issue Sequence:
+From Superpowers Plan:
+/plan-to-issues → /git-issues → [implement] → /issue-closeout → /issue-merge
+                      ↑                                          ↓
+                      └────────────── next issue ────────────────┘
+
+From Scratch:
 /epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
                                     ↑                                          ↓
                                     └────────────── next issue ────────────────┘
