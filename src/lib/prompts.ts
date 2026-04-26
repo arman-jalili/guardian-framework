@@ -13,10 +13,11 @@ import {
 	spinner,
 	text,
 } from "@clack/prompts";
-import type { Language, Tool, Validator, Workflow } from "./templates.js";
+import type { Language, RepoTool, Tool, Validator, Workflow } from "./templates.js";
 import {
 	AVAILABLE_VALIDATORS,
 	AVAILABLE_WORKFLOWS,
+	REPOSITORY_TOOLS,
 	SUPPORTED_LANGUAGES,
 	SUPPORTED_TOOLS,
 } from "./templates.js";
@@ -24,6 +25,7 @@ import {
 export interface InitOptions {
 	tools: Tool[];
 	language: Language;
+	repoTool: RepoTool;
 	validators: Validator[];
 	workflows: Workflow[];
 	projectName: string;
@@ -94,7 +96,29 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 5: AI Tool selection (multi-select, pi recommended)
+	// Step 5: Repository tool selection (gh or glab)
+	const repoTool = await select({
+		message: "Which Git repository tool do you use?",
+		options: [
+			{
+				value: "gh",
+				label: "GitHub CLI (gh)",
+				hint: "GitHub.com repositories",
+			},
+			{
+				value: "glab",
+				label: "GitLab CLI (glab)",
+				hint: "GitLab.com or self-hosted GitLab",
+			},
+		],
+	});
+
+	if (isCancel(repoTool)) {
+		cancel("Cancelled");
+		return null;
+	}
+
+	// Step 6: AI Tool selection (multi-select, pi recommended)
 	const tools = await multiselect({
 		message: "Select AI tools to scaffold (pi is recommended for full features)",
 		options: [
@@ -127,7 +151,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 6: Language selection
+	// Step 7: Language selection
 	const language = await select({
 		message: "Select programming language",
 		options: [
@@ -143,7 +167,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 7: Validator selection (CI pre-selected and locked)
+	// Step 8: Validator selection (CI pre-selected and locked)
 	const validators = await multiselect({
 		message: "Select validators (CI is always required)",
 		options: [
@@ -172,8 +196,13 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				label: "Integration validation",
 				hint: "Component integration checks",
 			},
+			{
+				value: "architecture",
+				label: "Architecture validation",
+				hint: "Architecture compliance and design checks",
+			},
 		],
-		initialValues: ["ci", "test"],
+		initialValues: ["ci", "test", "architecture"],
 	});
 
 	if (isCancel(validators)) {
@@ -181,10 +210,11 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 8: Workflow selection (all optional)
+	// Step 9: Workflow selection (grouped by category)
 	const workflows = await multiselect({
 		message: "Select workflow prompts",
 		options: [
+			// Standard workflows
 			{
 				value: "feature-development",
 				label: "Feature Development",
@@ -207,11 +237,37 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 			},
 			{
 				value: "issue-implementation-series",
-				label: "Issue Implementation",
-				hint: "Batch GitHub issues workflow",
+				label: "Issue Implementation Series",
+				hint: "Batch implementation workflow",
+			},
+			// Epic/Issue management workflows
+			{
+				value: "epic-plan",
+				label: "Epic Plan",
+				hint: "Architecture analysis + epic slicing",
+			},
+			{
+				value: "issue-draft",
+				label: "Issue Draft",
+				hint: "Create draft issues from epic",
+			},
+			{
+				value: "git-issues",
+				label: "Git Issues",
+				hint: "Create epics/issues in GitHub/GitLab",
+			},
+			{
+				value: "issue-closeout",
+				label: "Issue Closeout",
+				hint: "Validate + create compliance MR",
+			},
+			{
+				value: "issue-merge",
+				label: "Issue Merge",
+				hint: "Merge MR + close issue + update tracking",
 			},
 		],
-		initialValues: ["feature-development", "bug-fix"],
+		initialValues: ["epic-plan", "issue-draft", "git-issues", "issue-closeout", "issue-merge"],
 	});
 
 	if (isCancel(workflows)) {
@@ -219,14 +275,15 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 9: Confirmation
+	// Step 10: Confirmation
 	const confirmed = await confirm({
 		message: `Ready to scaffold?
+  Project: ${projectName} v${projectVersion}
+  Repository: ${repository} (${repoTool})
   Tools: ${tools.join(", ")}
   Language: ${language}
   Validators: ${validators.join(", ")}
-  Workflows: ${workflows.length > 0 ? workflows.join(", ") : "none"}
-  Project: ${projectName} v${projectVersion}`,
+  Workflows: ${workflows.length > 0 ? workflows.join(", ") : "none"}`,
 	});
 
 	if (isCancel(confirmed) || !confirmed) {
@@ -237,6 +294,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 	return {
 		tools: tools as Tool[],
 		language: language as Language,
+		repoTool: repoTool as RepoTool,
 		validators: validators as Validator[],
 		workflows: workflows as Workflow[],
 		projectName: projectName as string,

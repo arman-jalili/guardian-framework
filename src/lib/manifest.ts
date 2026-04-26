@@ -56,6 +56,7 @@ export interface GuardianManifest {
 	source: string; // Always "pi"
 	tools: string[];
 	language: string;
+	repoTool: string; // "gh" or "glab"
 	validators: string[];
 	workflows: string[];
 	files: Record<string, FileRecord>;
@@ -163,6 +164,7 @@ export function writeManifest(targetDir: string, manifest: GuardianManifest): vo
 export function createManifest(options: {
 	tools: string[];
 	language: string;
+	repoTool: string;
 	validators: string[];
 	workflows: string[];
 }): GuardianManifest {
@@ -174,6 +176,7 @@ export function createManifest(options: {
 		source: "pi",
 		tools: options.tools,
 		language: options.language,
+		repoTool: options.repoTool,
 		validators: options.validators,
 		workflows: options.workflows,
 		files: {},

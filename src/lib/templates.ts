@@ -26,6 +26,11 @@ export const SUPPORTED_TOOLS = ["pi", "claude", "opencode", "agents"] as const;
 
 export type Tool = (typeof SUPPORTED_TOOLS)[number];
 
+// Repository tools (for git operations)
+export const REPOSITORY_TOOLS = ["gh", "glab"] as const;
+
+export type RepoTool = (typeof REPOSITORY_TOOLS)[number];
+
 // Available validators
 export const AVAILABLE_VALIDATORS = [
 	"ci",
@@ -33,6 +38,7 @@ export const AVAILABLE_VALIDATORS = [
 	"security",
 	"operations",
 	"integration",
+	"architecture",
 ] as const;
 
 export type Validator = (typeof AVAILABLE_VALIDATORS)[number];
@@ -44,6 +50,11 @@ export const AVAILABLE_WORKFLOWS = [
 	"hotfix",
 	"refactoring",
 	"issue-implementation-series",
+	"epic-plan",
+	"issue-draft",
+	"git-issues",
+	"issue-closeout",
+	"issue-merge",
 ] as const;
 
 export type Workflow = (typeof AVAILABLE_WORKFLOWS)[number];
@@ -55,6 +66,7 @@ export interface TemplateContext {
 	language: Language;
 	projectType: string;
 	repository: string;
+	repoTool: RepoTool;
 	buildCommand: string;
 	testCommand: string;
 	lintCommand: string;
@@ -224,7 +236,7 @@ export function renderTemplate(content: string, context: Partial<TemplateContext
 /**
  * Get template context with language defaults
  */
-export function getDefaultContext(language: Language, projectName: string): TemplateContext {
+export function getDefaultContext(language: Language, projectName: string, repoTool: RepoTool = "gh"): TemplateContext {
 	const defaults = LANGUAGE_DEFAULTS[language];
 
 	return {
@@ -233,6 +245,7 @@ export function getDefaultContext(language: Language, projectName: string): Temp
 		language,
 		projectType: "Library",
 		repository: "owner/repo",
+		repoTool,
 		buildCommand: defaults.buildCommand,
 		testCommand: defaults.testCommand,
 		lintCommand: defaults.lintCommand,

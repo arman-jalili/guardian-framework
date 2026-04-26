@@ -27,6 +27,7 @@ import {
 } from "../lib/prompts.js";
 import {
 	type Language,
+	type RepoTool,
 	type TemplateContext,
 	type Tool,
 	type Validator,
@@ -100,6 +101,7 @@ async function scaffoldFramework(
 	options: {
 		tools: Tool[];
 		language: Language;
+		repoTool: RepoTool;
 		validators: Validator[];
 		workflows: Workflow[];
 		projectName: string;
@@ -111,12 +113,13 @@ async function scaffoldFramework(
 	const s = startSpinner("Scaffolding framework...");
 
 	try {
-		// Get template context with language defaults
+		// Get template context with language defaults and repo tool
 		const context: TemplateContext = {
-			...getDefaultContext(options.language, options.projectName),
+			...getDefaultContext(options.language, options.projectName, options.repoTool),
 			projectVersion: options.projectVersion,
 			projectType: options.projectType,
 			repository: options.repository,
+			repoTool: options.repoTool,
 		};
 
 		// Filter validators and workflows
@@ -127,6 +130,7 @@ async function scaffoldFramework(
 		const manifest = createManifest({
 			tools: options.tools,
 			language: options.language,
+			repoTool: options.repoTool,
 			validators,
 			workflows,
 		});

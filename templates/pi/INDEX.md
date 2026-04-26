@@ -1,6 +1,6 @@
 # GuardianCLI Agent Framework
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Status:** Template
 **Architecture:** Pi-first
 
@@ -50,13 +50,19 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 │   ├── bug-fix.md
 │   ├── hotfix.md
 │   ├── refactoring.md
-│   └── issue-implementation-series.md
+│   ├── issue-implementation-series.md
+│   ├── epic-plan.md           # Architecture analysis + epic slicing
+│   ├── issue-draft.md         # Create draft issues from epic
+│   ├── git-issues.md          # Create epics/issues in GitHub/GitLab
+│   ├── issue-closeout.md      # Validate + create compliance MR
+│   └── issue-merge.md         # Merge MR + close issue + update tracking
 │
 ├── scripts/
 │   ├── validate-ci.sh
 │   ├── validate-tests.sh
 │   ├── validate-operations.sh
 │   ├── validate-security.sh
+│   ├── validate-architecture.sh
 │   ├── validation-cache.sh
 │   ├── fetch-issues.sh
 │   ├── categorize-issues.sh
@@ -72,6 +78,19 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 ├── INDEX.md                   # This file
 └── README.md                  # Complete documentation
 ```
+
+---
+
+## Repository Tool
+
+The framework supports both GitHub and GitLab:
+
+| Tool | CLI | Platform |
+|------|-----|----------|
+| `gh` | GitHub CLI | GitHub.com |
+| `glab` | GitLab CLI | GitLab.com or self-hosted |
+
+Selected during `guardian init` and used in all git-related workflows.
 
 ---
 
@@ -96,9 +115,9 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 
 | Scope | Files | Lines | Required Validators |
 |-------|-------|-------|---------------------|
-| Simple | 1 | < 50 | ci-mr (automated) |
-| Moderate | 2-5 | 50-200 | architecture-validator |
-| Complex | 5-15 | 200-500 | architecture + security |
+| Simple | 1 | < 50 | ci (automated) |
+| Moderate | 2-5 | 50-200 | ci + architecture |
+| Complex | 5-15 | 200-500 | ci + architecture + security |
 | Critical | 15+ or core | 500+ | All validators + human approval |
 
 ---
@@ -111,11 +130,14 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 | `validate-tests.sh` | Unit, integration, coverage |
 | `validate-operations.sh` | Tracing, cancellation, atomic writes |
 | `validate-security.sh` | Secrets, injection, path traversal |
+| `validate-architecture.sh` | Architecture patterns, dependencies |
 | `validation-cache.sh` | Retry optimization |
 
 ---
 
 ## Workflows
+
+### Standard Workflows
 
 | Workflow | File | Use When |
 |----------|------|----------|
@@ -123,7 +145,25 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 | Bug Fix | `prompts/bug-fix.md` | Bug fixes |
 | Emergency Hotfix | `prompts/hotfix.md` | Production issues |
 | Refactoring | `prompts/refactoring.md` | Code improvement |
-| Issue Implementation | `prompts/issue-implementation-series.md` | Batch GitHub issues |
+| Issue Implementation | `prompts/issue-implementation-series.md` | Batch implementation |
+
+### Epic/Issue Management Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Epic Plan | `prompts/epic-plan.md` | Architecture analysis → epic slicing → validator review |
+| Issue Draft | `prompts/issue-draft.md` | Create draft issues from approved epic |
+| Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
+| Issue Closeout | `prompts/issue-closeout.md` | Verify acceptance criteria → validators → compliance MR |
+| Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic if complete |
+
+### Workflow Sequence
+
+```
+/epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
+                                    ↑                                          ↓
+                                    └────────────── next issue ────────────────┘
+```
 
 ---
 
