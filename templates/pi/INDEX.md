@@ -1,6 +1,6 @@
 # GuardianCLI Agent Framework
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Status:** Template
 **Architecture:** Pi-first
 
@@ -9,6 +9,32 @@
 ## Overview
 
 This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.opencode/`, `.agents/`) are generated exports.
+
+---
+
+## Canonical Reference Requirement
+
+**All implementation files must include a canonical reference header pointing to blueprint:**
+
+```typescript
+/**
+ * Canonical Reference: .pi/context/patterns.md#section-name
+ * Blueprint Alignment: [pattern-name]
+ * Implements: [feature/spec reference]
+ */
+```
+
+**Generated files must include source reference:**
+
+```markdown
+<!--
+Canonical Reference: .pi/[source-path].md
+Generated: [timestamp]
+DO NOT EDIT DIRECTLY - Modify source in .pi/
+-->
+```
+
+**Validation:** `validate-canonical.sh` checks reference integrity in all phases.
 
 ---
 
@@ -55,7 +81,13 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 │   ├── issue-draft.md         # Create draft issues from epic
 │   ├── git-issues.md          # Create epics/issues in GitHub/GitLab
 │   ├── issue-closeout.md      # Validate + create compliance MR
-│   └── issue-merge.md         # Merge MR + close issue + update tracking
+│   ├── issue-merge.md         # Merge MR + close issue + update tracking
+│   ├── blueprint-validate.md  # Validate blueprint integrity
+│   ├── sync-check.md          # Check exports in sync with blueprint
+│   ├── context-refresh.md     # Update context from codebase state
+│   ├── scope-analyzer.md      # Auto-determine scope classification
+│   ├── pattern-extract.md     # Extract patterns to blueprint
+│   └── blueprint-update.md    # Reverse-sync implementation to blueprint
 │
 ├── scripts/
 │   ├── validate-ci.sh
@@ -63,6 +95,7 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 │   ├── validate-operations.sh
 │   ├── validate-security.sh
 │   ├── validate-architecture.sh
+│   ├── validate-canonical.sh  # Canonical reference integrity
 │   ├── validation-cache.sh
 │   ├── fetch-issues.sh
 │   ├── categorize-issues.sh
@@ -115,10 +148,10 @@ Selected during `guardian init` and used in all git-related workflows.
 
 | Scope | Files | Lines | Required Validators |
 |-------|-------|-------|---------------------|
-| Simple | 1 | < 50 | ci (automated) |
-| Moderate | 2-5 | 50-200 | ci + architecture |
-| Complex | 5-15 | 200-500 | ci + architecture + security |
-| Critical | 15+ or core | 500+ | All validators + human approval |
+| Simple | 1 | < 50 | ci + canonical (automated) |
+| Moderate | 2-5 | 50-200 | ci + architecture + canonical |
+| Complex | 5-15 | 200-500 | ci + architecture + security + canonical |
+| Critical | 15+ or core | 500+ | All validators + canonical + human approval |
 
 ---
 
@@ -131,6 +164,7 @@ Selected during `guardian init` and used in all git-related workflows.
 | `validate-operations.sh` | Tracing, cancellation, atomic writes |
 | `validate-security.sh` | Secrets, injection, path traversal |
 | `validate-architecture.sh` | Architecture patterns, dependencies |
+| `validate-canonical.sh` | Canonical reference integrity, coverage |
 | `validation-cache.sh` | Retry optimization |
 
 ---
@@ -157,13 +191,63 @@ Selected during `guardian init` and used in all git-related workflows.
 | Issue Closeout | `prompts/issue-closeout.md` | Verify acceptance criteria → validators → compliance MR |
 | Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic if complete |
 
+### Blueprint Management Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Blueprint Validate | `prompts/blueprint-validate.md` | Validate .pi/ structure and integrity |
+| Sync Check | `prompts/sync-check.md` | Verify exports match blueprint source |
+| Context Refresh | `prompts/context-refresh.md` | Update context from codebase reality |
+| Scope Analyzer | `prompts/scope-analyzer.md` | Auto-determine change scope + validators |
+| Pattern Extract | `prompts/pattern-extract.md` | Extract patterns to patterns.md |
+| Blueprint Update | `prompts/blueprint-update.md` | Reverse-sync implementation changes |
+
 ### Workflow Sequence
 
 ```
+Blueprint Setup (one-time):
+/blueprint-validate → /sync-check → [ready for implementation]
+
+Epic/Issue Sequence:
 /epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
                                     ↑                                          ↓
                                     └────────────── next issue ────────────────┘
+
+Maintenance:
+/context-refresh → /pattern-extract → /blueprint-update → /sync-check → guardian generate
 ```
+
+---
+
+## Implementation Phase Requirements
+
+**All implementation phases must:**
+
+1. **Add canonical reference header** to new files:
+```typescript
+/**
+ * Canonical Reference: .pi/context/patterns.md#[pattern-section]
+ * Implements: [spec from issue/workflow]
+ */
+```
+
+2. **Update existing headers** when modifying files to reflect blueprint alignment
+
+3. **Reference specific sections** not just files: `.pi/context/patterns.md#safe-file-read`
+
+---
+
+## Validation Phase Requirements
+
+**All validation phases must:**
+
+1. **Run canonical validator**: `bash .pi/scripts/validate-canonical.sh`
+
+2. **Check coverage**: Implementation files should have ≥50% canonical reference coverage
+
+3. **Verify accuracy**: References must point to existing blueprint sections
+
+4. **Report gaps**: Files without references should be flagged for update
 
 ---
 
@@ -177,6 +261,7 @@ Selected during `guardian init` and used in all git-related workflows.
 6. **Risk-gated** - Safe=auto, Medium=confirm, Dangerous=dry-run
 7. **Pre-validated** - Validator catches errors BEFORE execution
 8. **Auditable** - Planning decisions tracked and diffable
+9. **Canonical-traced** - All code linked to blueprint documentation
 
 ---
 
@@ -186,10 +271,10 @@ When running `guardian generate`, `.pi/` files are transformed:
 
 | Source | Destination | Transformation |
 |--------|-------------|----------------|
-| `AGENTS.md` | `.claude/CLAUDE.md`, `.opencode/context.md` | Direct copy |
-| `skills/agents/*.md` | `.claude/agents/*.md` | Direct copy |
+| `AGENTS.md` | `.claude/CLAUDE.md`, `.opencode/context.md` | Direct copy + canonical header |
+| `skills/agents/*.md` | `.claude/agents/*.md` | Direct copy + canonical header |
 | `skills/validators/*.md` | `.opencode/prompts/*.txt` | Convert to .txt, compress |
-| `context/*.md` | `.claude/context/*.md`, `.opencode/context/*.md` | Direct copy |
+| `context/*.md` | `.claude/context/*.md`, `.opencode/context/*.md` | Direct copy + canonical header |
 | `prompts/*.md` | `.opencode/workflows/*.md` | Nest under workflows/ |
 | `scripts/*.sh` | `.claude/scripts/*.sh`, `.opencode/scripts/*.sh` | Direct copy |
 | `extensions/*.ts` | `extensions/*.ts` (pi only) | No export |

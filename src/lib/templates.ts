@@ -50,11 +50,19 @@ export const AVAILABLE_WORKFLOWS = [
 	"hotfix",
 	"refactoring",
 	"issue-implementation-series",
+	// Epic/Issue Management
 	"epic-plan",
 	"issue-draft",
 	"git-issues",
 	"issue-closeout",
 	"issue-merge",
+	// Blueprint Management
+	"blueprint-validate",
+	"sync-check",
+	"context-refresh",
+	"scope-analyzer",
+	"pattern-extract",
+	"blueprint-update",
 ] as const;
 
 export type Workflow = (typeof AVAILABLE_WORKFLOWS)[number];

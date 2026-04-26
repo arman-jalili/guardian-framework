@@ -1,6 +1,30 @@
 # Issue Closeout Workflow
 
-**Purpose:** Verify all acceptance criteria are met, run validators, and create a compliance merge request (MR) with complete documentation.
+<!--
+Canonical Reference: .pi/prompts/issue-closeout.md
+Blueprint Source: GuardianCLI Framework v1.2
+-->
+
+**Purpose:** Verify all acceptance criteria are met, run validators (including canonical reference check), and create a compliance merge request (MR) with complete documentation.
+
+---
+
+## Canonical Reference Requirement
+
+**Before closeout, verify all implementation files have canonical headers:**
+
+```bash
+bash .pi/scripts/validate-canonical.sh
+```
+
+**Files must include:**
+```typescript
+/**
+ * Canonical Reference: .pi/[blueprint-section]
+ * Implements: [issue acceptance criteria]
+ * Issue: #[number]
+ */
+```
 
 ---
 
@@ -9,6 +33,7 @@
 - Issue implementation completed
 - All code changes committed to feature branch
 - Issue number known
+- Canonical references added to all modified files
 
 ---
 
@@ -97,6 +122,19 @@ Expected output:
 ✅ Error handling complete
 ```
 
+**Canonical Reference Validator (always required):**
+
+```bash
+bash .pi/scripts/validate-canonical.sh
+```
+
+Expected output:
+```
+✅ Implementation files have canonical references
+✅ References point to valid blueprint sections
+✅ Coverage ≥ 50%
+```
+
 ### 3. Validator Results Recording
 
 Document all validator results:
@@ -127,6 +165,12 @@ Document all validator results:
 - Tracing: Implemented in [files]
 - Cancellation: Handled in [files]
 - Atomic Writes: Used in [files]
+
+### Canonical Reference Validation
+- Status: ✅ PASSED
+- Files with references: [X]/[Y]
+- Coverage: [Z]% (above 50% threshold)
+- All references valid
 
 ### Overall Validation Status: ✅ ALL PASSED
 ```
@@ -166,6 +210,7 @@ Closes #[ISSUE_NUMBER]
 | Test | ✅ PASSED | [N] tests, [X]% coverage |
 | Security | ✅ PASSED | No vulnerabilities detected |
 | Operations | ✅ PASSED | Production requirements met |
+| Canonical | ✅ PASSED | [X]% coverage, all refs valid |
 
 ### Files Changed
 
@@ -279,6 +324,7 @@ glab api projects/:id/issues/[issue_iid] \
 
 - [ ] All original issue acceptance criteria verified
 - [ ] All required validators passed
+- [ ] Canonical reference validator passed (≥50% coverage)
 - [ ] Compliance MR created with full documentation
 - [ ] MR linked to original issue
 - [ ] MR status: ready for review

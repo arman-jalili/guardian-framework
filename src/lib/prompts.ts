@@ -266,8 +266,39 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				label: "Issue Merge",
 				hint: "Merge MR + close issue + update tracking",
 			},
+			// Blueprint management workflows
+			{
+				value: "blueprint-validate",
+				label: "Blueprint Validate",
+				hint: "Validate .pi/ integrity",
+			},
+			{
+				value: "sync-check",
+				label: "Sync Check",
+				hint: "Verify exports match blueprint",
+			},
+			{
+				value: "context-refresh",
+				label: "Context Refresh",
+				hint: "Update context from codebase",
+			},
+			{
+				value: "scope-analyzer",
+				label: "Scope Analyzer",
+				hint: "Auto-determine scope + validators",
+			},
+			{
+				value: "pattern-extract",
+				label: "Pattern Extract",
+				hint: "Extract patterns to blueprint",
+			},
+			{
+				value: "blueprint-update",
+				label: "Blueprint Update",
+				hint: "Reverse-sync to blueprint",
+			},
 		],
-		initialValues: ["epic-plan", "issue-draft", "git-issues", "issue-closeout", "issue-merge"],
+		initialValues: ["epic-plan", "issue-draft", "git-issues", "issue-closeout", "issue-merge", "blueprint-validate", "sync-check", "scope-analyzer"],
 	});
 
 	if (isCancel(workflows)) {

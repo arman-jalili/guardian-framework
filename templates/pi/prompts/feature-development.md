@@ -1,7 +1,26 @@
 # Feature Development Workflow
 
+<!--
+Canonical Reference: .pi/prompts/feature-development.md
+Blueprint Source: GuardianCLI Framework v1.2
+-->
+
 **Scope:** Moderate, Complex, Critical
 **Optimized for:** Minimal token usage via shift-left validation + automated post-code checks
+
+## Canonical Reference Requirement
+
+**All implementation files created/modified in this workflow must include:**
+
+```typescript
+/**
+ * Canonical Reference: .pi/context/patterns.md#[section]
+ * Implements: [feature from design proposal]
+ * Issue: #[issue-number]
+ */
+```
+
+**Validation Phase includes canonical reference check:** `validate-canonical.sh`
 
 ## Flow
 
@@ -42,6 +61,7 @@ User Request
 │ 5. CODE-DEVELOPER: Implement         │
 │    Input: Design Proposal + Contract │
 │    Load: context/patterns.md         │
+│    Add: Canonical Reference Headers  │
 │    Output: Code + tests             │
 └──────────────┬───────────────────────┘
                │
@@ -52,6 +72,7 @@ User Request
 │    • bash .claude/scripts/validate-tests.sh │
 │    • bash .claude/scripts/validate-ops.sh   │
 │    • bash .claude/scripts/validate-sec.sh   │
+│    • bash .claude/scripts/validate-canonical│
 │    Output: Pass/Fail per check              │
 └──────────────┬──────────────────────────────┘
                │
@@ -98,6 +119,7 @@ bash .claude/scripts/validate-ci.sh
 bash .claude/scripts/validate-tests.sh
 bash .claude/scripts/validate-operations.sh [src_dir]
 bash .claude/scripts/validate-security.sh [src_dir]
+bash .claude/scripts/validate-canonical.sh  # Check canonical references
 
 # Validation cache
 bash .claude/scripts/validation-cache.sh init <task-id>
