@@ -11,7 +11,7 @@ Blueprint Source: GuardianCLI Framework v1.2
 
 ## Canonical Reference Requirement
 
-**Before closeout, verify all implementation files have canonical headers:**
+**Before closeout, verify all implementation files reference architecture:**
 
 ```bash
 bash .pi/scripts/validate-canonical.sh
@@ -20,11 +20,16 @@ bash .pi/scripts/validate-canonical.sh
 **Files must include:**
 ```typescript
 /**
- * Canonical Reference: .pi/[blueprint-section]
+ * Canonical Reference: .pi/architecture/modules/[module].md#[section]
  * Implements: [issue acceptance criteria]
  * Issue: #[number]
  */
 ```
+
+**Architecture Sync Check:**
+1. Check `.pi/architecture/CHANGELOG.md` for pending changes
+2. Verify implementation matches current architecture spec
+3. If CHANGELOG has pending changes for this module, note in MR
 
 ---
 

@@ -14,11 +14,15 @@ Blueprint Source: GuardianCLI Framework v1.2
 
 ```typescript
 /**
- * Canonical Reference: .pi/context/patterns.md#[section]
+ * Canonical Reference: .pi/architecture/modules/[module].md#[section]
  * Implements: [feature from design proposal]
  * Issue: #[issue-number]
- */
+ * Last Architecture Sync: [check CHANGELOG.md]
 ```
+
+**Before implementation:**
+1. Check `.pi/architecture/CHANGELOG.md` for pending changes affecting target module
+2. Verify architecture module doc is current
 
 **Validation Phase includes canonical reference check:** `validate-canonical.sh`
 

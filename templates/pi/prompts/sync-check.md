@@ -1,6 +1,11 @@
 # Sync Check Workflow
 
-**Purpose:** Verify generated exports (.claude/, .opencode/, .agents/) are in sync with .pi/ blueprint source.
+<!--
+Canonical Reference: .pi/prompts/sync-check.md
+Blueprint Source: GuardianCLI Framework v1.2
+-->
+
+**Purpose:** Verify generated exports (.claude/, .opencode/, .agents/) are in sync with .pi/ blueprint source. Includes architecture sync verification.
 
 ---
 
@@ -12,7 +17,24 @@
 
 ---
 
-## Canonical Reference Requirement
+## Architecture Sync Verification
+
+**Check architecture CHANGELOG for pending changes:**
+
+```bash
+# Check for pending (not synced) changes in CHANGELOG
+grep -E "Status.*pending" .pi/architecture/CHANGELOG.md | head -10
+
+# Check last architecture sync date
+jq -r '.lastArchitectureSync' guardian.manifest.json
+```
+
+**Pending changes indicate:**
+- Implementation files may have outdated canonical references
+- Architecture spec differs from implementation
+- Need `/blueprint-update` to sync
+
+**Canonical Reference Requirement**
 
 **Generated files must include canonical reference header:**
 

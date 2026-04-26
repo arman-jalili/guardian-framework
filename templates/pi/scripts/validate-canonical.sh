@@ -6,7 +6,7 @@
 # Exit codes: 0 = PASS, 1 = FAIL
 #
 # Validates that implementation files have proper canonical references
-# pointing to blueprint (.pi/) documentation
+# pointing to architecture documentation (.pi/architecture/)
 # ============================================================================
 set -euo pipefail
 
@@ -31,28 +31,59 @@ echo "============================================"
 echo ""
 
 # ---------------------------------------------------------------------------
+# Architecture Documentation Check
+# ---------------------------------------------------------------------------
+echo "--- Architecture Documentation ---"
+
+# Check architecture directories exist
+for dir in architecture/modules architecture/diagrams architecture/decisions; do
+  if [ -d ".pi/$dir" ]; then
+    pass ".pi/$dir directory exists"
+  else
+    warn ".pi/$dir directory missing (create for architecture docs)"
+  fi
+done
+
+# Check CHANGELOG exists
+if [ -f ".pi/architecture/CHANGELOG.md" ]; then
+  pass "Architecture CHANGELOG.md exists"
+
+  # Check for pending changes
+  PENDING=$(grep -c "Status.*pending" .pi/architecture/CHANGELOG.md 2>/dev/null || echo "0")
+  if [ "$PENDING" -gt 0 ]; then
+    warn "$PENDING architecture changes pending sync - check CHANGELOG.md"
+  else
+    pass "No pending architecture changes"
+  fi
+else
+  fail "Architecture CHANGELOG.md missing (required for change tracking)"
+fi
+
+# ---------------------------------------------------------------------------
 # Check Blueprint Files
 # ---------------------------------------------------------------------------
+echo ""
 echo "--- Blueprint Files (.pi/) ---"
 
 for file in .pi/**/*.md .pi/*.md; do
   if [ -f "$file" ]; then
+    # Skip architecture files - they are source, not generated
+    if [[ "$file" == *".pi/architecture/"* ]]; then
+      if grep -q "Canonical Reference:" "$file" 2>/dev/null; then
+        ref=$(grep "Canonical Reference:" "$file" | head -1 | grep -o '.pi/[^"]*' | head -1)
+        if [ "$ref" = "$file" ] || [ "$ref" = "${file#./}" ]; then
+          pass "$file has correct self-reference"
+        fi
+      fi
+      continue
+    fi
+
     # Blueprint files are SOURCE, not generated - should NOT have "Generated:" header
     if grep -q "Generated:" "$file" 2>/dev/null; then
       if grep -q "Generated: NEVER" "$file" 2>/dev/null; then
         pass "$file correctly marked as source"
       else
         warn "$file has Generated header but is blueprint (should be source)"
-      fi
-    else
-      # Check for self-reference header
-      if grep -q "Canonical Reference:" "$file" 2>/dev/null; then
-        ref=$(grep "Canonical Reference:" "$file" | head -1 | grep -o '.pi/[^"]*' | head -1)
-        if [ "$ref" = "$file" ] || [ "$ref" = "${file#./}" ]; then
-          pass "$file has correct self-reference"
-        else
-          warn "$file canonical reference mismatch: expected $file, got $ref"
-        fi
       fi
     fi
   fi
@@ -98,37 +129,47 @@ echo "--- Implementation Files (src/) ---"
 # Find source files
 for file in src/**/*.ts src/**/*.js src/**/*.tsx src/**/*.jsx src/**/*.py src/**/*.go src/**/*.rs; do
   if [ -f "$file" ]; then
-    # Implementation files should reference blueprint sections they implement
+    # Implementation files should reference architecture modules
     if grep -q "Canonical Reference:" "$file" 2>/dev/null; then
       # Extract the reference
       ref=$(grep "Canonical Reference:" "$file" | head -1)
 
-      # Check if it points to a valid blueprint file/section
-      ref_path=$(echo "$ref" | grep -o '.pi/[^:#]*' | head -1)
+      # Check if it points to architecture module
+      if echo "$ref" | grep -q "architecture/modules"; then
+        # Extract module path
+        ref_path=$(echo "$ref" | grep -o '.pi/architecture/modules/[^:#]*' | head -1)
 
-      if [ -n "$ref_path" ]; then
-        if [ -f "$ref_path" ]; then
-          # Check if there's a specific section reference (e.g., patterns.md#section-name)
-          if echo "$ref" | grep -q "#"; then
-            section=$(echo "$ref" | grep -o '#[^"]*' | head -1 | sed 's/^#//')
-            # Check if section exists in blueprint file
-            if grep -q "##.*$section" "$ref_path" 2>/dev/null || grep -q "###.*$section" "$ref_path" 2>/dev/null; then
-              pass "$file → $ref_path#$section (section exists)"
+        if [ -n "$ref_path" ]; then
+          if [ -f "$ref_path" ]; then
+            # Check if there's a specific section reference
+            if echo "$ref" | grep -q "#"; then
+              section=$(echo "$ref" | grep -o '#[^"]*' | head -1 | sed 's/^#//')
+              if grep -q "##.*$section" "$ref_path" 2>/dev/null || grep -q "###.*$section" "$ref_path" 2>/dev/null; then
+                pass "$file → architecture/modules/$section (valid)"
+              else
+                warn "$file → $ref_path#$section (section may not exist)"
+              fi
             else
-              warn "$file → $ref_path#$section (section may not exist - check manually)"
+              pass "$file → $ref_path (architecture module exists)"
             fi
           else
-            pass "$file → $ref_path (file exists)"
+            fail "$file references non-existent architecture module: $ref_path"
           fi
+        fi
+      elif echo "$ref" | grep -q ".pi/"; then
+        # Reference to other blueprint section (patterns, etc) - also valid
+        ref_path=$(echo "$ref" | grep -o '.pi/[^:#]*' | head -1)
+        if [ -f "$ref_path" ]; then
+          pass "$file → $ref_path (blueprint reference)"
         else
           fail "$file references non-existent blueprint: $ref_path"
         fi
       else
-        warn "$file has canonical reference but format unclear: $ref"
+        warn "$file has canonical reference but not pointing to architecture: $ref"
       fi
     else
       # Track files without canonical reference
-      info "$file missing canonical reference (consider adding)"
+      info "$file missing canonical reference (consider adding architecture ref)"
     fi
   fi
 done
@@ -213,7 +254,12 @@ fi
 echo -e "${GREEN}Canonical reference validation passed.${NC}"
 echo ""
 echo "Canonical Reference Format Guide:"
-echo "  Blueprint files: 'Canonical Reference: .pi/path/file.md (self)'"
-echo "  Generated files: 'Canonical Reference: .pi/source.md + DO NOT EDIT'"
-echo "  Implementation:  'Canonical Reference: .pi/context/patterns.md#section'"
+echo "  Architecture:     'Canonical Reference: .pi/architecture/modules/[module].md#[section]'"
+echo "  Blueprint source: 'Canonical Reference: .pi/[path]/file.md (self)'"
+echo "  Generated files:  'Canonical Reference: .pi/[source].md + DO NOT EDIT'"
+echo "  Implementation:   'Canonical Reference: .pi/architecture/modules/[module].md#[section]'"
+echo ""
+echo "Architecture Change Tracking:"
+echo "  - Check .pi/architecture/CHANGELOG.md for pending changes"
+echo "  - Run /blueprint-update after implementing architecture changes"
 exit 0

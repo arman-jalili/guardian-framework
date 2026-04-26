@@ -18,8 +18,43 @@ Multi-agent AI workflows produce excellent results but burn tokens quadratically
 | Full re-validation on retry | **Validation caching** — only re-check failed items |
 | Large agent definitions | **Compressed agents** — 20-30 lines vs 120-176 |
 | Multiple AI tools | **Pi-first architecture** — single source → multiple exports |
+| Orphaned code without docs | **Canonical references** — all code traces to architecture |
 
 **Result: 50-65% token reduction** compared to traditional multi-agent workflows.
+
+---
+
+## Canonical Reference System
+
+**Every implementation file must reference its architecture source:**
+
+```typescript
+/**
+ * Canonical Reference: .pi/architecture/modules/auth-system.md
+ * Implements: User authentication flow (AC-1, AC-2)
+ * Last Architecture Sync: 2026-04-26
+ */
+```
+
+**Architecture Change Log Requirement:**
+
+When architecture changes, update `.pi/architecture/CHANGELOG.md`:
+
+```markdown
+## 2026-04-26 - Auth System Refactor
+
+### Changed
+- Auth module: Token validation moved to middleware
+- Session handling: Added refresh token rotation
+
+### Impact
+- Files affected: src/auth/*.ts, src/middleware/auth.ts
+- Canonical refs to update: .pi/architecture/modules/auth-system.md
+- Validators: Re-run security-validator
+
+### Migration
+Run `/blueprint-update` after implementing these changes
+```
 
 ---
 
@@ -50,11 +85,11 @@ npx guardian-cli init
 Interactive prompts guide you through:
 - Project name and version
 - Project type (CLI, Web App, Library, API)
-- Repository name
+- Repository name and tool (GitHub/gh or GitLab/glab)
 - AI tools to scaffold (pi, Claude Code, OpenCode, Antigravity)
 - Programming language (TypeScript, Rust, Python, Go)
-- Validators to include (CI, tests, security, operations)
-- Workflow prompts (feature, bugfix, hotfix, refactoring)
+- Validators to include (CI, tests, security, operations, architecture, canonical)
+- Workflow prompts (feature, bugfix, epic management, blueprint management)
 
 ### 2. Configure Commands
 
@@ -81,6 +116,7 @@ Creates `.claude/`, `.opencode/`, `.agents/` from `.pi/` templates.
 ```bash
 chmod +x .pi/scripts/*.sh
 bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-canonical.sh
 ```
 
 ---
@@ -108,6 +144,15 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 ├── agent/
 │   └── AGENTS.md              # Project instructions
 │
+├── architecture/              # Architecture definitions (NEW)
+│   ├── modules/               # Module architecture docs
+│   │   ├── auth-system.md
+│   │   ├── data-layer.md
+│   │   └── api-gateway.md
+│   ├── diagrams/              # Architecture diagrams
+│   ├── CHANGELOG.md           # Architecture change log
+│   └── decisions/             # Architecture decision records (ADR)
+│
 ├── context/                   # Shared knowledge (loaded ONCE)
 │   ├── project.md             # Project facts, commands
 │   ├── patterns.md            # Code templates (language-specific)
@@ -133,13 +178,26 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 │   ├── bug-fix.md
 │   ├── hotfix.md
 │   ├── refactoring.md
-│   └── issue-implementation-series.md
+│   ├── issue-implementation-series.md
+│   ├── epic-plan.md           # Epic/Issue management
+│   ├── issue-draft.md
+│   ├── git-issues.md
+│   ├── issue-closeout.md
+│   ├── issue-merge.md
+│   ├── blueprint-validate.md  # Blueprint management (NEW)
+│   ├── sync-check.md
+│   ├── context-refresh.md
+│   ├── scope-analyzer.md
+│   ├── pattern-extract.md
+│   └── blueprint-update.md
 │
 ├── scripts/                   # Automated validators
 │   ├── validate-ci.sh
 │   ├── validate-tests.sh
 │   ├── validate-operations.sh
 │   ├── validate-security.sh
+│   ├── validate-architecture.sh
+│   ├── validate-canonical.sh  # NEW: Canonical ref integrity
 │   └── validation-cache.sh
 │
 ├── extensions/                # Pi extensions (pi-only feature)
@@ -161,6 +219,7 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 | **Smart merge** | ✅ Built-in | CLI | CLI | CLI |
 | **Session trees** | ✅ Native | ❌ | ❌ | ❌ |
 | **Model switching** | ✅ Ctrl+L | ❌ | ❌ | ❌ |
+| **Canonical refs** | ✅ Required | Recommended | Optional | Optional |
 
 ---
 
@@ -177,6 +236,7 @@ Options:
   -d, --dir <path>           Target directory (default: current)
   -t, --tool <name>          AI tool (pi, claude, opencode, agents)
   -l, --lang <name>          Language (typescript, rust, python, go)
+  --repo-tool <name>         Repository tool (gh, glab)
   --validators <list>        Validators (comma-separated, CI always included)
   --workflows <list>         Workflows (comma-separated)
   --nonInteractive           Skip prompts, use defaults/flags
@@ -185,11 +245,12 @@ Options:
 **Interactive Flow:**
 
 1. Project name, version, type, repository
-2. AI tool selection (pi recommended for full features)
-3. Language selection with smart defaults
-4. Validator selection (CI required, others optional)
-5. Workflow prompt selection
-6. Confirmation with summary
+2. Repository tool selection (GitHub/gh or GitLab/glab)
+3. AI tool selection (pi recommended for full features)
+4. Language selection with smart defaults
+5. Validator selection (CI required, others optional)
+6. Workflow prompt selection (standard, epic, blueprint)
+7. Confirmation with summary
 
 ### `generate`
 
@@ -207,7 +268,8 @@ Options:
 **Use Cases:**
 - After editing `.pi/agent/AGENTS.md`
 - After modifying `.pi/scripts/*.sh`
-- After updating `.pi/context/patterns.md`
+- After updating `.pi/architecture/`
+- After architecture changes logged in CHANGELOG.md
 
 ### `update`
 
@@ -228,6 +290,7 @@ Options:
 |---------------|----------|
 | Framework-controlled | Auto-update if unchanged |
 | User-editable | Preserve, show diff |
+| Architecture docs | Preserve, check canonical refs |
 | Generated exports | Regenerate from .pi/ |
 
 ### `upgrade`
@@ -252,7 +315,10 @@ npx guardian-cli info
 
 Shows:
 - Framework version and source
+- Repository tool (gh/glab)
 - Selected tools, language, validators, workflows
+- Canonical reference coverage percentage
+- Architecture change log status
 - File status (unchanged/modified)
 - Export generation timestamps
 
@@ -266,20 +332,24 @@ Shows:
 | **Test** | Unit tests, integration, coverage | Moderate+ scope |
 | **Security** | Secrets, injection, path traversal | Complex+ scope |
 | **Operations** | Tracing, cancellation, atomic writes | Plan review |
+| **Architecture** | Layer structure, module boundaries, deps | Moderate+ scope |
 | **Integration** | Component integration | Complex+ scope |
+| **Canonical** | Reference integrity, coverage ≥50% | All tasks (required) |
 
 ### Scope Classification
 
 | Scope | Files | Lines | Validators Required |
 |-------|-------|-------|---------------------|
-| Simple | 1 | < 50 | CI (automated) |
-| Moderate | 2-5 | 50-200 | CI + architecture |
-| Complex | 5-15 | 200-500 | CI + architecture + security |
-| Critical | 15+ | 500+ | All + human approval |
+| Simple | 1 | < 50 | CI + canonical (automated) |
+| Moderate | 2-5 | 50-200 | CI + architecture + canonical |
+| Complex | 5-15 | 200-500 | CI + architecture + security + canonical |
+| Critical | 15+ | 500+ | All validators + canonical + human approval |
 
 ---
 
 ## Workflows
+
+### Standard Workflows
 
 | Workflow | File | Use When |
 |----------|------|----------|
@@ -288,6 +358,91 @@ Shows:
 | Emergency Hotfix | `prompts/hotfix.md` | Production issues |
 | Refactoring | `prompts/refactoring.md` | Code improvement |
 | Issue Implementation | `prompts/issue-implementation-series.md` | Batch GitHub issues |
+
+### Epic/Issue Management Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Epic Plan | `prompts/epic-plan.md` | Architecture analysis → epic slicing → validator review |
+| Issue Draft | `prompts/issue-draft.md` | Create draft issues from approved epic |
+| Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
+| Issue Closeout | `prompts/issue-closeout.md` | Verify AC → validators → canonical refs → compliance MR |
+| Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic |
+
+**Workflow Sequence:**
+
+```
+/epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
+                                    ↑                                          ↓
+                                    └────────────── next issue ────────────────┘
+```
+
+### Blueprint Management Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Blueprint Validate | `prompts/blueprint-validate.md` | Validate `.pi/` structure and integrity |
+| Sync Check | `prompts/sync-check.md` | Verify exports match blueprint source |
+| Context Refresh | `prompts/context-refresh.md` | Update context from codebase reality |
+| Scope Analyzer | `prompts/scope-analyzer.md` | Auto-determine scope + required validators |
+| Pattern Extract | `prompts/pattern-extract.md` | Extract patterns to `patterns.md` |
+| Blueprint Update | `prompts/blueprint-update.md` | Reverse-sync implementation → blueprint |
+
+**Blueprint Maintenance Sequence:**
+
+```
+Blueprint Setup (one-time):
+/blueprint-validate → /sync-check → [ready for implementation]
+
+Maintenance Cycle:
+/context-refresh → /pattern-extract → /blueprint-update → /sync-check → guardian generate
+```
+
+---
+
+## Architecture Change Log
+
+**`.pi/architecture/CHANGELOG.md` tracks all architecture changes:**
+
+```markdown
+# Architecture Change Log
+
+## 2026-04-26 - Auth System Token Rotation
+
+### Changed
+- Module: auth-system
+  - Token validation moved to middleware layer
+  - Added refresh token rotation (RFC 6819)
+  - Session timeout reduced from 24h to 4h
+
+### Impact Analysis
+- Files affected:
+  - src/auth/token-validator.ts
+  - src/middleware/auth-middleware.ts
+  - src/session/session-manager.ts
+- Canonical refs to update:
+  - .pi/architecture/modules/auth-system.md#token-validation
+  - .pi/architecture/modules/auth-system.md#session-handling
+- Validators required:
+  - security-validator (auth changes)
+  - canonical-validator (ref updates)
+
+### Migration Guide
+1. Update canonical refs in affected files
+2. Run `/blueprint-update` to sync changes
+3. Run `validate-canonical.sh` to verify refs
+4. Run security-validator on auth module
+
+---
+[Previous entries...]
+```
+
+**When to Update:**
+- Module structure changes
+- API contract changes
+- Data flow changes
+- Security model changes
+- Integration patterns change
 
 ---
 
@@ -310,18 +465,26 @@ Language-specific patterns are automatically selected during `init`.
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "frameworkVersion": "1.0.0",
+  "schemaVersion": "1.2",
+  "frameworkVersion": "1.2.0",
   "source": "pi",
+  "repoTool": "gh",
   "tools": ["pi", "claude"],
   "language": "typescript",
-  "validators": ["ci", "test", "security"],
-  "workflows": ["feature-development", "bug-fix"],
+  "validators": ["ci", "test", "security", "architecture", "canonical"],
+  "workflows": ["feature-development", "epic-plan", "blueprint-validate"],
+  "canonicalCoverage": 78,
+  "lastArchitectureSync": "2026-04-26",
   "files": {
     ".pi/agent/AGENTS.md": {
       "category": "user",
       "originalHash": "sha256:...",
       "status": "modified"
+    },
+    ".pi/architecture/modules/auth-system.md": {
+      "category": "architecture",
+      "originalHash": "sha256:...",
+      "status": "unchanged"
     },
     ".pi/scripts/validate-ci.sh": {
       "category": "framework",
@@ -395,6 +558,9 @@ guardian-cli/
 │
 ├── templates/
 │   ├── pi/                   # Pi source templates
+│   │   ├── architecture/     # Architecture templates
+│   │   ├── prompts/          # Workflow templates
+│   │   └── scripts/          # Validator scripts
 │   └── languages/            # Language patterns
 │
 ├── docs/
@@ -407,46 +573,65 @@ guardian-cli/
 
 ## Examples
 
-### Scaffold a TypeScript Project
+### Scaffold a TypeScript Project with GitHub
 
 ```bash
-npx guardian-cli init --lang typescript --tool pi,claude
+npx guardian-cli init --lang typescript --repo-tool gh --tool pi,claude
 ```
 
 Creates:
 - `.pi/` with TypeScript patterns
+- `.pi/architecture/` structure
 - `.claude/` export for Claude Code
 - `guardian-manifest.json`
 
-### Scaffold a Rust Project
+### Scaffold a Rust Project with GitLab
 
 ```bash
-npx guardian-cli init --lang rust
+npx guardian-cli init --lang rust --repo-tool glab
 ```
 
 Creates `.pi/` with:
 - Cargo build/test/clippy defaults
 - Rust error handling patterns
-- Rust tracing patterns
+- GitLab-compatible issue workflows
 
 ### Non-Interactive Scaffold
 
 ```bash
 npx guardian-cli init \
   --lang typescript \
+  --repo-tool gh \
   --tool pi \
-  --validators ci,test,security \
-  --workflows feature-development,bug-fix \
+  --validators ci,test,security,architecture,canonical \
+  --workflows feature-development,epic-plan,blueprint-validate \
   --nonInteractive
 ```
 
-### Generate Claude Export After Edits
+### Validate Architecture and Canonical References
 
 ```bash
-# Edit .pi/agent/AGENTS.md
-# Edit .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-architecture.sh
+bash .pi/scripts/validate-canonical.sh
+```
 
-npx guardian-cli generate --tool claude
+### Epic Planning Workflow
+
+```bash
+# 1. Analyze architecture and plan epic
+/epic-plan
+
+# 2. Draft issues from approved epic
+/issue-draft
+
+# 3. Create in GitHub/GitLab
+/git-issues
+
+# 4. Implement, then closeout
+/issue-closeout
+
+# 5. Merge and update tracking
+/issue-merge
 ```
 
 ---
@@ -456,8 +641,10 @@ npx guardian-cli generate --tool claude
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run quality gates: `bun run lint && bun run typecheck && bun test`
-5. Submit a pull request
+4. Add canonical references to all new files
+5. Run quality gates: `bun run lint && bun run typecheck && bun test`
+6. Run canonical validator: `bash .pi/scripts/validate-canonical.sh`
+7. Submit a pull request
 
 ---
 

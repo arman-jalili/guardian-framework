@@ -14,13 +14,13 @@ This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.
 
 ## Canonical Reference Requirement
 
-**All implementation files must include a canonical reference header pointing to blueprint:**
+**All implementation files must reference architecture documentation:**
 
 ```typescript
 /**
- * Canonical Reference: .pi/context/patterns.md#section-name
- * Blueprint Alignment: [pattern-name]
- * Implements: [feature/spec reference]
+ * Canonical Reference: .pi/architecture/modules/[module-name].md#[section]
+ * Implements: [spec/AC from architecture]
+ * Last Sync: [date from CHANGELOG]
  */
 ```
 
@@ -34,7 +34,25 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 -->
 ```
 
-**Validation:** `validate-canonical.sh` checks reference integrity in all phases.
+**Architecture changes require CHANGELOG entry:**
+
+```markdown
+## [date] - [Change Title]
+
+### Changed
+- Module: [name]
+  - [what changed]
+
+### Impact
+- Files affected: [list]
+- Canonical refs to update: [list]
+- Validators: [which to re-run]
+
+### Migration
+[steps to update implementation]
+```
+
+**Validation:** `validate-canonical.sh` checks reference integrity, coverage, and architecture sync status.
 
 ---
 
@@ -44,6 +62,20 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 .pi/
 ├── agent/
 │   └── AGENTS.md              # Project instructions (template with placeholders)
+│
+├── architecture/              # Architecture documentation (NEW)
+│   ├── modules/               # Module architecture docs
+│   │   ├── auth-system.md
+│   │   ├── data-layer.md
+│   │   ├── api-gateway.md
+│   │   └── [module-name].md
+│   ├── diagrams/              # Architecture diagrams
+│   │   ├── system-overview.md
+│   │   └── data-flow.md
+│   ├── CHANGELOG.md           # Architecture change log (required)
+│   └── decisions/             # Architecture Decision Records (ADR)
+│       ├── ADR-001-auth-strategy.md
+│       └── ADR-002-database-choice.md
 │
 ├── context/
 │   ├── project.md             # Project facts, commands (template)
@@ -114,6 +146,45 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 
 ---
 
+## Architecture Module Documentation
+
+Each module in `.pi/architecture/modules/` follows this structure:
+
+```markdown
+# [Module Name] Architecture
+
+<!--
+Canonical Reference: .pi/architecture/modules/[module-name].md
+Source: Blueprint (do not modify implementation directly)
+-->
+
+## Overview
+[Module purpose and scope]
+
+## Components
+| Component | File | Purpose |
+|-----------|------|---------|
+| [name] | src/[path] | [what it does] |
+
+## Data Flow
+[How data moves through this module]
+
+## Dependencies
+- Depends on: [other modules]
+- Used by: [other modules]
+
+## Security Considerations
+[Security requirements for this module]
+
+## Testing Requirements
+[Unit, integration, e2e tests needed]
+
+## Change Log References
+- 2026-04-26: [change] → see CHANGELOG.md#[section]
+```
+
+---
+
 ## Repository Tool
 
 The framework supports both GitHub and GitLab:
@@ -140,7 +211,7 @@ Selected during `guardian init` and used in all git-related workflows.
 | `ci-validator` | CI/merge | All PRs (automated) | subagent |
 | `code-developer` | Implementation | All code tasks | subagent |
 | `issue-creator` | Issue tracking | All tasks | subagent |
-| `documentation-maintainer` | Doc sync | API changes | subagent |
+| `documentation-maintainer` | Doc sync | Architecture changes | subagent |
 
 ---
 
@@ -164,7 +235,7 @@ Selected during `guardian init` and used in all git-related workflows.
 | `validate-operations.sh` | Tracing, cancellation, atomic writes |
 | `validate-security.sh` | Secrets, injection, path traversal |
 | `validate-architecture.sh` | Architecture patterns, dependencies |
-| `validate-canonical.sh` | Canonical reference integrity, coverage |
+| `validate-canonical.sh` | Canonical reference integrity, coverage, architecture sync |
 | `validation-cache.sh` | Retry optimization |
 
 ---
@@ -188,18 +259,18 @@ Selected during `guardian init` and used in all git-related workflows.
 | Epic Plan | `prompts/epic-plan.md` | Architecture analysis → epic slicing → validator review |
 | Issue Draft | `prompts/issue-draft.md` | Create draft issues from approved epic |
 | Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
-| Issue Closeout | `prompts/issue-closeout.md` | Verify acceptance criteria → validators → compliance MR |
-| Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic if complete |
+| Issue Closeout | `prompts/issue-closeout.md` | Verify AC → validators → canonical → compliance MR |
+| Issue Merge | `prompts/issue-merge.md` | Merge MR → close issue → update tracking → close epic |
 
 ### Blueprint Management Workflows
 
 | Workflow | File | Purpose |
 |----------|------|---------|
-| Blueprint Validate | `prompts/blueprint-validate.md` | Validate .pi/ structure and integrity |
+| Blueprint Validate | `prompts/blueprint-validate.md` | Validate `.pi/` structure and integrity |
 | Sync Check | `prompts/sync-check.md` | Verify exports match blueprint source |
 | Context Refresh | `prompts/context-refresh.md` | Update context from codebase reality |
 | Scope Analyzer | `prompts/scope-analyzer.md` | Auto-determine change scope + validators |
-| Pattern Extract | `prompts/pattern-extract.md` | Extract patterns to patterns.md |
+| Pattern Extract | `prompts/pattern-extract.md` | Extract patterns to `patterns.md` |
 | Blueprint Update | `prompts/blueprint-update.md` | Reverse-sync implementation changes |
 
 ### Workflow Sequence
@@ -223,17 +294,18 @@ Maintenance:
 
 **All implementation phases must:**
 
-1. **Add canonical reference header** to new files:
+1. **Add canonical reference header** pointing to architecture module:
 ```typescript
 /**
- * Canonical Reference: .pi/context/patterns.md#[pattern-section]
- * Implements: [spec from issue/workflow]
+ * Canonical Reference: .pi/architecture/modules/[module].md#[section]
+ * Implements: [spec from architecture doc]
+ * Issue: #[issue-number]
  */
 ```
 
-2. **Update existing headers** when modifying files to reflect blueprint alignment
+2. **Check architecture CHANGELOG** for recent changes affecting the module
 
-3. **Reference specific sections** not just files: `.pi/context/patterns.md#safe-file-read`
+3. **Reference specific sections** not just files: `.pi/architecture/modules/auth-system.md#token-validation`
 
 ---
 
@@ -245,9 +317,23 @@ Maintenance:
 
 2. **Check coverage**: Implementation files should have ≥50% canonical reference coverage
 
-3. **Verify accuracy**: References must point to existing blueprint sections
+3. **Verify architecture sync**: Check if CHANGELOG has pending changes affecting implementation
 
-4. **Report gaps**: Files without references should be flagged for update
+4. **Validate accuracy**: References must point to existing architecture sections
+
+5. **Report gaps**: Files without references flagged, architecture changes needing sync
+
+---
+
+## Architecture Change Workflow
+
+When architecture changes:
+
+1. **Update module doc**: `.pi/architecture/modules/[module].md`
+2. **Add CHANGELOG entry**: `.pi/architecture/CHANGELOG.md`
+3. **Identify impacted files**: List files needing canonical ref updates
+4. **Notify via workflow**: Run `/blueprint-update` after implementation
+5. **Validate sync**: Run `validate-canonical.sh` to verify updates
 
 ---
 
@@ -261,7 +347,8 @@ Maintenance:
 6. **Risk-gated** - Safe=auto, Medium=confirm, Dangerous=dry-run
 7. **Pre-validated** - Validator catches errors BEFORE execution
 8. **Auditable** - Planning decisions tracked and diffable
-9. **Canonical-traced** - All code linked to blueprint documentation
+9. **Architecture-traced** - All code linked to architecture documentation
+10. **Change-log-governed** - Architecture changes tracked, migrations documented
 
 ---
 
@@ -272,6 +359,8 @@ When running `guardian generate`, `.pi/` files are transformed:
 | Source | Destination | Transformation |
 |--------|-------------|----------------|
 | `AGENTS.md` | `.claude/CLAUDE.md`, `.opencode/context.md` | Direct copy + canonical header |
+| `architecture/modules/*.md` | `.claude/architecture/*.md` | Direct copy + canonical header |
+| `architecture/CHANGELOG.md` | `.claude/architecture/CHANGELOG.md` | Direct copy |
 | `skills/agents/*.md` | `.claude/agents/*.md` | Direct copy + canonical header |
 | `skills/validators/*.md` | `.opencode/prompts/*.txt` | Convert to .txt, compress |
 | `context/*.md` | `.claude/context/*.md`, `.opencode/context/*.md` | Direct copy + canonical header |

@@ -1,6 +1,11 @@
 # Blueprint Validate Workflow
 
-**Purpose:** Validate the `.pi/` blueprint is complete, consistent, and properly structured before starting implementation.
+<!--
+Canonical Reference: .pi/prompts/blueprint-validate.md
+Blueprint Source: GuardianCLI Framework v1.2
+-->
+
+**Purpose:** Validate the `.pi/` blueprint is complete, consistent, and properly structured before starting implementation. Includes architecture documentation validation.
 
 ---
 
@@ -8,6 +13,41 @@
 
 - `.pi/` directory exists with blueprint files
 - No active implementation work in progress
+
+---
+
+## Architecture Documentation Validation
+
+**Check architecture structure exists:**
+
+```bash
+# Required architecture directories
+for dir in architecture/modules architecture/diagrams architecture/decisions; do
+  if [ -d ".pi/$dir" ]; then
+    echo "✅ .pi/$dir exists"
+  else
+    echo "❌ MISSING: .pi/$dir"
+  fi
+done
+
+# Required files
+if [ -f ".pi/architecture/CHANGELOG.md" ]; then
+  echo "✅ Architecture CHANGELOG exists"
+else
+  echo "❌ MISSING: .pi/architecture/CHANGELOG.md (required for change tracking)"
+fi
+```
+
+**Architecture Module Validation:**
+
+Each module in `.pi/architecture/modules/` must have:
+- [ ] Overview section
+- [ ] Components table with file paths
+- [ ] Data flow documentation
+- [ ] Dependencies section
+- [ ] Security considerations
+- [ ] Testing requirements
+- [ ] Change log references
 
 ---
 
