@@ -210,16 +210,17 @@ templates/pi/                    # SOURCE OF TRUTH (in GuardianCLI)
 
 ### Tool Comparison
 
-| Feature | pi | Claude Code | OpenCode | Antigravity |
-|---------|----|----|-----------|-------------|
-| **Extensions** | ✅ TypeScript | ❌ | ❌ | ❌ |
-| **Skills** | ✅ On-demand | Static .md | Static .txt | Static .md |
-| **Prompt templates** | ✅ `/commands` | Static .md | Static .md | Static .md |
-| **Shell scripts** | ✅ Auto-run | Manual | Manual | Manual |
-| **Smart merge** | ✅ Built-in | CLI | CLI | CLI |
-| **Session trees** | ✅ Native | ❌ | ❌ | ❌ |
-| **Model switching** | ✅ Ctrl+L | ❌ | ❌ | ❌ |
-| **Canonical refs** | ✅ Required | Recommended | Optional | Optional |
+| Feature | pi | Claude Code | GitHub Copilot | OpenCode | Antigravity |
+|---------|----|----|----|-----------|-------------|
+| **Extensions** | ✅ TypeScript | ❌ | ❌ | ❌ | ❌ |
+| **Skills** | ✅ On-demand | Static .md | YAML agents | Static .txt | Static .md |
+| **Prompt templates** | ✅ `/commands` | Static .md | Static .md | Static .md | Static .md |
+| **Shell scripts** | ✅ Auto-run | Manual | Manual | Manual | Manual |
+| **Smart merge** | ✅ Built-in | CLI | CLI | CLI | CLI |
+| **Session trees** | ✅ Native | ❌ | ❌ | ❌ | ❌ |
+| **Model switching** | ✅ Ctrl+L | ❌ | `/agent` | ❌ | ❌ |
+| **Canonical refs** | ✅ Required | Recommended | Recommended | Optional | Optional |
+| **Custom instructions** | ✅ AGENTS.md | CLAUDE.md | copilot-instructions.md | context.md | agents.md |
 
 ---
 
@@ -443,6 +444,83 @@ Maintenance Cycle:
 - Data flow changes
 - Security model changes
 - Integration patterns change
+
+---
+
+## GitHub Copilot CLI Support
+
+GuardianCLI scaffolds GitHub Copilot CLI configuration with:
+
+### Generated Structure
+
+```
+.github/
+├── copilot-instructions.md     # Main project instructions (from AGENTS.md)
+├── instructions/
+│   ├── architecture.instructions.md  # Architecture implementation guidelines
+│   └── validation.instructions.md    # Validation and quality gate requirements
+├── agents/
+│   ├── architecture-coordinator.agent.md  # Master orchestrator agent
+│   └── epic-planner.agent.md              # Epic planning agent
+└── copilot/
+    └── settings.json          # Copilot CLI settings
+```
+
+### Custom Instructions Format
+
+Files use YAML frontmatter for targeting:
+
+```markdown
+---
+description: 'Architecture implementation guidelines'
+applyTo: 'src/**/*.ts,src/**/*.js'
+---
+
+# Architecture Guidelines
+[content...]
+```
+
+### Agent Format
+
+```markdown
+---
+name: Architecture Coordinator
+description: Master orchestrator for workflows
+model: gpt-4o
+tools:
+  - view
+  - grep
+  - glob
+  - edit
+  - terminal
+---
+
+# Agent Instructions
+[content...]
+```
+
+### Usage
+
+```bash
+# Scaffold with GitHub Copilot support
+npx guardian-framework-cli init --tool github
+
+# Or with multiple tools
+npx guardian-framework-cli init --tool pi,github,claude
+
+# Copilot CLI reads .github/copilot-instructions.md automatically
+copilot "explain the auth module architecture"
+```
+
+### Switch Agents
+
+```bash
+# Inside copilot session
+/agent architecture-coordinator
+
+# Or from command line
+copilot --agent architecture-coordinator "plan the next epic"
+```
 
 ---
 

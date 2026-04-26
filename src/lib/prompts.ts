@@ -133,6 +133,11 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				hint: "Static export: .md files, manual scripts",
 			},
 			{
+				value: "github",
+				label: "GitHub Copilot CLI",
+				hint: "Custom instructions, agents, settings.json",
+			},
+			{
 				value: "opencode",
 				label: "OpenCode",
 				hint: "Static export: .txt prompts, manual scripts",

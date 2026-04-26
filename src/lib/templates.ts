@@ -57,7 +57,7 @@ export const SUPPORTED_LANGUAGES = ["typescript", "rust", "python", "go"] as con
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 // Supported tools
-export const SUPPORTED_TOOLS = ["pi", "claude", "opencode", "agents"] as const;
+export const SUPPORTED_TOOLS = ["pi", "claude", "opencode", "agents", "github"] as const;
 
 export type Tool = (typeof SUPPORTED_TOOLS)[number];
 

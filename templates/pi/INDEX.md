@@ -140,6 +140,17 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── validation-runner.ts   # Pi extension for validation
 │   └── coordinator.ts         # Pi extension for orchestration
 │
+├── github/                    # GitHub Copilot CLI templates
+│   ├── copilot-instructions.md    # Main project instructions
+│   ├── instructions/
+│   │   ├── architecture.instructions.md
+│   │   └── validation.instructions.md
+│   ├── agents/
+│   │   ├── architecture-coordinator.agent.md
+│   │   └── epic-planner.agent.md
+│   └── copilot/
+│       └── settings.json      # Copilot CLI settings
+│
 ├── INDEX.md                   # This file
 └── README.md                  # Complete documentation
 ```
@@ -354,19 +365,22 @@ When architecture changes:
 
 ## Generation Mappings
 
-When running `guardian generate`, `.pi/` files are transformed:
+When running `guardian-framework-cli generate`, `.pi/` files are transformed:
 
 | Source | Destination | Transformation |
 |--------|-------------|----------------|
 | `AGENTS.md` | `.claude/CLAUDE.md`, `.opencode/context.md` | Direct copy + canonical header |
+| `AGENTS.md` | `.github/copilot-instructions.md` | YAML frontmatter + canonical header |
 | `architecture/modules/*.md` | `.claude/architecture/*.md` | Direct copy + canonical header |
 | `architecture/CHANGELOG.md` | `.claude/architecture/CHANGELOG.md` | Direct copy |
-| `skills/agents/*.md` | `.claude/agents/*.md` | Direct copy + canonical header |
+| `skills/agents/*.md` | `.claude/agents/*.md`, `.github/agents/*.agent.md` | Direct copy + YAML frontmatter |
 | `skills/validators/*.md` | `.opencode/prompts/*.txt` | Convert to .txt, compress |
 | `context/*.md` | `.claude/context/*.md`, `.opencode/context/*.md` | Direct copy + canonical header |
+| `context/*.md` | `.github/instructions/*.instructions.md` | YAML frontmatter + canonical header |
 | `prompts/*.md` | `.opencode/workflows/*.md` | Nest under workflows/ |
 | `scripts/*.sh` | `.claude/scripts/*.sh`, `.opencode/scripts/*.sh` | Direct copy |
 | `extensions/*.ts` | `extensions/*.ts` (pi only) | No export |
+| `github/copilot/settings.json` | `.github/copilot/settings.json` | Direct copy |
 
 ---
 
