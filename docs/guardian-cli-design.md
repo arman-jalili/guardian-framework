@@ -390,6 +390,7 @@ guardian-cli/
 │   │   ├── init.ts           # Scaffold command
 │   │   ├── update.ts         # Smart merge update
 │   │   ├── upgrade.ts        # Version migration
+│   │   ├── uninstall.ts      # Managed file removal
 │   │   ├── info.ts           # Status display
 │   │   └── generate.ts       # Export generator (pi → other formats)
 │   ├── prompts/

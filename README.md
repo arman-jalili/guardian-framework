@@ -307,6 +307,20 @@ Arguments:
   latest                     Upgrade to newest available
 ```
 
+### `uninstall`
+
+Remove Guardian-managed files recorded in `guardian-manifest.json`.
+
+```bash
+npx guardian-framework-cli uninstall [options]
+
+Options:
+  --dry-run                  Show files that would be removed
+  --force                    Required to remove files
+```
+
+Uninstall only removes files tracked by the manifest under Guardian-managed roots such as `.pi/`, `.claude/`, `.opencode/`, `.agents/`, and `.github/`. It refuses modified managed files unless `--force` is provided.
+
 ### `info`
 
 Display manifest and framework status.
@@ -632,6 +646,7 @@ guardian-cli/
 │   │   ├── init.ts           # Scaffold command
 │   │   ├── generate.ts       # Export generator
 │   │   ├── update.ts         # Smart merge
+│   │   ├── uninstall.ts      # Managed file removal
 │   │   ├── upgrade.ts        # Version migration
 │   │   └── info.ts           # Status display
 │   └── lib/

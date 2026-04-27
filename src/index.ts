@@ -4,6 +4,7 @@ import { intro, isCancel, outro } from "@clack/prompts";
 import { runGenerate } from "./commands/generate.js";
 import { runInfo } from "./commands/info.js";
 import { runInit } from "./commands/init.js";
+import { runUninstall } from "./commands/uninstall.js";
 import { runUpdate } from "./commands/update.js";
 
 const VERSION = "0.1.0";
@@ -40,6 +41,7 @@ Usage:
   guardian-framework-cli generate      Generate exports from .pi source
   guardian-framework-cli update        Smart merge framework updates
   guardian-framework-cli upgrade       Migrate to new version
+  guardian-framework-cli uninstall     Remove Guardian-managed files
   guardian-framework-cli info          Display manifest information
 
 Options:
@@ -63,6 +65,10 @@ Update options:
   --dryRun                   Show changes without applying
   --force                    Overwrite user-editable files (dangerous)
   --regenerate               Regenerate exports after update
+
+Uninstall options:
+  --dryRun                   Show files that would be removed
+  --force                    Required to remove Guardian-managed files
 `);
 		return;
 	}
@@ -104,6 +110,12 @@ async function runCommand(
 			break;
 		case "upgrade":
 			console.log("Upgrade command - TODO");
+			break;
+		case "uninstall":
+			await runUninstall(targetDir, {
+				dryRun: args.values.dryRun as boolean | undefined,
+				force: args.values.force as boolean | undefined,
+			});
 			break;
 		case "info":
 			await runInfo(targetDir);
