@@ -18,7 +18,7 @@ NC='\033[0m'
 ERRORS=()
 PASS_COUNT=0
 
-pass() { echo -e "${GREEN}✅ PASS${NC} $1"; ((PASS_COUNT++)); }
+pass() { echo -e "${GREEN}✅ PASS${NC} $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
 fail() { echo -e "${RED}❌ FAIL${NC} $1"; ERRORS+=("$1"); }
 warn() { echo -e "${YELLOW}⚠️  WARN${NC} $1"; }
 

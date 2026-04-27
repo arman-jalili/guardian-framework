@@ -20,7 +20,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-pass() { echo -e "${GREEN}✅ PASS${NC} $1"; ((PASS_COUNT++)); }
+pass() { echo -e "${GREEN}✅ PASS${NC} $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
 fail() { echo -e "${RED}❌ FAIL${NC} $1"; ERRORS+=("$1"); }
 warn() { echo -e "${YELLOW}⚠️  WARN${NC} $1"; WARNINGS+=("$1"); }
 info() { echo -e "${BLUE}ℹ️  INFO${NC} $1"; }
