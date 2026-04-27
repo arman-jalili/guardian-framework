@@ -44,6 +44,29 @@ const Type = {
 	String: (options: Record<string, unknown> = {}) => ({ ...options, type: "string" }),
 };
 
+const VALIDATORS = {
+	architecture: ".pi/scripts/validate-architecture.sh",
+	canonical: ".pi/scripts/validate-canonical.sh",
+	ci: ".pi/scripts/validate-ci.sh",
+	integration: ".pi/scripts/validate-integration.sh",
+	operations: ".pi/scripts/validate-operations.sh",
+	security: ".pi/scripts/validate-security.sh",
+	tests: ".pi/scripts/validate-tests.sh",
+} as const;
+
+type ValidatorName = keyof typeof VALIDATORS;
+
+function isValidatorName(value: string): value is ValidatorName {
+	return Object.hasOwn(VALIDATORS, value);
+}
+
+function classifyScope(fileCount: number, lineChanges: number): string {
+	if (fileCount > 15 || lineChanges > 500) return "critical";
+	if (fileCount > 5 || lineChanges > 200) return "complex";
+	if (fileCount > 2 || lineChanges > 50) return "moderate";
+	return "simple";
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		ctx.ui.notify("GuardianCLI coordinator ready", "info");
@@ -125,9 +148,59 @@ export default function (pi: ExtensionAPI) {
 
 			ctx.ui.notify(`Starting ${taskType} workflow: ${taskDescription}`, "info");
 
-			return await ctx.tools.execute("guardian_coordinate", {
-				task: `${taskType}: ${taskDescription}`,
-			});
+			const task = `${taskType}: ${taskDescription}`;
+
+			// 1. Classify scope
+			const diff = await ctx.shell.execute("git diff --numstat HEAD");
+			const rows = diff.stdout.split("\n").filter((line) => line.trim());
+			const fileCount = rows.length;
+			const lineChanges = rows.reduce((sum, row) => {
+				const [added, removed] = row.split(/\s+/);
+				return (
+					sum +
+					(Number.isFinite(Number.parseInt(added, 10)) ? Number.parseInt(added, 10) : 0) +
+					(Number.isFinite(Number.parseInt(removed, 10)) ? Number.parseInt(removed, 10) : 0)
+				);
+			}, 0);
+			const scope = classifyScope(fileCount, lineChanges);
+
+			// 2. Determine validators based on scope
+			const validatorMap: Record<string, string[]> = {
+				simple: ["ci", "canonical"],
+				moderate: ["ci", "architecture", "canonical"],
+				complex: ["ci", "architecture", "security", "tests", "integration", "canonical"],
+				critical: [
+					"ci",
+					"architecture",
+					"security",
+					"operations",
+					"tests",
+					"integration",
+					"canonical",
+				],
+			};
+			const validators = validatorMap[scope] || validatorMap.moderate;
+
+			// 3. Run validators
+			const results: Record<string, { passed: boolean; output: string }> = {};
+			for (const validator of validators) {
+				if (!isValidatorName(validator)) continue;
+				const scriptPath = VALIDATORS[validator];
+				try {
+					const result = await ctx.shell.execute(`bash ${scriptPath}`);
+					results[validator] = { passed: result.exitCode === 0, output: result.stdout };
+				} catch (error) {
+					results[validator] = { passed: false, output: `Error: ${error}` };
+				}
+			}
+
+			return {
+				task,
+				scope,
+				validators,
+				validationResults: results,
+				nextSteps: scope === "critical" ? ["Request human approval"] : ["Proceed with implementation"],
+			};
 		},
 	});
 }

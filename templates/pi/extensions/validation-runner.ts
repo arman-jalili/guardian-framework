@@ -153,13 +153,42 @@ export default function (pi: ExtensionAPI) {
 				args.length > 0 ? args : ["ci", "tests", "operations", "security", "canonical"];
 			ctx.ui.notify(`Running validators: ${validators.join(", ")}`, "info");
 
-			// Execute validation tool
-			const result = await ctx.tools.execute("guardian_validate", {
-				validators,
-				scope: "moderate",
-			});
+			const results: Record<string, { passed: boolean; output: string }> = {};
 
-			return result;
+			for (const validator of validators) {
+				if (!isValidatorName(validator)) {
+					results[validator] = {
+						passed: false,
+						output: `Unsupported validator: ${validator}`,
+					};
+					continue;
+				}
+
+				const scriptPath = VALIDATORS[validator];
+				try {
+					const result = await ctx.shell.execute(`bash ${scriptPath}`);
+					results[validator] = {
+						passed: result.exitCode === 0,
+						output: result.stdout,
+					};
+				} catch (error) {
+					results[validator] = {
+						passed: false,
+						output: `Error: ${error}`,
+					};
+				}
+			}
+
+			const allPassed = Object.values(results).every((r) => r.passed);
+			ctx.ui.notify(
+				allPassed ? "All validations passed" : "Some validations failed",
+				allPassed ? "success" : "error",
+			);
+
+			return {
+				summary: allPassed ? "All validations passed" : "Some validations failed",
+				results,
+			};
 		},
 	});
 
