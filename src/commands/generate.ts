@@ -42,9 +42,9 @@ export async function runGenerate(
 	// Determine which tools to generate
 	const toolsToGenerate = options.tool
 		? options.tool === "all"
-			? manifest.tools.filter((t) => t !== "pi")
+			? manifest.tools
 			: [options.tool as Tool]
-		: manifest.tools.filter((t) => t !== "pi");
+		: manifest.tools;
 
 	if (toolsToGenerate.length === 0) {
 		outro("No export tools configured. Only .pi/ exists as source.");
@@ -59,7 +59,10 @@ export async function runGenerate(
 		const generatedFiles: Record<string, { category: FileCategory; content: string }> = {};
 
 		for (const tool of toolsToGenerate) {
-			const exportDir = path.join(targetDir, `.${tool}`);
+			// Pi is the source of truth; its "export" is pi-consumable SKILL.md packages
+			// under .agents/skills/, not .pi/ itself
+			const exportDir =
+				tool === "pi" ? path.join(targetDir, ".agents") : path.join(targetDir, `.${tool}`);
 
 			if (options.dryRun) {
 				s.stop(`Dry run: Would generate .${tool}/ from .pi/`);
@@ -90,7 +93,7 @@ export async function runGenerate(
 
 		outro(`
 Generated exports:
-  ${toolsToGenerate.map((t) => `.${t}/`).join("\n  ")}
+  ${toolsToGenerate.map((t) => (t === "pi" ? ".agents/skills/ (pi skills)" : `.${t}/`)).join("\n  ")}
 
 From .pi/ source.
 
@@ -247,6 +250,8 @@ function getExportStructure(tool: Tool): string[] {
 			return ["agents", "context", "workflows", "scripts"];
 		case "github":
 			return ["instructions", "agents", "copilot"];
+		case "pi":
+			return ["skills"];
 		default:
 			return [];
 	}
@@ -400,6 +405,51 @@ function getExportMappings(tool: Tool): ExportMapping[] {
 				{ source: "github/agents/epic-planner.agent.md", dest: "agents/epic-planner.agent.md" },
 				// Settings
 				{ source: "github/copilot/settings.json", dest: "copilot/settings.json" },
+			];
+		case "pi":
+			return [
+				// Transform .pi/skills/agents/*.md → .agents/skills/<name>/SKILL.md
+				// Pi's skill system expects each skill in its own directory with a SKILL.md
+				{
+					source: "skills/agents/architecture-coordinator.md",
+					dest: "skills/architecture-coordinator/SKILL.md",
+				},
+				{
+					source: "skills/agents/architecture-validator.md",
+					dest: "skills/architecture-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/security-validator.md",
+					dest: "skills/security-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/operations-validator.md",
+					dest: "skills/operations-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/test-validator.md",
+					dest: "skills/test-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/integration-validator.md",
+					dest: "skills/integration-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/ci-mr-validator.md",
+					dest: "skills/ci-mr-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/code-developer.md",
+					dest: "skills/code-developer/SKILL.md",
+				},
+				{
+					source: "skills/agents/issue-creator.md",
+					dest: "skills/issue-creator/SKILL.md",
+				},
+				{
+					source: "skills/agents/documentation-maintainer.md",
+					dest: "skills/documentation-maintainer/SKILL.md",
+				},
 			];
 		default:
 			return [];

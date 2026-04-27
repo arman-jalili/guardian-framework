@@ -145,23 +145,24 @@ async function scaffoldFramework(
 
 		// Generate exports for selected tools
 		for (const tool of options.tools) {
-			if (tool !== "pi") {
-				const exportDir = path.join(targetDir, `.${tool}`);
-				generateExport(exportDir, tool, piDir, scaffoldedFiles);
-			}
+			// Pi is the source of truth; its "export" is pi-consumable SKILL.md packages
+			// under .agents/skills/, not .pi/ itself
+			const exportDir =
+				tool === "pi" ? path.join(targetDir, AGENTS_DIR) : path.join(targetDir, `.${tool}`);
+			generateExport(exportDir, tool, piDir, scaffoldedFiles);
 		}
 
 		// Update and write manifest
 		updateManifestAfterScaffold(targetDir, manifest, scaffoldedFiles);
 
 		s.stop("Framework scaffolded successfully!");
+		const exportPaths = options.tools.map((t) =>
+			t === "pi" ? ".agents/skills/ (pi skills)" : `.${t}/`,
+		);
 		showSuccess(`
 Scaffolded GuardianCLI framework:
   .pi/         (source of truth)
-  ${options.tools
-		.filter((t) => t !== "pi")
-		.map((t) => `.${t}/`)
-		.join("\n  ")}
+  ${exportPaths.join("\n  ")}
 
 Next steps:
   1. Edit .pi/agent/AGENTS.md to customize project context
@@ -351,6 +352,8 @@ function getExportStructure(tool: Tool): string[] {
 			return ["context", "prompts", "workflows", "scripts"];
 		case "agents":
 			return ["agents", "context", "workflows", "scripts"];
+		case "pi":
+			return ["skills"];
 		default:
 			return [];
 	}
@@ -458,6 +461,51 @@ function getExportMappings(tool: Tool): ExportMapping[] {
 					dest: "agents/documentation-maintainer.md",
 				},
 				{ source: "INDEX.md", dest: "INDEX.md" },
+			];
+		case "pi":
+			return [
+				// Transform .pi/skills/agents/*.md → .agents/skills/<name>/SKILL.md
+				// Pi's skill system expects each skill in its own directory with a SKILL.md
+				{
+					source: "skills/agents/architecture-coordinator.md",
+					dest: "skills/architecture-coordinator/SKILL.md",
+				},
+				{
+					source: "skills/agents/architecture-validator.md",
+					dest: "skills/architecture-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/security-validator.md",
+					dest: "skills/security-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/operations-validator.md",
+					dest: "skills/operations-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/test-validator.md",
+					dest: "skills/test-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/integration-validator.md",
+					dest: "skills/integration-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/ci-mr-validator.md",
+					dest: "skills/ci-mr-validator/SKILL.md",
+				},
+				{
+					source: "skills/agents/code-developer.md",
+					dest: "skills/code-developer/SKILL.md",
+				},
+				{
+					source: "skills/agents/issue-creator.md",
+					dest: "skills/issue-creator/SKILL.md",
+				},
+				{
+					source: "skills/agents/documentation-maintainer.md",
+					dest: "skills/documentation-maintainer/SKILL.md",
+				},
 			];
 		default:
 			return [];
