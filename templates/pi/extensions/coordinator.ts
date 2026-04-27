@@ -4,8 +4,45 @@
  * Master orchestrator for GuardianCLI workflows.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type } from "typebox";
+type ExtensionContext = {
+	ui: { notify(message: string, level?: string): void };
+	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
+};
+
+type ExtensionAPI = {
+	on(event: string, handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
+	registerTool(options: {
+		name: string;
+		label: string;
+		description: string;
+		parameters: unknown;
+		execute(
+			toolCallId: string,
+			params: Record<string, unknown>,
+			signal: AbortSignal,
+			onUpdate: (update: { type: string; message: string }) => void,
+			ctx: ExtensionContext,
+		): unknown | Promise<unknown>;
+	}): void;
+	registerCommand(
+		name: string,
+		options: {
+			description: string;
+			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+		},
+	): void;
+};
+
+const Type = {
+	Array: (items: unknown, options: Record<string, unknown> = {}) => ({
+		...options,
+		items,
+		type: "array",
+	}),
+	Object: (properties: Record<string, unknown>) => ({ properties, type: "object" }),
+	Optional: (schema: unknown) => schema,
+	String: (options: Record<string, unknown> = {}) => ({ ...options, type: "string" }),
+};
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
@@ -24,9 +61,11 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			// 1. Classify scope (or use override)
-			let scope = params.scope;
+			let scope = typeof params.scope === "string" ? params.scope : undefined;
 			if (!scope) {
-				const scopeResult = await ctx.tools.execute("guardian_scope", {});
+				const scopeResult = (await ctx.tools.execute("guardian_scope", {})) as {
+					result?: { scope?: string };
+				};
 				scope = scopeResult.result?.scope || "moderate";
 			}
 
@@ -34,19 +73,31 @@ export default function (pi: ExtensionAPI) {
 
 			// 2. Determine validators based on scope
 			const validatorMap: Record<string, string[]> = {
-				simple: ["ci"],
-				moderate: ["ci", "architecture"],
-				complex: ["ci", "architecture", "security"],
-				critical: ["ci", "architecture", "security", "operations", "tests"],
+				simple: ["ci", "canonical"],
+				moderate: ["ci", "architecture", "canonical"],
+				complex: ["ci", "architecture", "security", "tests", "integration", "canonical"],
+				critical: [
+					"ci",
+					"architecture",
+					"security",
+					"operations",
+					"tests",
+					"integration",
+					"canonical",
+				],
 			};
 
-			const validators = params.validators || validatorMap[scope] || validatorMap.moderate;
+			const validators = Array.isArray(params.validators)
+				? params.validators.filter(
+						(validator): validator is string => typeof validator === "string",
+					)
+				: validatorMap[scope] || validatorMap.moderate;
 
 			onUpdate({ type: "progress", message: `Validators: ${validators.join(", ")}` });
 
 			// 3. Run validators
 			const validationResults = await ctx.tools.execute("guardian_validate", {
-				validators: validators.filter((v) => v !== "architecture"), // architecture is manual
+				validators,
 				scope,
 			});
 

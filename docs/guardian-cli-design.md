@@ -52,7 +52,7 @@ Templates are **generic** and come from the Rigorix framework:
 | Source | Status | Evidence |
 |--------|--------|----------|
 | `.claude/context/project.md` | Generic | Line 4: `> **Generic:** Replace bracketed placeholders` |
-| `.claude/scripts/*.sh` | Generic | Placeholder commands like `[build command]` |
+| `.pi/scripts/*.sh` | Generic source | Rendered from language defaults during init |
 | `.claude/agents/*.md` | Generic | No project-specific content |
 | `.claude/workflows/*.md` | Generic | Reusable workflow templates |
 
@@ -440,7 +440,7 @@ guardian-cli/
 | `pi/skills/agents/*.md` | `.claude/agents/**/*.md` | Nest into orchestrators/validators/implementers |
 | `pi/skills/validators/*.md` | `.claude/context/patterns.md` | **Merge**: Append to language patterns |
 | `pi/prompts/*.md` | `.claude/workflows/*.md` | Copy |
-| `pi/scripts/*.sh` | `.claude/scripts/*.sh` | Copy |
+| `pi/scripts/*.sh` | tool export scripts | Copy during export generation |
 | `pi/context/checklists.md` | `.claude/context/checklists.md` | Copy |
 | `pi/context/output-formats.md` | `.claude/context/output-formats.md` | Copy |
 | `pi/extensions/*.ts` | ❌ Not exported | pi-only feature |
@@ -468,7 +468,7 @@ await write('.claude/context/patterns.md', merged);
 | `pi/skills/agents/*.md` | `.opencode/prompts/*.txt` | Convert to .txt |
 | `pi/skills/validators/*.md` | `.opencode/context/patterns.md` | Merge with language patterns |
 | `pi/prompts/*.md` | `.opencode/workflows/*.md` | Copy |
-| `pi/scripts/*.sh` | `.opencode/scripts/*.sh` | Copy |
+| `pi/scripts/*.sh` | tool export scripts | Copy during export generation |
 | `pi/context/*.md` | `.opencode/context/*.md` | Copy |
 | `pi/extensions/*.ts` | ❌ Not exported | pi-only feature |
 | `languages/*.md` | `.opencode/context/patterns.md` | Merge with validator skills |
@@ -834,7 +834,7 @@ Commands:
   "source": "pi",
   "tools": ["pi", "claude"],
   "language": "rust",
-  "validators": ["ci", "test", "security", "cache"],
+  "validators": ["ci", "tests", "security", "canonical"],
   "workflows": ["feature", "bugfix", "hotfix"],
   "files": {
     ".pi/agent/AGENTS.md": {

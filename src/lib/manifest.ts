@@ -6,6 +6,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { TemplateContext } from "./templates.js";
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = path.dirname(_filename);
@@ -61,6 +62,7 @@ export interface GuardianManifest {
 	workflows: string[];
 	files: Record<string, FileRecord>;
 	exports: Record<string, ExportRecord>;
+	templateContext?: TemplateContext;
 	scaffoldedAt: string;
 	lastUpdatedAt: string;
 }
@@ -167,6 +169,7 @@ export function createManifest(options: {
 	repoTool: string;
 	validators: string[];
 	workflows: string[];
+	templateContext?: TemplateContext;
 }): GuardianManifest {
 	const now = new Date().toISOString();
 
@@ -181,6 +184,7 @@ export function createManifest(options: {
 		workflows: options.workflows,
 		files: {},
 		exports: {},
+		templateContext: options.templateContext,
 		scaffoldedAt: now,
 		lastUpdatedAt: now,
 	};

@@ -52,11 +52,15 @@ export async function runUpdate(
 		const changes: { path: string; action: "update" | "preserve" | "regenerate" }[] = [];
 
 		// Get template context from manifest
-		const context: TemplateContext = getDefaultContext(
-			manifest.language as Language,
-			manifest.tools.includes("pi") ? "guardian-project" : "project",
-			manifest.repoTool as RepoTool,
-		);
+		const context: TemplateContext = {
+			...getDefaultContext(
+				manifest.language as Language,
+				manifest.templateContext?.projectName ??
+					(manifest.tools.includes("pi") ? "guardian-project" : "project"),
+				manifest.repoTool as RepoTool,
+			),
+			...manifest.templateContext,
+		};
 
 		// Check each framework file
 		for (const [filePath, record] of Object.entries(manifest.files)) {

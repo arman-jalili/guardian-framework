@@ -2,7 +2,7 @@
 # ============================================================================
 # validate-security.sh — Automated Security Scanner
 #
-# Run as: bash .claude/scripts/validate-security.sh [src_dir]
+# Run as: bash .pi/scripts/validate-security.sh [src_dir]
 # Exit codes: 0 = PASS, 1 = FAIL
 # ============================================================================
 set -euo pipefail

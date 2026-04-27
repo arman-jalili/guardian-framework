@@ -72,11 +72,11 @@ User Request
                ▼
 ┌─────────────────────────────────────────────┐
 │ 6. POST-CODE: Automated Checks (NO LLM)     │
-│    • bash .claude/scripts/validate-ci.sh    │
-│    • bash .claude/scripts/validate-tests.sh │
-│    • bash .claude/scripts/validate-ops.sh   │
-│    • bash .claude/scripts/validate-sec.sh   │
-│    • bash .claude/scripts/validate-canonical│
+│    • bash .pi/scripts/validate-ci.sh    │
+│    • bash .pi/scripts/validate-tests.sh │
+│    • bash .pi/scripts/validate-operations.sh   │
+│    • bash .pi/scripts/validate-security.sh   │
+│    • bash .pi/scripts/validate-canonical.sh│
 │    Output: Pass/Fail per check              │
 └──────────────┬──────────────────────────────┘
                │
@@ -119,13 +119,13 @@ If post-code wiring checks fail:
 
 ```bash
 # Run all automated validators
-bash .claude/scripts/validate-ci.sh
-bash .claude/scripts/validate-tests.sh
-bash .claude/scripts/validate-operations.sh [src_dir]
-bash .claude/scripts/validate-security.sh [src_dir]
-bash .claude/scripts/validate-canonical.sh  # Check canonical references
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-operations.sh [src_dir]
+bash .pi/scripts/validate-security.sh [src_dir]
+bash .pi/scripts/validate-canonical.sh  # Check canonical references
 
 # Validation cache
-bash .claude/scripts/validation-cache.sh init <task-id>
-bash .claude/scripts/validation-cache.sh summary <task-id>
+bash .pi/scripts/validation-cache.sh init <task-id>
+bash .pi/scripts/validation-cache.sh summary <task-id>
 ```

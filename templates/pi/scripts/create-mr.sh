@@ -2,7 +2,7 @@
 # ============================================================================
 # create-mr.sh — Create Merge Request/PR for Issue Implementation
 #
-# Run as: bash .claude/scripts/create-mr.sh <branch-name> [issue-list]
+# Run as: bash .pi/scripts/create-mr.sh <branch-name> [issue-list]
 # ============================================================================
 set -euo pipefail
 
@@ -81,8 +81,8 @@ git log --oneline "origin/$BASE_BRANCH"..HEAD | head -10
 echo ""
 echo "--- Pre-MR Validation ---"
 
-if [ -f ".claude/scripts/validate-ci.sh" ]; then
-    bash .claude/scripts/validate-ci.sh || {
+if [ -f ".pi/scripts/validate-ci.sh" ]; then
+    bash .pi/scripts/validate-ci.sh || {
         echo -e "${RED}❌ CI validation failed${NC}"
         echo "Fix issues before creating MR"
         exit 1
@@ -194,7 +194,7 @@ echo "============================================"
 echo "  Next Steps"
 echo "============================================"
 echo "1. Wait for CI pipeline to complete"
-echo "2. Run: .claude/scripts/mr-validation.sh"
+echo "2. Run: .pi/scripts/mr-validation.sh"
 echo "3. Address any feedback"
 echo "4. Merge when green"
 

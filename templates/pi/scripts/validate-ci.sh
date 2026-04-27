@@ -2,7 +2,7 @@
 # ============================================================================
 # validate-ci.sh — Automated CI/MR Validator
 #
-# Run as: bash .claude/scripts/validate-ci.sh
+# Run as: bash .pi/scripts/validate-ci.sh
 # Exit codes: 0 = PASS, 1 = FAIL
 # ============================================================================
 set -euo pipefail
@@ -62,7 +62,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Format ---"
-if [format command] 2>/dev/null; then
+if [format check command] 2>/dev/null; then
     pass "Format check passed"
 else
     fail "Format check failed"

@@ -45,6 +45,6 @@ Bug Report
 
 ```bash
 # Quick fix verification
-bash .claude/scripts/validate-ci.sh
-bash .claude/scripts/validate-tests.sh
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
 ```

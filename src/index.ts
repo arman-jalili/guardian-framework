@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
-import { runInit } from "./commands/init.js";
 import { runGenerate } from "./commands/generate.js";
-import { runUpdate } from "./commands/update.js";
 import { runInfo } from "./commands/info.js";
+import { runInit } from "./commands/init.js";
+import { runUpdate } from "./commands/update.js";
 
 const VERSION = "0.1.0";
 

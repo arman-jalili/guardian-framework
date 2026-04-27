@@ -5,11 +5,11 @@
 # Caches passed validation checks so retries only re-check failed items.
 #
 # Usage:
-#   bash .claude/scripts/validation-cache.sh init [task-id]
-#   bash .claude/scripts/validation-cache.sh record [task-id] [validator] [check] [pass|fail]
-#   bash .claude/scripts/validation-cache.sh get-failed [task-id] [validator]
-#   bash .claude/scripts/validation-cache.sh summary [task-id]
-#   bash .claude/scripts/validation-cache.sh clear [task-id]
+#   bash .pi/scripts/validation-cache.sh init [task-id]
+#   bash .pi/scripts/validation-cache.sh record [task-id] [validator] [check] [pass|fail]
+#   bash .pi/scripts/validation-cache.sh get-failed [task-id] [validator]
+#   bash .pi/scripts/validation-cache.sh summary [task-id]
+#   bash .pi/scripts/validation-cache.sh clear [task-id]
 #
 # Exit codes: 0 = success, 1 = error
 # ============================================================================

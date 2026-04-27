@@ -22,7 +22,10 @@ import { type Tool, templatesExist } from "../lib/templates.js";
 /**
  * Run generate command
  */
-export async function runGenerate(targetDir: string, options: { tool?: string; dryRun?: boolean; force?: boolean }): Promise<void> {
+export async function runGenerate(
+	targetDir: string,
+	options: { tool?: string; dryRun?: boolean; force?: boolean },
+): Promise<void> {
 	// Check if templates exist
 	if (!templatesExist()) {
 		outro("Templates not found. Ensure templates/pi/ exists in package.");
@@ -154,7 +157,7 @@ function generateExport(
 		fs.mkdirSync(scriptsTargetDir, { recursive: true });
 
 		for (const validator of manifest.validators) {
-			const scriptFile = `validate-${validator}.sh`;
+			const scriptFile = `validate-${normalizeValidatorName(validator)}.sh`;
 			const sourceScript = path.join(scriptsDir, scriptFile);
 			const targetScript = path.join(scriptsTargetDir, scriptFile);
 
@@ -189,6 +192,10 @@ function generateExport(
 		category: "generated",
 		content: readmeContent,
 	};
+}
+
+function normalizeValidatorName(validator: string): string {
+	return validator === "test" ? "tests" : validator;
 }
 
 /**
@@ -377,10 +384,19 @@ function getExportMappings(tool: Tool): ExportMapping[] {
 				// Main instructions
 				{ source: "agent/AGENTS.md", dest: "copilot-instructions.md" },
 				// Custom instructions
-				{ source: "github/instructions/architecture.instructions.md", dest: "instructions/architecture.instructions.md" },
-				{ source: "github/instructions/validation.instructions.md", dest: "instructions/validation.instructions.md" },
+				{
+					source: "github/instructions/architecture.instructions.md",
+					dest: "instructions/architecture.instructions.md",
+				},
+				{
+					source: "github/instructions/validation.instructions.md",
+					dest: "instructions/validation.instructions.md",
+				},
 				// Agent definitions
-				{ source: "github/agents/architecture-coordinator.agent.md", dest: "agents/architecture-coordinator.agent.md" },
+				{
+					source: "github/agents/architecture-coordinator.agent.md",
+					dest: "agents/architecture-coordinator.agent.md",
+				},
 				{ source: "github/agents/epic-planner.agent.md", dest: "agents/epic-planner.agent.md" },
 				// Settings
 				{ source: "github/copilot/settings.json", dest: "copilot/settings.json" },

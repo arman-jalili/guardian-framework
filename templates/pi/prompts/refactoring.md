@@ -19,7 +19,7 @@ Refactor Request
 │ 2. CODE-DEVELOPER: Baseline     │
 │    Run all tests, record output │
 │    Run all validators, cache    │
-│    bash .claude/scripts/validation-cache.sh init <task-id>
+│    bash .pi/scripts/validation-cache.sh init <task-id>
 └──────────────┬──────────────────┘
                │
                ▼
@@ -72,11 +72,11 @@ Refactor Request
 
 ```bash
 # Baseline
-bash .claude/scripts/validate-ci.sh
-bash .claude/scripts/validate-tests.sh
-bash .claude/scripts/validate-operations.sh [src_dir]
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-operations.sh [src_dir]
 
 # Validation cache
-bash .claude/scripts/validation-cache.sh init <task-id>
-bash .claude/scripts/validation-cache.sh summary <task-id>
+bash .pi/scripts/validation-cache.sh init <task-id>
+bash .pi/scripts/validation-cache.sh summary <task-id>
 ```

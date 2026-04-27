@@ -385,7 +385,7 @@ When running `guardian-framework-cli generate`, `.pi/` files are transformed:
 | `context/*.md` | `.claude/context/*.md`, `.opencode/context/*.md` | Direct copy + canonical header |
 | `context/*.md` | `.github/instructions/*.instructions.md` | YAML frontmatter + canonical header |
 | `prompts/*.md` | `.opencode/workflows/*.md` | Nest under workflows/ |
-| `scripts/*.sh` | `.claude/scripts/*.sh`, `.opencode/scripts/*.sh` | Direct copy |
+| `scripts/*.sh` | `.pi/scripts/*.sh`, `.pi/scripts/*.sh` | Direct copy |
 | `extensions/*.ts` | `extensions/*.ts` (pi only) | No export |
 | `github/copilot/settings.json` | `.github/copilot/settings.json` | Direct copy |
 

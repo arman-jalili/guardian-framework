@@ -182,7 +182,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				hint: "Required - build, lint, format check",
 			},
 			{
-				value: "test",
+				value: "tests",
 				label: "Test validation",
 				hint: "Unit and integration tests",
 			},
@@ -206,8 +206,13 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				label: "Architecture validation",
 				hint: "Architecture compliance and design checks",
 			},
+			{
+				value: "canonical",
+				label: "Canonical sync validation",
+				hint: ".pi source/export integrity checks",
+			},
 		],
-		initialValues: ["ci", "test", "architecture"],
+		initialValues: ["ci", "tests", "architecture", "canonical"],
 	});
 
 	if (isCancel(validators)) {
@@ -309,7 +314,16 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				hint: "Reverse-sync to blueprint",
 			},
 		],
-		initialValues: ["epic-plan", "issue-draft", "git-issues", "issue-closeout", "issue-merge", "blueprint-validate", "sync-check", "scope-analyzer"],
+		initialValues: [
+			"epic-plan",
+			"issue-draft",
+			"git-issues",
+			"issue-closeout",
+			"issue-merge",
+			"blueprint-validate",
+			"sync-check",
+			"scope-analyzer",
+		],
 	});
 
 	if (isCancel(workflows)) {

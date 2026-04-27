@@ -2,7 +2,7 @@
 # ============================================================================
 # merge-mr.sh — Merge MR and Close Implemented Issues
 #
-# Run as: bash .claude/scripts/merge-mr.sh [pr-number] [issue-list]
+# Run as: bash .pi/scripts/merge-mr.sh [pr-number] [issue-list]
 # ============================================================================
 set -euo pipefail
 
@@ -57,7 +57,7 @@ fi
 
 if [ "$PR_MERGEABLE" != "MERGEABLE" ]; then
     echo -e "${RED}❌ PR is not mergeable${NC}"
-    echo "Run: .claude/scripts/mr-validation.sh first"
+    echo "Run: .pi/scripts/mr-validation.sh first"
     exit 1
 fi
 
@@ -66,8 +66,8 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Final Validation ---"
 
-if [ -f ".claude/scripts/mr-validation.sh" ]; then
-    bash .claude/scripts/mr-validation.sh "$PR_NUMBER" || {
+if [ -f ".pi/scripts/mr-validation.sh" ]; then
+    bash .pi/scripts/mr-validation.sh "$PR_NUMBER" || {
         echo -e "${RED}❌ MR validation failed${NC}"
         exit 1
     }

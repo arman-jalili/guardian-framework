@@ -10,7 +10,7 @@ Workflow for implementing a series of existing GitHub issues with categorization
 ## Phases
 
 ### Phase 1: Fetch Issues
-**Script:** `.claude/scripts/fetch-issues.sh` (or `.opencode/scripts/fetch-issues.sh`)
+**Script:** `.pi/scripts/fetch-issues.sh` (or `.pi/scripts/fetch-issues.sh`)
 
 ```bash
 # Fetch open issues sorted by priority
@@ -50,7 +50,7 @@ For each group:
 4. Define validation requirements per issue
 
 ### Phase 4: Create Feature Branch
-**Script:** `.claude/scripts/create-feature-branch.sh`
+**Script:** `.pi/scripts/create-feature-branch.sh`
 
 ```bash
 # Create branch from group name
@@ -78,16 +78,16 @@ For each issue in batch order:
 
 ```bash
 # Full validation before MR
-.claude/scripts/validate-ci.sh
-.claude/scripts/validate-tests.sh
-.claude/scripts/validate-security.sh
-.claude/scripts/validate-operations.sh
+.pi/scripts/validate-ci.sh
+.pi/scripts/validate-tests.sh
+.pi/scripts/validate-security.sh
+.pi/scripts/validate-operations.sh
 ```
 
 **Gate:** All scripts must PASS
 
 ### Phase 7: Create MR/PR
-**Script:** `.claude/scripts/create-mr.sh`
+**Script:** `.pi/scripts/create-mr.sh`
 
 ```bash
 # Push and create PR
@@ -121,7 +121,7 @@ If checks fail:
 **Max retries:** 3
 
 ### Phase 10: Merge
-**Script:** `.claude/scripts/merge-mr.sh`
+**Script:** `.pi/scripts/merge-mr.sh`
 
 ```bash
 # Merge when green

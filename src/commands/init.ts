@@ -133,6 +133,7 @@ async function scaffoldFramework(
 			repoTool: options.repoTool,
 			validators,
 			workflows,
+			templateContext: context,
 		});
 
 		// Track all scaffolded files

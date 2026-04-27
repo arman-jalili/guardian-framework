@@ -3,7 +3,7 @@
 # validate-operations.sh — Automated Operations Validator
 #
 # Replaces LLM-based operations-validator for routine checks.
-# Run as: bash .claude/scripts/validate-operations.sh [src_dir]
+# Run as: bash .pi/scripts/validate-operations.sh [src_dir]
 #
 # Exit codes: 0 = PASS, 1 = FAIL
 # ============================================================================

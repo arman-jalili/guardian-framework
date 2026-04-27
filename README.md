@@ -555,7 +555,7 @@ Language-specific patterns are automatically selected during `init`.
   "repoTool": "gh",
   "tools": ["pi", "claude"],
   "language": "typescript",
-  "validators": ["ci", "test", "security", "architecture", "canonical"],
+  "validators": ["ci", "tests", "security", "architecture", "canonical"],
   "workflows": ["feature-development", "epic-plan", "blueprint-validate"],
   "canonicalCoverage": 78,
   "lastArchitectureSync": "2026-04-26",

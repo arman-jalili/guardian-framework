@@ -2,7 +2,7 @@
 # ============================================================================
 # create-feature-branch.sh — Create Branch for Issue Group
 #
-# Run as: bash .claude/scripts/create-feature-branch.sh <branch-name> [base-branch]
+# Run as: bash .pi/scripts/create-feature-branch.sh <branch-name> [base-branch]
 # ============================================================================
 set -euo pipefail
 

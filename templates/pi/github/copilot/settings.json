@@ -5,19 +5,12 @@
 	"extraKnownMarketplaces": [],
 	"customInstructions": {
 		"enabled": true,
-		"paths": [
-			".github/copilot-instructions.md",
-			".github/instructions/*.instructions.md"
-		]
+		"paths": [".github/copilot-instructions.md", ".github/instructions/*.instructions.md"]
 	},
 	"agents": {
-		"paths": [
-			".github/agents/*.agent.md"
-		]
+		"paths": [".github/agents/*.agent.md"]
 	},
 	"workflows": {
-		"paths": [
-			".github/workflows/*.md"
-		]
+		"paths": [".github/workflows/*.md"]
 	}
 }

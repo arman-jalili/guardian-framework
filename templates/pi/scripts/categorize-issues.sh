@@ -2,7 +2,7 @@
 # ============================================================================
 # categorize-issues.sh — Categorize Issues into Implementation Groups
 #
-# Run as: bash .claude/scripts/categorize-issues.sh
+# Run as: bash .pi/scripts/categorize-issues.sh
 # Input: .claude/plans/issues-fetched.json
 # Output: .claude/plans/issue-groups.md
 # ============================================================================
@@ -27,7 +27,7 @@ echo ""
 # ---------------------------------------------------------------------------
 if [ ! -f "$INPUT_FILE" ]; then
     echo -e "${RED}❌ No issues file found${NC}"
-    echo "  Run: bash .claude/scripts/fetch-issues.sh first"
+    echo "  Run: bash .pi/scripts/fetch-issues.sh first"
     exit 1
 fi
 

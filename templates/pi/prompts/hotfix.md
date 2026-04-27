@@ -64,8 +64,8 @@ Production Issue Detected
 
 ```bash
 # Full automated validation
-bash .claude/scripts/validate-ci.sh
-bash .claude/scripts/validate-tests.sh
-bash .claude/scripts/validate-operations.sh [src_dir]
-bash .claude/scripts/validate-security.sh [src_dir]
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-operations.sh [src_dir]
+bash .pi/scripts/validate-security.sh [src_dir]
 ```

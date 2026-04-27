@@ -2,7 +2,7 @@
 # ============================================================================
 # mr-validation.sh — Validate Merge Request/Pull Request
 #
-# Run as: bash .claude/scripts/mr-validation.sh [pr-number]
+# Run as: bash .pi/scripts/mr-validation.sh [pr-number]
 # Checks: CI status, architecture, security, integration
 # ============================================================================
 set -euo pipefail
@@ -109,12 +109,12 @@ git checkout "$PR_BRANCH" 2>/dev/null || {
 }
 
 # Run validation scripts
-if [ -f ".claude/scripts/validate-ci.sh" ]; then
-    bash .claude/scripts/validate-ci.sh 2>&1 | tail -5
+if [ -f ".pi/scripts/validate-ci.sh" ]; then
+    bash .pi/scripts/validate-ci.sh 2>&1 | tail -5
 fi
 
-if [ -f ".claude/scripts/validate-security.sh" ]; then
-    bash .claude/scripts/validate-security.sh 2>&1 | tail -5
+if [ -f ".pi/scripts/validate-security.sh" ]; then
+    bash .pi/scripts/validate-security.sh 2>&1 | tail -5
 fi
 
 # ---------------------------------------------------------------------------

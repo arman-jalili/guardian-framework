@@ -2,7 +2,7 @@
 # ============================================================================
 # validate-architecture.sh — Architecture Pattern Validator
 #
-# Run as: bash .claude/scripts/validate-architecture.sh
+# Run as: bash .pi/scripts/validate-architecture.sh
 # Exit codes: 0 = PASS, 1 = FAIL
 # ============================================================================
 set -euo pipefail

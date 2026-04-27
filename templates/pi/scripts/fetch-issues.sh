@@ -2,7 +2,7 @@
 # ============================================================================
 # fetch-issues.sh — Fetch GitHub Issues for Implementation
 #
-# Run as: bash .claude/scripts/fetch-issues.sh [limit] [state]
+# Run as: bash .pi/scripts/fetch-issues.sh [limit] [state]
 # Output: .claude/plans/issues-fetched.json
 # ============================================================================
 set -euo pipefail

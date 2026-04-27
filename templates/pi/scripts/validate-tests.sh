@@ -2,7 +2,7 @@
 # ============================================================================
 # validate-tests.sh — Automated Test Validator
 #
-# Run as: bash .claude/scripts/validate-tests.sh
+# Run as: bash .pi/scripts/validate-tests.sh
 # Exit codes: 0 = PASS, 1 = FAIL
 # ============================================================================
 set -euo pipefail

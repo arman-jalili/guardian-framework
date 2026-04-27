@@ -73,7 +73,10 @@ export async function runInfo(targetDir: string): Promise<void> {
 │ Export Sync Status                                           │
 ├─────────────────────────────────────────────────────────────┤
 ${Object.entries(exportSyncStatus)
-	.map(([tool, synced]) => `│ .${tool}/            ${synced ? "✅ In sync" : "⚠️  Out of sync".padEnd(30)}│`)
+	.map(
+		([tool, synced]) =>
+			`│ .${tool}/            ${synced ? "✅ In sync" : "⚠️  Out of sync".padEnd(30)}│`,
+	)
 	.join("\n")}
 ├─────────────────────────────────────────────────────────────┤
 │ Timestamps                                                   │
@@ -82,7 +85,7 @@ ${Object.entries(exportSyncStatus)
 │ Last Updated:      ${manifest.lastUpdatedAt?.split("T")[0] || "N/A".padEnd(38)}│
 └─────────────────────────────────────────────────────────────┘
 
-${modifiedFiles.length > 0 ? "Modified files:\n  " + modifiedFiles.map(([p]) => p).join("\n  ") : "No modified files."}
+${modifiedFiles.length > 0 ? `Modified files:\n  ${modifiedFiles.map(([p]) => p).join("\n  ")}` : "No modified files."}
 
 ${Object.entries(exportSyncStatus).some(([_, s]) => !s) ? "⚠️  Some exports out of sync. Run: guardian-framework-cli generate" : "✅ All exports in sync."}
 `);

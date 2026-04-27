@@ -69,11 +69,12 @@ export type RepoTool = (typeof REPOSITORY_TOOLS)[number];
 // Available validators
 export const AVAILABLE_VALIDATORS = [
 	"ci",
-	"test",
+	"tests",
 	"security",
 	"operations",
 	"integration",
 	"architecture",
+	"canonical",
 ] as const;
 
 export type Validator = (typeof AVAILABLE_VALIDATORS)[number];
@@ -275,13 +276,34 @@ export function renderTemplate(content: string, context: Partial<TemplateContext
 		}
 	}
 
+	const aliases: Record<string, keyof TemplateContext> = {
+		"audit command": "securityAuditCommand",
+		"build command": "buildCommand",
+		"format check command": "formatCheckCommand",
+		"format command": "formatCommand",
+		"lint command": "lintCommand",
+		"security audit command": "securityAuditCommand",
+		"test command": "testCommand",
+	};
+
+	for (const [alias, key] of Object.entries(aliases)) {
+		const value = context[key];
+		if (value !== undefined) {
+			result = result.replaceAll(`[${alias}]`, value);
+		}
+	}
+
 	return result;
 }
 
 /**
  * Get template context with language defaults
  */
-export function getDefaultContext(language: Language, projectName: string, repoTool: RepoTool = "gh"): TemplateContext {
+export function getDefaultContext(
+	language: Language,
+	projectName: string,
+	repoTool: RepoTool = "gh",
+): TemplateContext {
 	const defaults = LANGUAGE_DEFAULTS[language];
 
 	return {
