@@ -28,14 +28,15 @@ export type FileCategory = "framework" | "user" | "generated";
 /**
  * File status in manifest
  */
-export type FileStatus = "unchanged" | "modified" | "deleted";
+export type FileStatus = "unchanged" | "modified" | "deleted" | "configured";
 
 /**
  * File record in manifest
  */
 export interface FileRecord {
 	category: FileCategory;
-	originalHash: string;
+	originalHash?: string;
+	currentHash?: string;
 	status: FileStatus;
 }
 
@@ -268,9 +269,17 @@ export function isFileModified(
 	}
 
 	const currentHash = crypto.createHash("sha256").update(currentContent).digest("hex");
-	const originalHash = record.originalHash.replace("sha256:", "");
+	const storedHash = getStoredHash(record);
+	if (!storedHash) {
+		return true;
+	}
 
-	return currentHash !== originalHash;
+	return currentHash !== storedHash;
+}
+
+function getStoredHash(record: FileRecord): string | null {
+	const hash = record.currentHash ?? record.originalHash;
+	return hash ? hash.replace("sha256:", "") : null;
 }
 
 /**

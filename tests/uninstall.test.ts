@@ -53,6 +53,52 @@ describe("uninstall", () => {
 		expect(plan.blockedFiles).toEqual([".pi/context/project.md"]);
 	});
 
+	test("accepts configured manifest records that only have currentHash", () => {
+		const dir = makeFixture();
+		writeManagedFile(dir, ".pi/scripts/validate-canonical.sh", "configured");
+
+		const manifest = createManifest({
+			language: "typescript",
+			repoTool: "gh",
+			tools: ["pi"],
+			validators: ["ci"],
+			workflows: [],
+		});
+		manifest.files[".pi/scripts/validate-canonical.sh"] = {
+			category: "framework",
+			currentHash: "sha256:20158224750041d653cd8c737d64c2fdce258d4280c9bf2a49fa1db0a7f9f3ac",
+			status: "configured",
+		};
+		writeManifest(dir, manifest);
+
+		const plan = createUninstallPlan(dir);
+
+		expect(plan.filesToRemove).toContain(".pi/scripts/validate-canonical.sh");
+		expect(plan.blockedFiles).toEqual([]);
+	});
+
+	test("blocks managed records that have no comparable hash", () => {
+		const dir = makeFixture();
+		writeManagedFile(dir, ".pi/scripts/validate-tests.sh", "configured");
+
+		const manifest = createManifest({
+			language: "typescript",
+			repoTool: "gh",
+			tools: ["pi"],
+			validators: ["ci"],
+			workflows: [],
+		});
+		manifest.files[".pi/scripts/validate-tests.sh"] = {
+			category: "framework",
+			status: "configured",
+		};
+		writeManifest(dir, manifest);
+
+		const plan = createUninstallPlan(dir);
+
+		expect(plan.blockedFiles).toEqual([".pi/scripts/validate-tests.sh"]);
+	});
+
 	test("applies uninstall plan without removing unrelated files", () => {
 		const dir = makeFixture();
 		writeManagedFile(dir, ".pi/README.md", "pi");

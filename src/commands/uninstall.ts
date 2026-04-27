@@ -35,16 +35,6 @@ export async function runUninstall(
 
 	const plan = createUninstallPlan(targetDir);
 
-	if (plan.blockedFiles.length > 0 && !options.force) {
-		outro(`
-Uninstall blocked because managed files have local modifications:
-  ${plan.blockedFiles.join("\n  ")}
-
-Run with --force to remove them anyway, or move your changes into a backup first.
-`);
-		return;
-	}
-
 	if (options.dryRun) {
 		outro(`
 Dry run - no files removed.
@@ -52,8 +42,21 @@ Dry run - no files removed.
 Files to remove:
   ${plan.filesToRemove.length > 0 ? plan.filesToRemove.join("\n  ") : "none"}
 
+Modified managed files that require --force:
+  ${plan.blockedFiles.length > 0 ? plan.blockedFiles.join("\n  ") : "none"}
+
 Directories to prune if empty:
   ${plan.directoriesToPrune.length > 0 ? plan.directoriesToPrune.join("\n  ") : "none"}
+`);
+		return;
+	}
+
+	if (plan.blockedFiles.length > 0 && !options.force) {
+		outro(`
+Uninstall blocked because managed files have local modifications:
+  ${plan.blockedFiles.join("\n  ")}
+
+Run with --force to remove them anyway, or move your changes into a backup first.
 `);
 		return;
 	}
