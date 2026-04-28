@@ -193,29 +193,6 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	// Register scope command
-	pi.registerCommand("scope", {
-		description: "Get scope classification for current changes",
-		handler: async (_args, ctx) => {
-			const diff = await ctx.shell.execute("git diff --numstat HEAD");
-			const rows = diff.stdout.split("\n").filter((line) => line.trim());
-			const fileCount = rows.length;
-			const lineChanges = rows.reduce((sum, row) => {
-				const [added, removed] = row.split(/\s+/);
-				const addedCount = Number.parseInt(added, 10);
-				const removedCount = Number.parseInt(removed, 10);
-				return (
-					sum +
-					(Number.isFinite(addedCount) ? addedCount : 0) +
-					(Number.isFinite(removedCount) ? removedCount : 0)
-				);
-			}, 0);
-			const scope = classifyScope(fileCount, lineChanges);
-
-			ctx.ui.notify(`Scope: ${scope} (${fileCount} files, ~${lineChanges} lines)`, "info");
-			return { scope, fileCount, lineChanges };
-		},
-	});
-
 	pi.registerTool({
 		name: "guardian_scope",
 		label: "Guardian Scope",
