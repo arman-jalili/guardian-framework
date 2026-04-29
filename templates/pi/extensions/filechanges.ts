@@ -20,8 +20,6 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import type { SelectItem } from "@mariozechner/pi-tui";
 import { Container, Key, Markdown, SelectList, Text, matchesKey } from "@mariozechner/pi-tui";
-import { createTwoFilesPatch } from "diff";
-
 // Custom session entry types
 const ENTRY_BASELINE = "filechanges:baseline";
 const ENTRY_CLEAR = "filechanges:clear";
@@ -78,10 +76,139 @@ function countDiffLines(unifiedDiff: string): { added: number; removed: number }
 	return { added, removed };
 }
 
+// Simple unified diff generator — LCS-based. Zero external dependencies.
+function createUnifiedPatch(
+	oldName: string,
+	newName: string,
+	oldContent: string,
+	newContent: string,
+	contextSize = 3,
+): string {
+	const oldLines = oldContent.split("\n");
+	const newLines = newContent.split("\n");
+	const m = oldLines.length;
+	const n = newLines.length;
+
+	// Full LCS DP
+	const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+	for (let i = 1; i <= m; i++) {
+		for (let j = 1; j <= n; j++) {
+			if (oldLines[i - 1] === newLines[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+			else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+		}
+	}
+
+	// Backtrack
+	const ops: Array<"equal" | "delete" | "insert"> = [];
+	let i = m;
+	let j = n;
+	while (i > 0 || j > 0) {
+		if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+			ops.push("equal");
+			i--;
+			j--;
+		} else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+			ops.push("insert");
+			j--;
+		} else {
+			ops.push("delete");
+			i--;
+		}
+	}
+	ops.reverse();
+
+	// Build detailed changes with line content
+	interface Change { type: "equal" | "delete" | "insert"; oldLine?: string; newLine?: string }
+	const detailed: Change[] = [];
+	let oi = 0;
+	let ni = 0;
+	for (const op of ops) {
+		if (op === "equal") {
+			detailed.push({ type: "equal", oldLine: oldLines[oi], newLine: newLines[ni] });
+			oi++;
+			ni++;
+		} else if (op === "delete") {
+			detailed.push({ type: "delete", oldLine: oldLines[oi] });
+			oi++;
+		} else {
+			detailed.push({ type: "insert", newLine: newLines[ni] });
+			ni++;
+		}
+	}
+
+	// Group into hunks with context
+	const hunks: Change[][] = [];
+	let currentHunk: Change[] = [];
+	let pendingContext: Change[] = [];
+
+	for (const c of detailed) {
+		if (c.type === "equal") {
+			pendingContext.push(c);
+			if (pendingContext.length > contextSize) {
+				if (currentHunk.length > 0) {
+					currentHunk.push(...pendingContext.slice(0, contextSize));
+					hunks.push(currentHunk);
+					currentHunk = [];
+				}
+				pendingContext = pendingContext.slice(contextSize);
+			}
+		} else {
+			if (currentHunk.length === 0) {
+				currentHunk = [...pendingContext.slice(-contextSize)];
+			}
+			currentHunk.push(c);
+			pendingContext = [];
+		}
+	}
+	if (currentHunk.length > 0) {
+		currentHunk.push(...pendingContext.slice(0, contextSize));
+		hunks.push(currentHunk);
+	}
+
+	if (hunks.length === 0) return "";
+
+	// Build output
+	const lines: string[] = [];
+	lines.push(`--- ${oldName}`);
+	lines.push(`+++ ${newName}`);
+
+	let oldLineNum = 1;
+	let newLineNum = 1;
+
+	for (const hunk of hunks) {
+		let oldCount = 0;
+		let newCount = 0;
+		if (hunk.every((c) => c.type === "equal")) continue;
+
+		for (const c of hunk) {
+			if (c.type === "delete" || c.type === "equal") oldCount++;
+			if (c.type === "insert" || c.type === "equal") newCount++;
+		}
+
+		const hunkOldStart = oldLineNum;
+		const hunkNewStart = newLineNum;
+		lines.push(`@@ -${hunkOldStart},${oldCount} +${hunkNewStart},${newCount} @@`);
+
+		for (const c of hunk) {
+			if (c.type === "equal") {
+				lines.push(` ${c.oldLine ?? ""}`);
+				oldLineNum++;
+				newLineNum++;
+			} else if (c.type === "delete") {
+				lines.push(`-${c.oldLine ?? ""}`);
+				oldLineNum++;
+			} else {
+				lines.push(`+${c.newLine ?? ""}`);
+				newLineNum++;
+			}
+		}
+	}
+
+	return lines.join("\n") + "\n";
+}
+
 function patchFromBaseline(displayPath: string, original: string | null, current: string): string {
-	return createTwoFilesPatch(displayPath, displayPath, original ?? "", current, "", "", {
-		context: 3,
-	});
+	return createUnifiedPatch(displayPath, displayPath, original ?? "", current);
 }
 
 async function ensureParentDir(absPath: string): Promise<void> {

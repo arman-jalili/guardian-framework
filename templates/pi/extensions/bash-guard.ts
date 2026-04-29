@@ -6,13 +6,14 @@
  *
  * In subagent sessions (headless), catastrophic operations are hard-blocked
  * without prompting.
+ *
+ * Zero dependencies — no shell-quote, no diff.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { isToolCallEventType } from "@mariozechner/pi-coding-agent";
 import type { SelectItem } from "@mariozechner/pi-tui";
 import { Container, SelectList, Text } from "@mariozechner/pi-tui";
-import { parse as shellParse } from "shell-quote";
 
 type Severity = "high" | "medium";
 
@@ -21,52 +22,91 @@ type Risk = {
 	reasons: string[];
 };
 
-type OpToken = { op: string; [k: string]: unknown };
-type Token = string | OpToken;
+// Simple shell command tokenizer — extracts command name and arguments.
+// Handles: single/double quotes, escaped chars, pipes, redirects, &&/||/;
+function tokenizeCommand(cmd: string): { parts: string[]; ops: string[] } {
+	const parts: string[] = [];
+	const ops: string[] = [];
+	let current = "";
+	let inSingleQuote = false;
+	let inDoubleQuote = false;
+	let escaped = false;
 
-function isOpToken(t: Token): t is OpToken {
-	return typeof t === "object" && t !== null && "op" in t;
-}
+	for (let i = 0; i < cmd.length; i++) {
+		const ch = cmd[i];
 
-function tokensToStrings(tokens: Token[]): string[] {
-	return tokens.filter((t) => typeof t === "string") as string[];
-}
-
-function splitOnOps(tokens: Token[], splitOps: string[]): Token[][] {
-	const out: Token[][] = [];
-	let current: Token[] = [];
-	for (const t of tokens) {
-		if (isOpToken(t) && splitOps.includes(t.op)) {
-			if (current.length) out.push(current);
-			current = [];
+		if (escaped) {
+			current += ch;
+			escaped = false;
 			continue;
 		}
-		current.push(t);
+
+		if (ch === "\\") {
+			escaped = true;
+			continue;
+		}
+
+		if (ch === "'" && !inDoubleQuote) {
+			inSingleQuote = !inSingleQuote;
+			continue;
+		}
+
+		if (ch === '"' && !inSingleQuote) {
+			inDoubleQuote = !inDoubleQuote;
+			continue;
+		}
+
+		if (inSingleQuote || inDoubleQuote) {
+			current += ch;
+			continue;
+		}
+
+		// Operators: |, ||, &&, ;, >, >>, <
+		if (ch === "|" || ch === ";" || ch === "<" || ch === ">") {
+			if (current.trim()) parts.push(current.trim());
+			current = "";
+
+			// Check for ||, &&, >>
+			const next = cmd[i + 1];
+			if ((ch === "|" && next === "|") || (ch === "&" && next === "&") || (ch === ">" && next === ">")) {
+				ops.push(ch + next);
+				i++;
+			} else {
+				ops.push(ch);
+			}
+			continue;
+		}
+
+		if (ch === " " || ch === "\t") {
+			if (current.trim()) parts.push(current.trim());
+			current = "";
+			continue;
+		}
+
+		current += ch;
 	}
-	if (current.length) out.push(current);
-	return out;
+
+	if (current.trim()) parts.push(current.trim());
+	return { parts, ops };
 }
 
-function anyArgStartsWith(args: string[], prefix: string): boolean {
-	return args.some((a) => a.startsWith(prefix));
-}
-
-function analyzeSegment(seg: Token[]): Risk | null {
+function analyzeCommand(command: string): Risk | null {
 	const reasons: string[] = [];
 	let severity: Severity = "medium";
 
-	const ops = seg.filter(isOpToken).map((o) => o.op);
-	const args = tokensToStrings(seg);
-	if (args.length === 0) return null;
+	const { parts, ops } = tokenizeCommand(command);
+	if (parts.length === 0) return null;
 
-	const cmd = args[0];
-	const rest = args.slice(1);
+	const cmd = parts[0];
+	const rest = parts.slice(1);
+
+	const hasFlag = (flag: string): boolean =>
+		rest.some((a) => a === flag || a.startsWith(flag + "="));
+	const hasFlagPrefix = (prefix: string): boolean =>
+		rest.some((a) => a.startsWith(prefix));
 
 	// Shell injection
-	if (
-		ops.includes("|") &&
-		(args.includes("sh") || args.includes("bash") || args.includes("zsh") || args.includes("fish"))
-	) {
+	if (ops.includes("|") && (rest.includes("sh") || rest.includes("bash") || rest.includes("zsh") || rest.includes("fish"))) {
 		reasons.push("pipe to a shell (possible remote code execution)");
 		severity = "high";
 	}
@@ -81,14 +121,19 @@ function analyzeSegment(seg: Token[]): Risk | null {
 	if (cmd === "rm" || cmd === "rmdir" || cmd === "unlink") {
 		severity = "high";
 		reasons.push(`${cmd} (file deletion)`);
-		if (rest.some((a) => a.includes("-r") || a.includes("-R")))
+		if (hasFlag("-r") || hasFlag("-R") || hasFlagPrefix("-rf") || hasFlagPrefix("-fr") || hasFlagPrefix("-Rf") || hasFlagPrefix("-fR")) {
 			reasons.push("recursive delete (-r/-R)");
-		if (rest.some((a) => a.includes("-f"))) reasons.push("forced delete (-f)");
-		if (ops.includes("glob")) reasons.push("glob pattern expansion (may delete many files)");
+		}
+		if (hasFlag("-f")) {
+			reasons.push("forced delete (-f)");
+		}
+		if (rest.some((a) => a.includes("*") || a.includes("?"))) {
+			reasons.push("glob pattern expansion (may delete many files)");
+		}
 	}
 
 	// find -delete
-	if (cmd === "find" && rest.includes("-delete")) {
+	if (cmd === "find" && hasFlag("-delete")) {
 		severity = "high";
 		reasons.push("find -delete (bulk deletion)");
 	}
@@ -104,37 +149,26 @@ function analyzeSegment(seg: Token[]): Risk | null {
 			severity = "high";
 			reasons.push("git rm (deletes files from working tree)");
 		}
-		if (
-			sub === "clean" &&
-			(subArgs.some((a) => a.includes("-f")) || subArgs.includes("-d") || subArgs.includes("-x"))
-		) {
+		if (sub === "clean" && (hasFlag("-f") || hasFlag("-d") || hasFlag("-x"))) {
 			severity = "high";
 			reasons.push("git clean (can delete untracked files)");
 		}
-		if (sub === "reset" && subArgs.includes("--hard")) {
+		if (sub === "reset" && hasFlag("--hard")) {
 			severity = "high";
 			reasons.push("git reset --hard (discard changes)");
 		}
-		if (
-			(sub === "checkout" || sub === "restore") &&
-			(subArgs.includes(".") || subArgs.includes("--") || subArgs.includes("--source"))
-		) {
+		if ((sub === "checkout" || sub === "restore") && (subArgs.includes(".") || hasFlag("--") || hasFlag("--source"))) {
 			reasons.push("git checkout/restore (can overwrite working tree)");
 		}
-		if (
-			sub === "push" &&
-			(subArgs.includes("--force") ||
-				subArgs.includes("--force-with-lease") ||
-				subArgs.includes("-f"))
-		) {
+		if (sub === "push" && (hasFlag("--force") || hasFlag("--force-with-lease") || hasFlag("-f"))) {
 			severity = "high";
 			reasons.push("git push --force (rewrite remote history)");
 		}
-		if (sub === "reflog" && subArgs.includes("expire")) {
+		if (sub === "reflog" && hasFlag("expire")) {
 			severity = "high";
 			reasons.push("git reflog expire (can remove recovery history)");
 		}
-		if (sub === "gc" && subArgs.some((a) => a.startsWith("--prune"))) {
+		if (sub === "gc" && hasFlagPrefix("--prune")) {
 			severity = "high";
 			reasons.push("git gc --prune (can permanently delete objects)");
 		}
@@ -145,28 +179,14 @@ function analyzeSegment(seg: Token[]): Risk | null {
 		reasons.push("truncate (in-place size change, can erase contents)");
 	}
 
-	// dd of=
-	if (cmd === "dd" && (anyArgStartsWith(rest, "of=") || rest.includes("of"))) {
+	// dd
+	if (cmd === "dd" && hasFlagPrefix("of=")) {
 		severity = "high";
 		reasons.push("dd with output file/device (can overwrite data)");
 	}
 
 	// Disk / volume management
-	const diskCmds = [
-		"mkfs",
-		"wipefs",
-		"parted",
-		"fdisk",
-		"gdisk",
-		"sgdisk",
-		"lsblk",
-		"cryptsetup",
-		"zpool",
-		"diskutil",
-		"hdiutil",
-		"gpt",
-		"asr",
-	];
+	const diskCmds = ["mkfs", "wipefs", "parted", "fdisk", "gdisk", "sgdisk", "lsblk", "cryptsetup", "zpool", "diskutil", "hdiutil", "gpt", "asr"];
 	for (const dc of diskCmds) {
 		if (cmd === dc || cmd.startsWith(`${dc}.`) || cmd.startsWith(`${dc}_`)) {
 			severity = "high";
@@ -176,18 +196,18 @@ function analyzeSegment(seg: Token[]): Risk | null {
 	}
 
 	// chmod/chown recursive
-	if (cmd === "chmod" && (rest.includes("-R") || rest.includes("--recursive"))) {
+	if (cmd === "chmod" && (hasFlag("-R") || hasFlag("--recursive"))) {
 		reasons.push("chmod -R (recursive permission changes)");
 	}
-	if (cmd === "chown" && (rest.includes("-R") || rest.includes("--recursive"))) {
+	if (cmd === "chown" && (hasFlag("-R") || hasFlag("--recursive"))) {
 		reasons.push("chown -R (recursive ownership changes)");
 	}
 
 	// mv/cp forcing
-	if (cmd === "mv" && (rest.includes("-f") || rest.includes("--force"))) {
+	if (cmd === "mv" && (hasFlag("-f") || hasFlag("--force"))) {
 		reasons.push("mv --force (can overwrite files)");
 	}
-	if (cmd === "cp" && (rest.includes("-f") || rest.includes("--force"))) {
+	if (cmd === "cp" && (hasFlag("-f") || hasFlag("--force"))) {
 		reasons.push("cp --force (can overwrite files)");
 	}
 
@@ -195,14 +215,14 @@ function analyzeSegment(seg: Token[]): Risk | null {
 	if (cmd === "sed" && rest.some((a) => a.startsWith("-i") || a === "--in-place")) {
 		reasons.push("sed -i (in-place file modification)");
 	}
-	if (cmd === "perl" && (rest.includes("-pi") || (rest.includes("-p") && rest.includes("-i")))) {
+	if (cmd === "perl" && (hasFlag("-pi") || (hasFlag("-p") && hasFlag("-i")))) {
 		reasons.push("perl -pi (in-place file modification)");
 	}
 
 	// kill/shutdown/systemctl
 	if (cmd === "kill" || cmd === "pkill" || cmd === "killall") {
 		reasons.push(`${cmd} (process termination)`);
-		if (rest.includes("-9")) {
+		if (hasFlag("-9")) {
 			severity = "high";
 			reasons.push("SIGKILL (-9)");
 		}
@@ -211,7 +231,7 @@ function analyzeSegment(seg: Token[]): Risk | null {
 		severity = "high";
 		reasons.push(`${cmd} (system power operation)`);
 	}
-	if (cmd === "systemctl" && (rest.includes("stop") || rest.includes("disable"))) {
+	if (cmd === "systemctl" && (hasFlag("stop") || hasFlag("disable"))) {
 		reasons.push("systemctl stop/disable (service disruption)");
 	}
 
@@ -230,48 +250,13 @@ function analyzeSegment(seg: Token[]): Risk | null {
 		severity = "high";
 		reasons.push("terraform destroy (infrastructure teardown)");
 	}
-	if (cmd === "aws" && rest[0] === "s3" && rest[1] === "rm" && rest.includes("--recursive")) {
+	if (cmd === "aws" && rest[0] === "s3" && rest[1] === "rm" && hasFlag("--recursive")) {
 		severity = "high";
 		reasons.push("aws s3 rm --recursive (bulk deletion)");
 	}
 
 	if (reasons.length === 0) return null;
-	return { severity, reasons };
-}
-
-function analyzeBashCommand(command: string): Risk | null {
-	let tokens: Token[];
-	try {
-		tokens = shellParse(command) as Token[];
-	} catch {
-		return { severity: "medium", reasons: ["unparsed shell command (unable to analyze safely)"] };
-	}
-
-	const reasons: string[] = [];
-	let severity: Severity = "medium";
-
-	const ops = tokens.filter(isOpToken).map((t) => t.op);
-	if (ops.some((op) => op === ">" || op === ">>" || op === "2>" || op === "2>>")) {
-		reasons.push("shell output redirection (can overwrite files)");
-	}
-	if (ops.includes("<")) {
-		reasons.push("shell input redirection");
-	}
-	if (ops.includes("|")) {
-		reasons.push("pipe operator (chained commands)");
-	}
-
-	const segments = splitOnOps(tokens, ["&&", "||", ";"]);
-	for (const seg of segments) {
-		const segRisk = analyzeSegment(seg);
-		if (!segRisk) continue;
-		if (segRisk.severity === "high") severity = "high";
-		for (const r of segRisk.reasons) reasons.push(r);
-	}
-
-	const uniq = [...new Set(reasons)];
-	if (uniq.length === 0) return null;
-	return { severity, reasons: uniq };
+	return { severity, reasons: [...new Set(reasons)] };
 }
 
 async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<"run" | "abort"> {
@@ -285,37 +270,32 @@ async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<
 		{ value: "abort", label: "Abort", description: "Block this command" },
 	];
 
-	const choice = await ctx.ui.custom<"run" | "abort">(
-		(tui, theme, _kb, done) => {
-			const container = new Container();
-			container.addChild(
-				new Text(theme.fg("warning", theme.bold("⚠  Potentially destructive bash command")), 1, 0),
-			);
-			container.addChild(new Text(body, 1, 0));
+	const choice = await ctx.ui.custom<"run" | "abort">((tui, theme, _kb, done) => {
+		const container = new Container();
+		container.addChild(new Text(theme.fg("warning", theme.bold("⚠  Potentially destructive bash command")), 1, 0));
+		container.addChild(new Text(body, 1, 0));
 
-			const list = new SelectList(items, items.length, {
-				selectedPrefix: (t) => theme.fg("accent", t),
-				selectedText: (t) => theme.fg("accent", t),
-				description: (t) => theme.fg("muted", t),
-				scrollInfo: (t) => theme.fg("dim", t),
-				noMatch: (t) => theme.fg("warning", t),
-			});
+		const list = new SelectList(items, items.length, {
+			selectedPrefix: (t) => theme.fg("accent", t),
+			selectedText: (t) => theme.fg("accent", t),
+			description: (t) => theme.fg("muted", t),
+			scrollInfo: (t) => theme.fg("dim", t),
+			noMatch: (t) => theme.fg("warning", t),
+		});
 
-			list.onSelect = (item) => done(item.value as "run" | "abort");
-			list.onCancel = () => done("abort");
-			container.addChild(list);
+		list.onSelect = (item) => done(item.value as "run" | "abort");
+		list.onCancel = () => done("abort");
+		container.addChild(list);
 
-			return {
-				render: (w) => container.render(w),
-				invalidate: () => container.invalidate(),
-				handleInput: (data) => {
-					list.handleInput(data);
-					tui.requestRender();
-				},
-			};
-		},
-		{ overlay: true },
-	);
+		return {
+			render: (w) => container.render(w),
+			invalidate: () => container.invalidate(),
+			handleInput: (data) => {
+				list.handleInput(data);
+				tui.requestRender();
+			},
+		};
+	}, { overlay: true });
 
 	return choice ?? "abort";
 }
@@ -326,42 +306,26 @@ const isSubagent = Number.isFinite(subagentDepth) && subagentDepth >= 1;
 
 // Hard-block patterns for subagent (headless) mode.
 const HEADLESS_BLOCKED: Array<{ pattern: RegExp; reason: string }> = [
-	{
-		pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-\brecursive\b)/,
-		reason: "recursive delete (rm -r / -rf)",
-	},
+	{ pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-\brecursive\b)/, reason: "recursive delete (rm -r / -rf)" },
 	{ pattern: /\bsudo\b/, reason: "elevated privileges (sudo)" },
-	{
-		pattern: /\b(curl|wget)\b[^#\n]*\|\s*(ba?sh|zsh|fish|dash|sh)\b/,
-		reason: "pipe to shell (remote code execution)",
-	},
+	{ pattern: /\b(curl|wget)\b[^#\n]*\|\s*(ba?sh|zsh|fish|dash|sh)\b/, reason: "pipe to shell (remote code execution)" },
 	{ pattern: /\bmkfs/, reason: "filesystem formatting (mkfs)" },
 	{ pattern: /\bwipefs\b/, reason: "disk signature wipe" },
-	{
-		pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i,
-		reason: "destructive disk operation (diskutil)",
-	},
+	{ pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i, reason: "destructive disk operation (diskutil)" },
 	{ pattern: /\bdd\b[^#\n]*\bof=\/dev\//, reason: "raw disk write (dd of=/dev/...)" },
 	{ pattern: /\b(parted|fdisk|gdisk|sgdisk)\b/, reason: "partition table management" },
 	{ pattern: /\b(shutdown|reboot|halt|poweroff)\b/, reason: "system power operation" },
 	{ pattern: /\bterraform\s+destroy\b/, reason: "infrastructure teardown (terraform destroy)" },
 	{ pattern: /\bkubectl\s+delete\b/, reason: "Kubernetes resource deletion" },
-	{
-		pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/,
-		reason: "bulk S3 deletion (aws s3 rm --recursive)",
-	},
+	{ pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/, reason: "bulk S3 deletion (aws s3 rm --recursive)" },
 	{ pattern: /\bgit\s+push\b/, reason: "git push (main-session operation)" },
 	{ pattern: /\bgit\s+commit\b/, reason: "git commit (main-session operation)" },
-	{
-		pattern: /\bgit\s+reset\b[^#\n]*--hard\b/,
-		reason: "discard all uncommitted changes (git reset --hard)",
-	},
+	{ pattern: /\bgit\s+reset\b[^#\n]*--hard\b/, reason: "discard all uncommitted changes (git reset --hard)" },
 	{ pattern: /\bgit\s+clean\b[^#\n]*-[a-zA-Z]*f/, reason: "delete untracked files (git clean -f)" },
 ];
 
 export default function (pi: ExtensionAPI) {
 	if (isSubagent) {
-		// Subagent mode: hard-block catastrophic operations, no prompting.
 		pi.on("tool_call", async (event) => {
 			if (!isToolCallEventType("bash", event)) return;
 			const command = event.input.command;
@@ -377,15 +341,12 @@ export default function (pi: ExtensionAPI) {
 		return;
 	}
 
-	// Main session mode: interactive prompting.
 	pi.registerFlag("bash-guard-auto-allow", {
-		description:
-			"If set, bash-guard will not block when no UI is available (non-interactive modes).",
+		description: "If set, bash-guard will not block when no UI is available (non-interactive modes).",
 		type: "boolean",
 		default: false,
 	});
 
-	// Avoid annoying retry loops: remember recently aborted commands.
 	const recentlyAborted = new Map<string, number>();
 	const ABORT_REMEMBER_MS = 60_000;
 
@@ -393,7 +354,7 @@ export default function (pi: ExtensionAPI) {
 		if (!isToolCallEventType("bash", event)) return;
 
 		const command = event.input.command;
-		const risk = analyzeBashCommand(command);
+		const risk = analyzeCommand(command);
 		if (!risk) return;
 
 		const now = Date.now();
@@ -401,8 +362,7 @@ export default function (pi: ExtensionAPI) {
 		if (lastAbort && now - lastAbort < ABORT_REMEMBER_MS) {
 			return {
 				block: true,
-				reason:
-					"Blocked by bash-guard: command was already aborted recently. Ask the user for a safer alternative; do not retry the same command.",
+				reason: "Blocked by bash-guard: command was already aborted recently. Ask the user for a safer alternative; do not retry the same command.",
 			};
 		}
 
@@ -416,8 +376,7 @@ export default function (pi: ExtensionAPI) {
 		recentlyAborted.set(command, now);
 		return {
 			block: true,
-			reason:
-				"Blocked by user via bash-guard (potentially destructive command). Ask the user for confirmation or propose a non-destructive alternative.",
+			reason: "Blocked by user via bash-guard (potentially destructive command). Ask the user for confirmation or propose a non-destructive alternative.",
 		};
 	});
 }
