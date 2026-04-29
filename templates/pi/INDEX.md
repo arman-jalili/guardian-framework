@@ -138,8 +138,12 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   └── merge-mr.sh
 │
 ├── extensions/
-│   ├── validation-runner.ts   # Pi extension for validation
-│   └── coordinator.ts         # Pi extension for orchestration
+│   ├── validation-runner.ts   # Pi extension for validation commands
+│   ├── coordinator.ts         # Pi extension for scope classification + validation tools
+│   ├── bash-guard.ts          # Interactive destructive command blocking
+│   ├── filechanges.ts         # File change tracking with accept/decline
+│   ├── read-only-mode.ts      # Safe exploration mode (read/grep/find/ls only)
+│   └── ask-user-question.ts   # Structured question tool (text/single/multi-select)
 │
 ├── github/                    # GitHub Copilot CLI templates
 │   ├── copilot-instructions.md    # Main project instructions

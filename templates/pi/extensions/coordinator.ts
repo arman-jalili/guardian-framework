@@ -2,6 +2,7 @@
  * Coordinator Extension for pi
  *
  * Master orchestrator for GuardianCLI workflows.
+ * Uses guardian_scope, guardian_validate, and ask_user_question tools.
  */
 
 type ExtensionContext = {
@@ -139,5 +140,102 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
+	// Register scope tool
+	pi.registerTool({
+		name: "guardian_scope",
+		label: "Guardian Scope",
+		description: "Classify current git diff scope using Guardian thresholds",
+		parameters: Type.Object({}),
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			if (signal.aborted) {
+				return { type: "error", error: "Scope classification aborted" };
+			}
 
+			const diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
+			const rows = diff.stdout.split("\n").filter((line) => line.trim());
+			const fileCount = rows.length;
+			const lineChanges = rows.reduce((sum, row) => {
+				const [added, removed] = row.split(/\s+/);
+				const addedCount = Number.parseInt(added, 10);
+				const removedCount = Number.parseInt(removed, 10);
+				return (
+					sum +
+					(Number.isFinite(addedCount) ? addedCount : 0) +
+					(Number.isFinite(removedCount) ? removedCount : 0)
+				);
+			}, 0);
+
+			return {
+				type: "success",
+				result: {
+					scope: classifyScope(fileCount, lineChanges),
+					fileCount,
+					lineChanges,
+				},
+			};
+		},
+	});
+
+	// Register validation tool
+	pi.registerTool({
+		name: "guardian_validate",
+		label: "Guardian Validate",
+		description: "Run GuardianCLI validation scripts for a specific category",
+		parameters: Type.Object({
+			validators: Type.Array(Type.String(), {
+				description:
+					"Validation categories: ci, tests, operations, security, integration, architecture, canonical",
+			}),
+			scope: Type.Optional(
+				Type.String({ description: "Scope classification: simple, moderate, complex, critical" }),
+			),
+		}),
+		async execute(toolCallId, params, signal, onUpdate, ctx) {
+			const results: Record<string, { passed: boolean; output: string }> = {};
+			const validators = Array.isArray(params.validators)
+				? params.validators.filter(
+						(validator): validator is string => typeof validator === "string",
+					)
+				: [];
+
+			for (const validator of validators) {
+				if (signal.aborted) break;
+
+				if (!isValidatorName(validator)) {
+					results[validator] = {
+						passed: false,
+						output: `Unsupported validator: ${validator}`,
+					};
+					continue;
+				}
+
+				onUpdate({ type: "progress", message: `Running ${validator} validation...` });
+
+				const scriptPath = VALIDATORS[validator];
+				try {
+					const result = await ctx.shell.execute(`bash ${scriptPath}`, { signal });
+					results[validator] = {
+						passed: result.exitCode === 0,
+						output: result.stdout,
+					};
+				} catch (error) {
+					results[validator] = {
+						passed: false,
+						output: `Error: ${error}`,
+					};
+				}
+			}
+
+			const allPassed = Object.values(results).every((r) => r.passed);
+
+			return {
+				type: "success",
+				result: {
+					summary: allPassed ? "All validations passed" : "Some validations failed",
+					results,
+					scope: typeof params.scope === "string" ? params.scope : "moderate",
+				},
+			};
+		},
+	});
 }

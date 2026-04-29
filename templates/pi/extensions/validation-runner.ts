@@ -2,6 +2,7 @@
  * Validation Runner Extension for pi
  *
  * Runs validation scripts as pi tools and commands.
+ * See coordinator.ts for guardian_scope and guardian_validate tools.
  */
 
 type ShellResult = {
@@ -40,17 +41,6 @@ type ExtensionAPI = {
 	): void;
 };
 
-const Type = {
-	Array: (items: unknown, options: Record<string, unknown> = {}) => ({
-		...options,
-		items,
-		type: "array",
-	}),
-	Object: (properties: Record<string, unknown>) => ({ properties, type: "object" }),
-	Optional: (schema: unknown) => schema,
-	String: (options: Record<string, unknown> = {}) => ({ ...options, type: "string" }),
-};
-
 const VALIDATORS = {
 	architecture: ".pi/scripts/validate-architecture.sh",
 	canonical: ".pi/scripts/validate-canonical.sh",
@@ -67,103 +57,25 @@ function isValidatorName(value: string): value is ValidatorName {
 	return Object.hasOwn(VALIDATORS, value);
 }
 
-function classifyScope(fileCount: number, lineChanges: number): string {
-	if (fileCount > 15 || lineChanges > 500) return "critical";
-	if (fileCount > 5 || lineChanges > 200) return "complex";
-	if (fileCount > 2 || lineChanges > 50) return "moderate";
-	return "simple";
-}
-
 export default function (pi: ExtensionAPI) {
 	// Session initialization
 	pi.on("session_start", async (_event, ctx) => {
 		ctx.ui.notify("GuardianCLI validation runner initialized", "info");
 	});
 
-	// Register validation tool
-	pi.registerTool({
-		name: "guardian_validate",
-		label: "Guardian Validate",
-		description: "Run GuardianCLI validation scripts for a specific category",
-		parameters: Type.Object({
-			validators: Type.Array(Type.String(), {
-				description:
-					"Validation categories: ci, tests, operations, security, integration, architecture, canonical",
-			}),
-			scope: Type.Optional(
-				Type.String({
-					description: "Scope classification: simple, moderate, complex, critical",
-				}),
-			),
-		}),
-		async execute(toolCallId, params, signal, onUpdate, ctx) {
-			const results: Record<string, { passed: boolean; output: string }> = {};
-			const validators = Array.isArray(params.validators)
-				? params.validators.filter(
-						(validator): validator is string => typeof validator === "string",
-					)
-				: [];
-
-			for (const validator of validators) {
-				if (signal.aborted) break;
-
-				if (!isValidatorName(validator)) {
-					results[validator] = {
-						passed: false,
-						output: `Unsupported validator: ${validator}`,
-					};
-					continue;
-				}
-
-				onUpdate({ type: "progress", message: `Running ${validator} validation...` });
-
-				const scriptPath = VALIDATORS[validator];
-				try {
-					const result = await ctx.shell.execute(`bash ${scriptPath}`, { signal });
-					results[validator] = {
-						passed: result.exitCode === 0,
-						output: result.stdout,
-					};
-				} catch (error) {
-					results[validator] = {
-						passed: false,
-						output: `Error: ${error}`,
-					};
-				}
-			}
-
-			const allPassed = Object.values(results).every((r) => r.passed);
-
-			return {
-				type: "success",
-				result: {
-					summary: allPassed ? "All validations passed" : "Some validations failed",
-					results,
-					scope: typeof params.scope === "string" ? params.scope : "moderate",
-				},
-			};
-		},
-	});
-
-	// Register validate command
+	// Register validate command — runs scripts directly via shell
 	pi.registerCommand("validate", {
 		description: "Run all or specific validators",
 		handler: async (args, ctx) => {
 			const validators =
-				args.length > 0 ? args : ["ci", "tests", "operations", "security", "canonical"];
+				args.length > 0
+					? args.filter(isValidatorName)
+					: ["ci", "tests", "operations", "security", "canonical"];
 			ctx.ui.notify(`Running validators: ${validators.join(", ")}`, "info");
 
 			const results: Record<string, { passed: boolean; output: string }> = {};
 
 			for (const validator of validators) {
-				if (!isValidatorName(validator)) {
-					results[validator] = {
-						passed: false,
-						output: `Unsupported validator: ${validator}`,
-					};
-					continue;
-				}
-
 				const scriptPath = VALIDATORS[validator];
 				try {
 					const result = await ctx.shell.execute(`bash ${scriptPath}`);
@@ -172,10 +84,7 @@ export default function (pi: ExtensionAPI) {
 						output: result.stdout,
 					};
 				} catch (error) {
-					results[validator] = {
-						passed: false,
-						output: `Error: ${error}`,
-					};
+					results[validator] = { passed: false, output: `Error: ${error}` };
 				}
 			}
 
@@ -185,46 +94,7 @@ export default function (pi: ExtensionAPI) {
 				allPassed ? "success" : "error",
 			);
 
-			return {
-				summary: allPassed ? "All validations passed" : "Some validations failed",
-				results,
-			};
-		},
-	});
-
-	// Register scope command
-	pi.registerTool({
-		name: "guardian_scope",
-		label: "Guardian Scope",
-		description: "Classify current git diff scope using Guardian thresholds",
-		parameters: Type.Object({}),
-		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
-			if (signal.aborted) {
-				return { type: "error", error: "Scope classification aborted" };
-			}
-
-			const diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
-			const rows = diff.stdout.split("\n").filter((line) => line.trim());
-			const fileCount = rows.length;
-			const lineChanges = rows.reduce((sum, row) => {
-				const [added, removed] = row.split(/\s+/);
-				const addedCount = Number.parseInt(added, 10);
-				const removedCount = Number.parseInt(removed, 10);
-				return (
-					sum +
-					(Number.isFinite(addedCount) ? addedCount : 0) +
-					(Number.isFinite(removedCount) ? removedCount : 0)
-				);
-			}, 0);
-
-			return {
-				type: "success",
-				result: {
-					scope: classifyScope(fileCount, lineChanges),
-					fileCount,
-					lineChanges,
-				},
-			};
+			return { summary: allPassed ? "All validations passed" : "Some validations failed", results };
 		},
 	});
 }
