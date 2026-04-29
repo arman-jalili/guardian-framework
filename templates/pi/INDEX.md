@@ -109,7 +109,7 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── hotfix.md
 │   ├── refactoring.md
 │   ├── issue-implementation-series.md
-│   ├── epic-plan.md           # Architecture analysis + epic slicing
+│   ├── epic-plan.md           # Multi-module epic planning (overview + module slice)
 │   ├── issue-draft.md         # Create draft issues from epic
 │   ├── git-issues.md          # Create epics/issues in GitHub/GitLab
 │   ├── issue-closeout.md      # Validate + create compliance MR
@@ -272,7 +272,9 @@ Selected during `guardian init` and used in all git-related workflows.
 
 | Workflow | File | Purpose |
 |----------|------|---------|
-| Epic Plan | `prompts/epic-plan.md` | Architecture analysis → epic slicing → validator review |
+| Epic Plan (Overview) | `prompts/epic-plan.md` | Cross-module epic planning across all architectures |
+| Epic Plan (Module Slice) | `prompts/epic-plan.md` | Module-specific epic planning from architecture doc |
+| Epic Plan (Free-Form) | `prompts/epic-plan.md` | Quick single-feature planning |
 | Issue Draft | `prompts/issue-draft.md` | Create draft issues from approved epic |
 | Git Issues | `prompts/git-issues.md` | Create epics/milestones + issues + tracking in GitHub/GitLab |
 | Issue Closeout | `prompts/issue-closeout.md` | Verify AC → validators → canonical → compliance MR |
@@ -296,15 +298,20 @@ Selected during `guardian init` and used in all git-related workflows.
 Blueprint Setup (one-time):
 /blueprint-validate → /sync-check → [ready for implementation]
 
+Multi-Module Planning (from scratch):
+/epic-plan --overview → discover all modules, map dependencies, plan cross-module epics
+  → /issue-draft (per epic in dependency order)
+    → /git-issues → [implement] → /issue-closeout → /issue-merge
+
+Single-Module Planning (targeted):
+/epic-plan --module frontend docs/frontend-architecture.md
+  → analyze gap, slice next epic, validate
+  → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
+
 From Superpowers Plan:
 /plan-to-issues → /git-issues → [implement] → /issue-closeout → /issue-merge
                       ↑                                          ↓
                       └────────────── next issue ────────────────┘
-
-From Scratch:
-/epic-plan → /issue-draft → /git-issues → [implement] → /issue-closeout → /issue-merge
-                                    ↑                                          ↓
-                                    └────────────── next issue ────────────────┘
 
 Maintenance:
 /context-refresh → /pattern-extract → /blueprint-update → /sync-check → guardian generate
