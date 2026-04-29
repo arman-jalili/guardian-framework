@@ -59,6 +59,76 @@ else
   fail "Architecture CHANGELOG.md missing (required for change tracking)"
 fi
 
+# Check ADRs are well-formed
+if [ -d ".pi/architecture/decisions" ]; then
+  ADR_COUNT=$(find .pi/architecture/decisions -name "ADR-*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+  info "$ADR_COUNT ADRs found"
+
+  if [ "$ADR_COUNT" -gt 0 ]; then
+    for adr in .pi/architecture/decisions/ADR-*.md; do
+      if [ -f "$adr" ]; then
+        ADR_NAME=$(basename "$adr" .md)
+        # Check required sections
+        if grep -q "## Status" "$adr" 2>/dev/null; then
+          STATUS=$(grep -A3 "## Status" "$adr" | grep "\[x\]" | head -1 | sed 's/.*\[x\] //' || echo "unknown")
+          pass "$adr: status = $STATUS"
+        else
+          warn "$adr missing Status section"
+        fi
+        if grep -q "## Decision" "$adr" 2>/dev/null; then
+          pass "$adr: has Decision section"
+        else
+          fail "$adr missing Decision section"
+        fi
+        if grep -q "## Alternatives Considered" "$adr" 2>/dev/null; then
+          pass "$adr: has Alternatives section"
+        else
+          warn "$adr missing Alternatives section (weakens decision quality)"
+        fi
+      fi
+    done
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# ADR Cross-Reference Check
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- ADR Cross-References ---"
+
+if [ -d ".pi/architecture/decisions" ]; then
+  for adr in .pi/architecture/decisions/ADR-*.md; do
+    if [ -f "$adr" ]; then
+      ADR_NAME=$(basename "$adr" .md)
+
+      # Check if ADR lists affected modules
+      if grep -q "## Implementation" "$adr" 2>/dev/null; then
+        # Extract module references from ADR
+        MODULES=$(grep -A20 "## Implementation" "$adr" | grep ".pi/architecture/modules/" | sed 's/.*\(\.pi\/architecture\/modules\/[^)]*\)).*/\1/' | head -5)
+
+        if [ -n "$MODULES" ]; then
+          for mod in $MODULES; do
+            if [ -f "$mod" ]; then
+              # Check if module doc references this ADR
+              if grep -q "$ADR_NAME" "$mod" 2>/dev/null; then
+                pass "$mod references $ADR_NAME"
+              else
+                warn "$mod does not reference $ADR_NAME (consider adding Change Log Reference)"
+              fi
+            fi
+          done
+        fi
+      fi
+
+      # Check if ADR has superseded status and links to successor
+      STATUS=$(grep -A3 "## Status" "$adr" 2>/dev/null | grep "\[x\]" | head -1 | sed 's/.*\[x\] //' || echo "")
+      if [ "$STATUS" = "Superseded by ADR-XXX" ]; then
+        warn "$adr has unresolved superseded status (update ADR-XXX reference)"
+      fi
+    fi
+  done
+fi
+
 # ---------------------------------------------------------------------------
 # Check Blueprint Files
 # ---------------------------------------------------------------------------
