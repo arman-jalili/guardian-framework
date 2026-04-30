@@ -3,12 +3,16 @@
  *
  * Master orchestrator for GuardianCLI workflows.
  * Uses guardian_scope, guardian_validate, and ask_user_question tools.
+ * Zero external dependencies — self-contained pi extension.
  */
 
 type ExtensionContext = {
 	ui: { notify(message: string, level?: string): void };
+	shell: { execute(command: string, options?: { signal?: AbortSignal }): Promise<{ exitCode: number; stdout: string }> };
 	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
 };
+
+type ToolCallEvent = { toolName: string; toolCallId: string; input: { command: string } };
 
 type ExtensionAPI = {
 	on(event: string, handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
@@ -25,14 +29,11 @@ type ExtensionAPI = {
 			ctx: ExtensionContext,
 		): unknown | Promise<unknown>;
 	}): void;
-	registerCommand(
-		name: string,
-		options: {
-			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
-		},
-	): void;
 };
+
+function isToolCallEventType(name: string, event: unknown): event is ToolCallEvent {
+	return (event as ToolCallEvent)?.toolName === name;
+}
 
 const Type = {
 	Array: (items: unknown, options: Record<string, unknown> = {}) => ({
@@ -68,12 +69,109 @@ function classifyScope(fileCount: number, lineChanges: number): string {
 	return "simple";
 }
 
+function toolResult(text: string) {
+	return { content: [{ type: "text" as const, text }] };
+}
+
+function toolError(text: string) {
+	return { content: [{ type: "text" as const, text }], isError: true };
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		ctx.ui.notify("GuardianCLI coordinator ready", "info");
 	});
 
-	// Register coordinator tool
+	// ── guardian_scope ──
+	pi.registerTool({
+		name: "guardian_scope",
+		label: "Guardian Scope",
+		description: "Classify current git diff scope using Guardian thresholds",
+		parameters: Type.Object({}),
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			if (signal?.aborted) {
+				return toolError("Scope classification aborted");
+			}
+
+			const diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
+			const rows = diff.stdout.split("\n").filter((line) => line.trim());
+			const fileCount = rows.length;
+			const lineChanges = rows.reduce((sum, row) => {
+				const [added, removed] = row.split(/\s+/);
+				const a = Number.parseInt(added, 10);
+				const r = Number.parseInt(removed, 10);
+				return sum + (Number.isFinite(a) ? a : 0) + (Number.isFinite(r) ? r : 0);
+			}, 0);
+
+			const scope = classifyScope(fileCount, lineChanges);
+			return toolResult(
+				`Scope: **${scope}**\n- Files: ${fileCount}\n- Line changes: ~${lineChanges}\n\nThresholds: simple (<3 files, <50 lines) → moderate (<6 files, <200 lines) → complex (<16 files, <500 lines) → critical (16+ files or 500+ lines)`,
+			);
+		},
+	});
+
+	// ── guardian_validate ──
+	pi.registerTool({
+		name: "guardian_validate",
+		label: "Guardian Validate",
+		description: "Run GuardianCLI validation scripts for specific categories",
+		parameters: Type.Object({
+			validators: Type.Array(Type.String(), {
+				description: "Categories: ci, tests, operations, security, integration, architecture, canonical",
+			}),
+			scope: Type.Optional(
+				Type.String({ description: "Scope: simple, moderate, complex, critical" }),
+			),
+		}),
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
+			const results: Record<string, { passed: boolean; output: string }> = {};
+			const validators = Array.isArray(params.validators)
+				? params.validators.filter((v): v is string => typeof v === "string")
+				: [];
+
+			if (validators.length === 0) {
+				return toolError("No validators specified. Available: ci, tests, operations, security, integration, architecture, canonical");
+			}
+
+			for (const validator of validators) {
+				if (signal?.aborted) break;
+
+				if (!isValidatorName(validator)) {
+					results[validator] = { passed: false, output: `Unsupported validator: ${validator}` };
+					continue;
+				}
+
+				onUpdate({ type: "progress", message: `Running ${validator} validation...` });
+
+				const scriptPath = VALIDATORS[validator];
+				try {
+					const result = await ctx.shell.execute(`bash ${scriptPath}`, { signal });
+					results[validator] = { passed: result.exitCode === 0, output: result.stdout };
+				} catch (error) {
+					results[validator] = { passed: false, output: `Error: ${error}` };
+				}
+			}
+
+			const lines: string[] = [];
+			const allPassed = Object.values(results).every((r) => r.passed);
+
+			lines.push(`## Validation Results — ${allPassed ? "✅ All Passed" : "❌ Some Failed"}\n`);
+			for (const [name, result] of Object.entries(results)) {
+				lines.push(`### ${name}: ${result.passed ? "✅ PASS" : "❌ FAIL"}`);
+				// Show last 15 lines of output to keep it readable
+				const output = result.output.trim();
+				if (output) {
+					const tail = output.split("\n").slice(-15).join("\n");
+					lines.push("```\n" + tail + "\n```");
+				}
+				lines.push("");
+			}
+
+			return toolResult(lines.join("\n"));
+		},
+	});
+
+	// ── guardian_coordinate ──
 	pi.registerTool({
 		name: "guardian_coordinate",
 		label: "Guardian Coordinate",
@@ -83,159 +181,77 @@ export default function (pi: ExtensionAPI) {
 			scope: Type.Optional(Type.String({ description: "Override scope classification" })),
 			validators: Type.Optional(Type.Array(Type.String())),
 		}),
-		async execute(toolCallId, params, signal, onUpdate, ctx) {
-			// 1. Classify scope (or use override)
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
+			// 1. Classify scope
 			let scope = typeof params.scope === "string" ? params.scope : undefined;
 			if (!scope) {
-				const scopeResult = (await ctx.tools.execute("guardian_scope", {})) as {
-					result?: { scope?: string };
-				};
-				scope = scopeResult.result?.scope || "moderate";
+				const scopeResult = await ctx.tools.execute("guardian_scope", {});
+				// Parse the text result to extract scope
+				const text = (scopeResult as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
+				const match = text.match(/Scope:\s+\*\*(\w+)\*\*/);
+				scope = match?.[1] ?? "moderate";
 			}
 
 			onUpdate({ type: "progress", message: `Scope: ${scope}` });
 
-			// 2. Determine validators based on scope
+			// 2. Determine validators
 			const validatorMap: Record<string, string[]> = {
 				simple: ["ci", "canonical"],
 				moderate: ["ci", "architecture", "canonical"],
 				complex: ["ci", "architecture", "security", "tests", "integration", "canonical"],
-				critical: [
-					"ci",
-					"architecture",
-					"security",
-					"operations",
-					"tests",
-					"integration",
-					"canonical",
-				],
+				critical: ["ci", "architecture", "security", "operations", "tests", "integration", "canonical"],
 			};
 
 			const validators = Array.isArray(params.validators)
-				? params.validators.filter(
-						(validator): validator is string => typeof validator === "string",
-					)
-				: validatorMap[scope] || validatorMap.moderate;
+				? params.validators.filter((v): v is string => typeof v === "string")
+				: validatorMap[scope] ?? validatorMap.moderate;
 
 			onUpdate({ type: "progress", message: `Validators: ${validators.join(", ")}` });
 
 			// 3. Run validators
-			const validationResults = await ctx.tools.execute("guardian_validate", {
-				validators,
-				scope,
-			});
+			const validationResults = await ctx.tools.execute("guardian_validate", { validators, scope });
 
-			// 4. Return coordination result
-			return {
-				type: "success",
-				result: {
-					task: params.task,
-					scope,
-					validators,
-					validationResults,
-					nextSteps:
-						scope === "critical" ? ["Request human approval"] : ["Proceed with implementation"],
-				},
-			};
+			// 4. Build coordination result
+			const lines: string[] = [
+				`## Coordination Report`,
+				``,
+				`**Task:** ${params.task}`,
+				`**Scope:** ${scope}`,
+				`**Validators:** ${validators.join(", ")}`,
+				``,
+				`### Next Steps`,
+				scope === "critical" ? "- Request human approval before proceeding" : "- Proceed with implementation",
+			];
+
+			// Append validation results
+			const valText = (validationResults as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
+			if (valText) {
+				lines.push("", "### Validation", valText);
+			}
+
+			return toolResult(lines.join("\n"));
 		},
 	});
 
-	// Register scope tool
-	pi.registerTool({
-		name: "guardian_scope",
-		label: "Guardian Scope",
-		description: "Classify current git diff scope using Guardian thresholds",
-		parameters: Type.Object({}),
-		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
-			if (signal.aborted) {
-				return { type: "error", error: "Scope classification aborted" };
+	// ── Block dangerous commands (lightweight bash-guard) ──
+	pi.on("tool_call", async (event) => {
+		if (!isToolCallEventType("bash", event)) return;
+
+		const cmd = event.input.command;
+
+		// Hard-block patterns
+		const dangerous = [
+			{ pattern: /\b(rm\s+-rf?|rmdir)\b/, reason: "file deletion" },
+			{ pattern: /\bsudo\b/, reason: "elevated privileges" },
+			{ pattern: /\bgit\s+push\b/, reason: "git push" },
+			{ pattern: /\bgit\s+commit\b/, reason: "git commit" },
+			{ pattern: /\bgit\s+reset\s+--hard\b/, reason: "git reset --hard" },
+		];
+
+		for (const { pattern, reason } of dangerous) {
+			if (pattern.test(cmd)) {
+				return { block: true, reason: `Guardian blocked: ${reason} — this is an automated validation context. For git operations, use /issue-merge or /git-issues.` };
 			}
-
-			const diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
-			const rows = diff.stdout.split("\n").filter((line) => line.trim());
-			const fileCount = rows.length;
-			const lineChanges = rows.reduce((sum, row) => {
-				const [added, removed] = row.split(/\s+/);
-				const addedCount = Number.parseInt(added, 10);
-				const removedCount = Number.parseInt(removed, 10);
-				return (
-					sum +
-					(Number.isFinite(addedCount) ? addedCount : 0) +
-					(Number.isFinite(removedCount) ? removedCount : 0)
-				);
-			}, 0);
-
-			return {
-				type: "success",
-				result: {
-					scope: classifyScope(fileCount, lineChanges),
-					fileCount,
-					lineChanges,
-				},
-			};
-		},
-	});
-
-	// Register validation tool
-	pi.registerTool({
-		name: "guardian_validate",
-		label: "Guardian Validate",
-		description: "Run GuardianCLI validation scripts for a specific category",
-		parameters: Type.Object({
-			validators: Type.Array(Type.String(), {
-				description:
-					"Validation categories: ci, tests, operations, security, integration, architecture, canonical",
-			}),
-			scope: Type.Optional(
-				Type.String({ description: "Scope classification: simple, moderate, complex, critical" }),
-			),
-		}),
-		async execute(toolCallId, params, signal, onUpdate, ctx) {
-			const results: Record<string, { passed: boolean; output: string }> = {};
-			const validators = Array.isArray(params.validators)
-				? params.validators.filter(
-						(validator): validator is string => typeof validator === "string",
-					)
-				: [];
-
-			for (const validator of validators) {
-				if (signal.aborted) break;
-
-				if (!isValidatorName(validator)) {
-					results[validator] = {
-						passed: false,
-						output: `Unsupported validator: ${validator}`,
-					};
-					continue;
-				}
-
-				onUpdate({ type: "progress", message: `Running ${validator} validation...` });
-
-				const scriptPath = VALIDATORS[validator];
-				try {
-					const result = await ctx.shell.execute(`bash ${scriptPath}`, { signal });
-					results[validator] = {
-						passed: result.exitCode === 0,
-						output: result.stdout,
-					};
-				} catch (error) {
-					results[validator] = {
-						passed: false,
-						output: `Error: ${error}`,
-					};
-				}
-			}
-
-			const allPassed = Object.values(results).every((r) => r.passed);
-
-			return {
-				type: "success",
-				result: {
-					summary: allPassed ? "All validations passed" : "Some validations failed",
-					results,
-					scope: typeof params.scope === "string" ? params.scope : "moderate",
-				},
-			};
-		},
+		}
 	});
 }
