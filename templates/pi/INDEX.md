@@ -61,7 +61,7 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 ```
 .pi/
 ├── agent/
-│   └── AGENTS.md              # Project instructions (template with placeholders)
+│   └── AGENTS.md              # Project instructions + workflow config (YAML front matter)
 │
 ├── architecture/              # Architecture documentation (NEW)
 │   ├── modules/               # Module architecture docs
@@ -74,6 +74,7 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   │   └── data-flow.md
 │   ├── CHANGELOG.md           # Architecture change log (required)
 │   └── decisions/             # Architecture Decision Records (ADR)
+│       ├── ADR-template.md
 │       ├── ADR-001-auth-strategy.md
 │       └── ADR-002-database-choice.md
 │
@@ -94,7 +95,12 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   │   ├── ci-mr-validator.md
 │   │   ├── code-developer.md
 │   │   ├── documentation-maintainer.md
-│   │   └── issue-creator.md
+│   │   ├── issue-creator.md
+│   │   ├── commit.md            # Clean, logical commits
+│   │   ├── push.md              # Keep remote branch current
+│   │   ├── pull.md              # Sync with latest main
+│   │   ├── land.md              # PR merge loop with validation
+│   │   └── debug.md             # Systematic debugging
 │   └── validators/
 │       ├── architecture-validator.md
 │       ├── security-validator.md
@@ -145,6 +151,7 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── read-only-mode.ts      # Safe exploration mode (read/grep/find/ls only)
 │   └── ask-user-question.ts   # Structured question tool (text/single/multi-select)
 │
+├── workpad.md                 # Persistent session progress tracker
 ├── github/                    # GitHub Copilot CLI templates
 │   ├── copilot-instructions.md    # Main project instructions
 │   ├── instructions/

@@ -66,7 +66,18 @@ export interface GuardianManifest {
 	templateContext?: TemplateContext;
 	scaffoldedAt: string;
 	lastUpdatedAt: string;
+	// Token accounting (GuardianCLI addition)
+	tokenStats?: TokenStats;
 }
+
+export interface TokenStats {
+	totalTokens: number;
+	byCategory: Record<string, number>;
+	byFile: Record<string, number>;
+	lastCalculatedAt: string;
+}
+
+/**
 
 /**
  * Calculate SHA-256 hash of file content
@@ -360,4 +371,45 @@ export function validateManifest(manifest: unknown): GuardianManifest | null {
 	}
 
 	return manifest as GuardianManifest;
+}
+
+// ── Token Accounting ──
+
+/**
+ * Estimate token count for a string.
+ * Rough approximation: ~4 chars per token (consistent with pi's estimateTokens).
+ */
+export function estimateTokens(text: string): number {
+	return Math.ceil(text.length / 4);
+}
+
+/**
+ * Calculate token stats for all files in the manifest.
+ */
+export function calculateTokenStats(
+	targetDir: string,
+	manifest: GuardianManifest,
+): TokenStats {
+	const byCategory: Record<string, number> = {};
+	const byFile: Record<string, number> = {};
+	let totalTokens = 0;
+
+	for (const [filePath, record] of Object.entries(manifest.files)) {
+		const fullPath = path.join(targetDir, filePath);
+		if (!fs.existsSync(fullPath)) continue;
+
+		const content = fs.readFileSync(fullPath, "utf-8");
+		const tokens = estimateTokens(content);
+
+		byFile[filePath] = tokens;
+		byCategory[record.category] = (byCategory[record.category] ?? 0) + tokens;
+		totalTokens += tokens;
+	}
+
+	return {
+		totalTokens,
+		byCategory,
+		byFile,
+		lastCalculatedAt: new Date().toISOString(),
+	};
 }

@@ -39,6 +39,30 @@ glab api projects/:id/merge_requests/[mr_iid] --jq '.head_pipeline.status'
 # Expected: "success"
 ```
 
+### 1b. PR Feedback Sweep (Required Before Merge)
+
+Before merging, ensure ALL review comments are resolved:
+
+1. **Gather feedback from all channels:**
+   ```bash
+   # Top-level PR comments
+   gh pr view --comments
+   # Inline review comments
+   gh api repos/<owner>/<repo>/pulls/<number>/comments
+   # Review summaries
+   gh pr view --json reviews
+   ```
+
+2. **Every actionable reviewer comment (human or bot) is blocking until:**
+   - Code/test/docs updated to address it, OR
+   - Explicit, justified pushback reply posted on that thread
+
+3. **Re-run validation after feedback-driven changes**
+
+4. **Repeat until no outstanding actionable comments remain**
+
+5. **Confirm PR checks are green after latest changes**
+
 ### 2. Merge the MR
 
 **For GitHub (gh):**

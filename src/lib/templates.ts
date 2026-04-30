@@ -293,6 +293,14 @@ export function renderTemplate(content: string, context: Partial<TemplateContext
 		}
 	}
 
+	// Resolve $VAR_NAME references from process.env (Symphony spec Section 6.1)
+	// Only resolves values that explicitly reference $VAR_NAME — env vars do not
+	// globally override template values.
+	result = result.replace(/\$([A-Z_][A-Z0-9_]*)/g, (_match, varName) => {
+		const envVal = process.env[varName];
+		return envVal !== undefined ? envVal : `$${varName}`;
+	});
+
 	return result;
 }
 
