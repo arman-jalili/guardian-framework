@@ -41,8 +41,14 @@ export async function executeHook(
 		const proc = child_process.spawn("bash", ["-lc", script], {
 			cwd: workspacePath,
 			stdio: ["ignore", "pipe", "pipe"],
-			timeout: timeoutMs,
 		});
+
+		// Hard timeout (child_process.spawn does NOT support the timeout option)
+		const hardTimer = setTimeout(() => {
+			if (!proc.killed) {
+				proc.kill("SIGTERM");
+			}
+		}, timeoutMs);
 
 		// Stall detection: if no output for stallTimeoutMs, consider it stalled
 		const stallTimeoutMs = Math.min(timeoutMs, 60000); // Max 60s stall window
@@ -52,7 +58,6 @@ export async function executeHook(
 
 		const resetStallTimer = () => {
 			if (stallTimer) clearTimeout(stallTimer);
-			hadOutput = false;
 			stallTimer = setTimeout(() => {
 				if (!proc.killed) {
 					console.error(`[warn] Hook '${hookName}' stalled (no output for ${stallTimeoutMs}ms), terminating`);
@@ -77,6 +82,8 @@ export async function executeHook(
 		resetStallTimer();
 
 		proc.on("close", (code) => {
+			clearTimeout(hardTimer);
+			if (stallTimer) clearTimeout(stallTimer);
 			resolve({
 				success: code === 0,
 				exitCode: code ?? 1,
@@ -87,6 +94,8 @@ export async function executeHook(
 		});
 
 		proc.on("error", (err) => {
+			clearTimeout(hardTimer);
+			if (stallTimer) clearTimeout(stallTimer);
 			resolve({
 				success: false,
 				exitCode: 1,

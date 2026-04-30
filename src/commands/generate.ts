@@ -67,8 +67,8 @@ export async function runGenerate(
 		// Reconciliation: check if any existing exports were modified externally
 		const modifiedExports = detectExternallyModifiedExports(targetDir, manifest, toolsToGenerate, onConflict);
 		if (modifiedExports.length > 0 && !options.dryRun) {
-			s.stop();
 			if (onConflict === "skip") {
+				s.stop();
 				outro(`Skipping generation — ${modifiedExports.length} export files were modified externally.\nRun with --force to overwrite.`);
 				return;
 			}
@@ -80,10 +80,8 @@ export async function runGenerate(
 				console.log();
 			}
 			// "overwrite" proceeds silently
-			// Restart spinner
-			const s2 = spinner();
-			s2.start("Generating exports from .pi/ source...");
 		}
+		// Continue with same spinner s — no new spinner needed
 		// Workspace: ensure workspace directory exists
 		const workspacePath = path.join(piDir, "workspaces");
 		const wsResult = await ensureWorkspace(workspacePath, config.workspace.hooks);
