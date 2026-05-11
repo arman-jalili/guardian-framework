@@ -233,24 +233,25 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	// ── Block dangerous commands (lightweight bash-guard) ──
+	// ── Block catastrophic commands only (lightweight safety net) ──
+	// Git commit/push are allowed — agents need them for autonomous workflows.
+	// Destructive operations are blocked to prevent irreversible damage.
 	pi.on("tool_call", async (event) => {
 		if (!isToolCallEventType("bash", event)) return;
 
 		const cmd = event.input.command;
 
-		// Hard-block patterns
-		const dangerous = [
-			{ pattern: /\b(rm\s+-rf?|rmdir)\b/, reason: "file deletion" },
-			{ pattern: /\bsudo\b/, reason: "elevated privileges" },
-			{ pattern: /\bgit\s+push\b/, reason: "git push" },
-			{ pattern: /\bgit\s+commit\b/, reason: "git commit" },
-			{ pattern: /\bgit\s+reset\s+--hard\b/, reason: "git reset --hard" },
+		// Only block truly catastrophic operations
+		const catastrophic = [
+			{ pattern: /(?<!\bgit\s+)\brm\s+-rf?\b/, reason: "recursive file deletion (rm -rf)" },
+			{ pattern: /\bsudo\b/, reason: "elevated privileges (sudo)" },
+			{ pattern: /\bgit\s+reset\s+--hard\b/, reason: "git reset --hard (discard all changes)" },
+			{ pattern: /\bgit\s+clean\s+-[a-zA-Z]*f/, reason: "git clean -f (delete untracked files)" },
 		];
 
-		for (const { pattern, reason } of dangerous) {
+		for (const { pattern, reason } of catastrophic) {
 			if (pattern.test(cmd)) {
-				return { block: true, reason: `Guardian blocked: ${reason} — this is an automated validation context. For git operations, use /issue-merge or /git-issues.` };
+				return { block: true, reason: `Guardian blocked: ${reason}. Use safer alternatives or confirm with the user.` };
 			}
 		}
 	});
