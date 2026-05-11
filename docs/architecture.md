@@ -60,6 +60,10 @@ GuardianCLI's orchestration model is inspired by the [OpenAI Symphony specificat
 │  │workspace    │ │retry.ts      │ │logger.ts         │   │
 │  │-hooks.ts    │ │(backoff)     │ │(structured JSON) │   │
 │  └─────────────┘ └──────────────┘ └──────────────────┘   │
+│  ┌─────────────┐ ┌──────────────┐                        │
+│  │retry-queue  │ │generate.ts   │ (generate + mappings)  │
+│  │(persistence)│ │(export logic)│                        │
+│  └─────────────┘ └──────────────┘                        │
 └──────────────────────────────────────────────────────────┘
             │               │              │
             ▼               ▼              ▼
@@ -289,6 +293,41 @@ Configuration:
   baseDelayMs: 10000
 ```
 
+### 3.7a Retry Queue (`src/lib/retry-queue.ts`)
+
+**Responsibility:** Persist retry state across process restarts.
+
+```
+Storage: .pi/.guardian-retry-state.json
+Format:
+{
+  "entries": [
+    {
+      "key": "generate.claude",
+      "attempt": 2,
+      "scheduledAtMs": 1714420800000,
+      "error": "timeout",
+      "meta": { "tool": "claude" }
+    }
+  ],
+  "lastUpdated": "2026-05-11T12:00:00.000Z"
+}
+
+API:
+  scheduleRetry(dir, key, delayMs, error, meta, attempt)
+  getDueRetries(dir)              → entries where scheduledAtMs <= now
+  clearRetry(dir, key)
+  clearAllRetries(dir)
+  calculateBackoff(attempt, base, max)
+
+Write safety: Atomic via temp file + rename
+```
+
+Usage in commands:
+- generate: On failure, schedule retry with exponential backoff
+- On next run: check getDueRetries() and resume failed operations
+```
+
 ### 3.8 Manifest (`src/lib/manifest.ts`)
 
 **Responsibility:** Track framework state, file hashes, export records, token stats.
@@ -370,6 +409,29 @@ Helpers:
 - logger.issue(issueId, message, context) — adds issue_id to context
 - logger.tool(tool, message, context) — adds tool name to context
 - logger.action(action, outcome, reason?) — structured action logging
+```
+
+### 3.11 Config Reload Extension (`templates/pi/extensions/config-reload.ts`)
+
+**Responsibility:** Watch `.pi/agent/AGENTS.md` for changes and re-apply config without pi restart.
+
+```
+Mechanism:
+  fs.watch(CONFIG_FILE) → detect 'change' event → debounce 500ms
+  → parse new front-matter → compare with last known
+  → if different: update status bar, notify user
+
+Commands:
+  /reload-config — manually trigger config reload
+
+Events:
+  session_start → start watching
+  session_end → stop watching
+
+Status indicator:
+  ⚡ config reload #N (shown in status bar)
+
+Based on Symphony spec Section 6.2 (Dynamic Reload Semantics).
 ```
 
 ---
@@ -757,13 +819,18 @@ tests/templates.test.ts — 5 tests
 
 | Priority | Feature | Description |
 |----------|---------|-------------|
-| 🔴 | Dynamic config reload | File watch on AGENTS.md, re-apply without restart |
-| 🔴 | Persist retry queue | Survive process restarts |
 | 🟡 | HTTP observability | `GET /api/v1/state` for runtime snapshot |
 | 🟡 | Pluggable trackers | Beyond GitHub/GitLab (Linear, Jira) |
 | 🟡 | Tracker write APIs | State transitions, comments from orchestrator |
 | 🟢 | SSH worker extension | Execute agent runs on remote hosts |
 | 🟢 | Token billing | Accurate tokenization vs estimation |
+
+### Implemented (previously future work)
+
+| Feature | Implementation |
+|---------|----------------|
+| Dynamic config reload | `config-reload.ts` extension — watches AGENTS.md via `fs.watch`, re-applies config on change, `/reload-config` command for manual trigger |
+| Persist retry queue | `retry-queue.ts` library — persists retry entries to `.pi/.guardian-retry-state.json`, survives restarts, atomic write via temp+rename |
 
 ---
 

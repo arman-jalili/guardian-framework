@@ -215,6 +215,7 @@ hooks:
 | `filechanges.ts` | Tracks all file modifications. `/filechanges` to review diffs, `/filechanges-accept` to keep, `/filechanges-decline` to revert. |
 | `read-only-mode.ts` | Enforces read/grep/find/ls only. Safe codebase exploration. `/read-only on|off|toggle`. |
 | `ask-user-question.ts` | Structured questions: free-text, single-select, multi-select with "Other" escape hatch. |
+| `config-reload.ts` | Watches AGENTS.md for changes, reloads config without restart. `/reload-config` for manual trigger. |
 | `coordinator.ts` | guardian_scope, guardian_validate, guardian_coordinate tools + lightweight bash-guard. |
 | `validation-runner.ts` | `/validate` command for running validator scripts directly. |
 
@@ -297,6 +298,7 @@ Every implementation file references its architecture source:
 | **Continuation retry** | 1 s after clean exit, checks if work remains |
 | **Reconciliation** | Detects externally modified exports before clobbering |
 | **Stall detection** | SIGTERM after 60 s of no output from hooks |
+| **Retry persistence** | Queue stored in `.pi/.guardian-retry-state.json`, survives restarts |
 
 ---
 

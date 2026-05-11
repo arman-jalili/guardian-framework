@@ -149,7 +149,8 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── bash-guard.ts          # Interactive destructive command blocking
 │   ├── filechanges.ts         # File change tracking with accept/decline
 │   ├── read-only-mode.ts      # Safe exploration mode (read/grep/find/ls only)
-│   └── ask-user-question.ts   # Structured question tool (text/single/multi-select)
+│   ├── ask-user-question.ts   # Structured question tool (text/single/multi-select)
+│   └── config-reload.ts       # Dynamic config reload on AGENTS.md change
 │
 ├── workpad.md                 # Persistent session progress tracker
 ├── github/                    # GitHub Copilot CLI templates
