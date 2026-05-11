@@ -168,7 +168,7 @@ Next steps:
 /**
  * Generate export directory from .pi/ source
  */
-function generateExport(
+export function generateExport(
 	exportDir: string,
 	tool: Tool,
 	piDir: string,
