@@ -55,7 +55,15 @@ bash .pi/scripts/validate-ci.sh
 bash .pi/scripts/validate-canonical.sh
 ```
 
-### 3. Generate exports
+### 3. Update framework
+
+```bash
+npx guardian-framework-cli update
+```
+
+Smart-merges new template versions into your project — preserves user edits, merges YAML config.
+
+### 4. Generate exports
 
 ```bash
 npx guardian-framework-cli generate
@@ -89,10 +97,52 @@ Read the full [Architecture Document](docs/architecture.md) for system design, d
 |---------|---------|
 | `init` | Scaffold `.pi/` + exports interactively |
 | `generate` | Regenerate exports from `.pi/` source |
-| `update` | Smart merge framework updates, preserving user edits |
+| `update` | Smart merge new templates, preserving user edits |
 | `upgrade` | Migrate to new framework version |
 | `uninstall` | Remove Guardian-managed files |
 | `info` | Display manifest status, token stats, coverage |
+
+### `update` — Smart Merge
+
+Updates `.pi/` files from new GuardianCLI templates without losing your work:
+
+```bash
+# See what would change (safe, no writes)
+guardian update --dryRun
+
+# Apply changes (shows confirmation prompt)
+guardian update
+
+# Force overwrite everything, including user-modified files
+guardian update --force
+
+# Update + regenerate all exports in one step
+guardian update --regenerate
+```
+
+**How it decides what to do:**
+
+| File State | Action | Example |
+|------------|--------|-------|
+| New template file | **Add** to project | New skills, new validators |
+| Unchanged framework file | **Update** to new version | Bugfix in validate-ci.sh |
+| User file with YAML front matter | **Merge** — keep user config, new body | `AGENTS.md` with custom workspace/agent config |
+| User file without front matter | **Preserve** — keep as-is | Custom `patterns.md` edits |
+| Generated export | **Mark** for regeneration | `.claude/`, `.opencode/` files |
+| Removed from templates | **Orphan** — noted, not deleted | Deprecated files |
+
+**Front-matter merge example:**
+
+If your `AGENTS.md` has custom config:
+```yaml
+---
+agent:
+  max_turns: 30
+---
+# My custom project context...
+```
+
+Update preserves your config (`max_turns: 30`) and replaces the body with the new template.
 
 ### Key options
 

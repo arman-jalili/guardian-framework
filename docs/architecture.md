@@ -2,7 +2,7 @@
 
 **Version:** 2.0
 **Status:** Living Document
-**Last Updated:** 2026-04-30
+**Last Updated:** 2026-05-11
 
 ---
 
@@ -158,18 +158,52 @@ Flow:
 
 ### 3.4 Update Command (`src/commands/update.ts`)
 
-**Responsibility:** Smart merge framework updates, preserving user edits.
+**Responsibility:** Smart merge new template versions into existing projects, preserving user edits.
 
 ```
 Flow:
-1. Read current manifest
-2. Fetch updated templates
-3. For each framework file:
-   a. Check hash: unchanged → auto-update
-   b. Check hash: modified → preserve, show diff
-4. Regenerate exports if --regenerate
-5. Update manifest
+1. Read manifest
+2. Load workflow config (AGENTS.md front matter)
+3. Analyze changes:
+   a. Compare manifest files against current templates
+   b. Classify each file: add / update / merge-frontmatter / preserve / regenerate / orphan
+   c. For front-matter files: parse user config vs new template
+4. Show dry-run plan (if --dryRun)
+5. Confirm changes (unless --force)
+6. Apply changes:
+   a. New files → render template + write
+   b. Unchanged files → render template + overwrite
+   c. Front-matter merge → user's config + new template body
+   d. User-modified (no front-matter) → keep, mark status=modified
+7. Update manifest with new hashes
+8. Optionally regenerate exports (--regenerate)
 ```
+
+**Change Classification Algorithm:**
+
+| Condition | Action | Rationale |
+|-----------|--------|----------|
+| File not in manifest + exists in templates | add | New GuardianCLI feature |
+| File in manifest + hash unchanged | update | Safe to overwrite |
+| File in manifest + hash changed + has YAML front-matter | merge-frontmatter | User's config + new body |
+| File in manifest + hash changed + no front-matter | preserve | Don't risk losing user content |
+| File in manifest + category=generated | regenerate | Re-generate from .pi/ |
+| File in manifest + NOT in templates | orphan | Deprecated, don't delete |
+
+**Front-Matter Merge Logic:**
+
+```typescript
+// 1. Parse user's front-matter config
+userFrontMatter = parseFrontMatter(userContent)
+
+// 2. Extract new template body (everything after ---)
+newBody = extractPromptBody(renderTemplate(newTemplate, context))
+
+// 3. Rebuild file: user config + new body
+merged = buildYamlFrontMatter(userFrontMatter) + "\n\n" + newBody
+```
+
+This is the core value proposition: your workspace/agent/generate config survives template updates automatically.
 
 ### 3.5 Workflow Config (`src/lib/workflow-config.ts`)
 
@@ -419,6 +453,37 @@ User Input (prompts/flags)
 │    "overwrite" → proceed silently                           │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
+```
+
+### 4.4 Update Flow
+
+```
+┌─ runUpdate() ───────────────────────────────────────────────┐
+│                                                               │
+│  1. readManifest()                                           │
+│  2. buildTemplateContext(from manifest.templateContext)     │
+│  3. analyzeChanges():                                        │
+│     a. For each manifest file:                               │
+│        - If template removed → orphan                         │
+│        - If generated → regenerate                            │
+│        - If file missing → update                             │
+│        - If hash unchanged → update                           │
+│        - If hash changed + has front-matter → merge          │
+│        - If hash changed + no front-matter → preserve        │
+│     b. For each template not in manifest → add               │
+│  4. If --dryRun → print plan, exit                           │
+│  5. If not --force → confirm with user                       │
+│  6. For each change:                                         │
+│     add → renderTemplate() + write                           │
+│     update → renderTemplate() + write                        │
+│     merge-frontmatter → parseFrontMatter(user) +             │
+│                          extractPromptBody(new) → write      │
+│     preserve → mark status=modified in manifest              │
+│  7. writeManifest()                                          │
+│  8. If --regenerate → regenerateAllExports()                 │
+│  9. Print summary                                            │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ---
