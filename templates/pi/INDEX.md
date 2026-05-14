@@ -136,6 +136,9 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   ├── pattern-extract.md     # Extract patterns to blueprint
 │   └── blueprint-update.md    # Reverse-sync implementation to blueprint
 │
+├── validators/                 # TOML-based declarative validation rules
+│   ├── default.toml           # Built-in validators with inline tests
+│   └── README.md              # Validator documentation
 ├── scripts/
 │   ├── validate-ci.sh
 │   ├── validate-tests.sh

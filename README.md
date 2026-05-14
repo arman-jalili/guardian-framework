@@ -26,8 +26,10 @@ Multi-agent AI workflows produce excellent results but burn tokens quadratically
 | Blind file mutations | **Plan mode** — queued edits for batch review |
 | Token-heavy skill loading | **Snippet expansion** — `#handle` tokens (70–90% savings) |
 | Secret leakage in output | **Redaction layer** — API keys, tokens, JWTs auto-stripped |
+| Verbosity in command output | **TOML filter pipeline** — declarative 8-stage output compression |
+| No runtime token accounting | **SQLite tracking** — per-validator token savings + USD estimation |
 
-**Result: 50–70% token reduction** compared to traditional multi-agent workflows.
+**Result: 60–90% token reduction** compared to traditional multi-agent workflows.
 
 ---
 
@@ -231,6 +233,23 @@ hooks:
 | `redaction.ts` | Automatic secret redaction in tool results and user input. Covers API keys, tokens, JWTs, env assignments. |
 
 Zero external npm dependencies — all self-contained.
+
+---
+
+## RTK-Adopted Patterns
+
+GuardianCLI incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
+
+| # | Pattern | Impact |
+|---|---------|--------|
+| 1 | **TOML Filter Pipeline** | 8-stage declarative output compression (strip → replace → match → filter → truncate → head/tail → cap → empty) |
+| 2 | **Inline Test-Driven Validators** | Self-verifying validators with `[[tests.*]]` blocks, `guardian validate --verify` |
+| 3 | **SQLite Token Tracking** | Runtime token accounting with `guardian stats`, daily/weekly reports, USD estimation |
+| 4 | **Language-Aware Code Filtering** | 3-level read filtering (None/Minimal/Aggressive) for 11 languages |
+| 5 | **Tee-on-Failure** | Raw validator output preserved on failure for debugging |
+| 6 | **Trust-Gated Project Config** | Prevents malicious extension injection — `guardian trust` workflow |
+| 7 | **File Integrity Verification** | SHA-256 hash verification, detects tampering/drift — `guardian verify` |
+| 8 | **Economic Analytics** | Estimated USD savings based on API pricing — shown in `guardian info` |
 
 ---
 

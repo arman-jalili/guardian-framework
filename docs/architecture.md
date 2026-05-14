@@ -1,6 +1,6 @@
 # GuardianCLI Architecture
 
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Living Document
 **Last Updated:** 2026-05-14
 
@@ -51,6 +51,19 @@ GuardianCLI also incorporates production-tested patterns from [Terax AI](https:/
 | Tool labeling | Progress display with human-readable tool call labels |
 | Model capability registry | `skills/validators/model-registry.md` — intelligence/speed/cost scoring |
 | Redaction layer | `extensions/redaction.ts` — auto-strip API keys, tokens, JWTs |
+
+GuardianCLI also incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
+
+| RTK Pattern | Guardian Implementation |
+|---------------|------------------------|
+| TOML filter pipeline | `src/lib/toml-filter.ts` — 8-stage declarative output compression |
+| Inline test-driven filters | `.pi/validators/*.toml` with `[[tests.*]]` blocks |
+| SQLite token tracking | `src/lib/tracking.ts` — per-validator token savings + USD estimation |
+| Language-aware code filtering | `src/lib/code-filter.ts` — 3-level filtering for 11 languages |
+| Trust-gated project config | `src/lib/trust.ts` — SHA-256 hash verification before enabling |
+| File integrity verification | `src/lib/integrity.ts` — detect tampering/drift |
+| Tee-on-failure | Raw validator output preserved on failure |
+| Economic analytics | `guardian stats` command with USD savings estimation |
 
 ---
 

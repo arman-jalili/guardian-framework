@@ -4,8 +4,10 @@ import { intro, isCancel, outro } from "@clack/prompts";
 import { runGenerate } from "./commands/generate.js";
 import { runInfo } from "./commands/info.js";
 import { runInit } from "./commands/init.js";
+import { runStats } from "./commands/stats.js";
 import { runUninstall } from "./commands/uninstall.js";
 import { runUpdate } from "./commands/update.js";
+import { runTrust, runValidate, runVerify } from "./commands/validate.js";
 
 const VERSION = "0.1.0";
 
@@ -43,6 +45,10 @@ Usage:
   guardian-framework-cli upgrade       Migrate to new version
   guardian-framework-cli uninstall     Remove Guardian-managed files
   guardian-framework-cli info          Display manifest information
+  guardian-framework-cli stats         Token savings analytics and USD estimation
+  guardian-framework-cli validate      Run TOML-based validators
+  guardian-framework-cli verify        File integrity verification
+  guardian-framework-cli trust         Trust-gated config management
 
 Options:
   -v, --version              Show version
@@ -69,6 +75,15 @@ Update options:
 Uninstall options:
   --dryRun                   Show files that would be removed
   --force                    Required to remove Guardian-managed files
+
+Validate options:
+  --filter <name>            Run only matching validator
+  --verify                   Run inline tests, don't validate
+
+Stats options:
+  --days <N>                 Time window (default: 30)
+  --history                  Show recent command history
+  --clear                    Clear tracking history
 `);
 		return;
 	}
@@ -119,6 +134,30 @@ async function runCommand(
 			break;
 		case "info":
 			await runInfo(targetDir);
+			break;
+		case "stats":
+			await runStats({
+				days: Number(args.values.days) || 30,
+				history: args.values.history as boolean | undefined,
+				clear: args.values.clear as boolean | undefined,
+			});
+			break;
+		case "validate":
+			await runValidate(targetDir, {
+				filter: args.values.filter as string | undefined,
+				verify: args.values.verify as boolean | undefined,
+				verbose: args.values.verbose as boolean | undefined,
+			});
+			break;
+		case "verify":
+			await runVerify(targetDir);
+			break;
+		case "trust":
+			await runTrust(targetDir, {
+				list: args.values.list as boolean | undefined,
+				revoke: args.values.revoke as boolean | undefined,
+				file: args.positionals[1],
+			});
 			break;
 		default:
 			console.error(`Unknown command: ${command}`);

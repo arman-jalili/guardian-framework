@@ -13,6 +13,7 @@ import {
 	isFileModified,
 	readManifest,
 } from "../lib/manifest.js";
+import { formatTokens, getStats } from "../lib/tracking.js";
 
 /**
  * Run info command
@@ -56,6 +57,9 @@ export async function runInfo(targetDir: string): Promise<void> {
 
 	// Calculate token stats
 	const tokenStats = calculateTokenStats(targetDir, manifest);
+
+	// Get RTK-style runtime token tracking stats
+	const runtimeStats = getStats(30);
 
 	// Check for new Terax-adopted features
 	const hasSubagentRegistry = fs.existsSync(
@@ -118,6 +122,7 @@ export async function runInfo(targetDir: string): Promise<void> {
 │ Framework tokens:  ${String(tokenStats.byCategory.framework ?? 0).padEnd(38)}│
 │ User tokens:       ${String(tokenStats.byCategory.user ?? 0).padEnd(38)}│
 │ Generated tokens:  ${String(tokenStats.byCategory.generated ?? 0).padEnd(38)}│
+│ Runtime savings:   ${runtimeStats.totalCommands > 0 ? formatTokens(runtimeStats.totalSavedTokens) : "N/A".padEnd(38)}│
 ├─────────────────────────────────────────────────────────────┤
 │ File Summary                                                 │
 ├─────────────────────────────────────────────────────────────┤
