@@ -386,10 +386,7 @@ export function estimateTokens(text: string): number {
 /**
  * Calculate token stats for all files in the manifest.
  */
-export function calculateTokenStats(
-	targetDir: string,
-	manifest: GuardianManifest,
-): TokenStats {
+export function calculateTokenStats(targetDir: string, manifest: GuardianManifest): TokenStats {
 	const byCategory: Record<string, number> = {};
 	const byFile: Record<string, number> = {};
 	let totalTokens = 0;

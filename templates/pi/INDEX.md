@@ -100,10 +100,18 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 │   │   ├── push.md              # Keep remote branch current
 │   │   ├── pull.md              # Sync with latest main
 │   │   ├── land.md              # PR merge loop with validation
-│   │   └── debug.md             # Systematic debugging
+│   │   ├── debug.md             # Systematic debugging
+│   │   ├── subagent-registry.md # Delegated subagent system with tool scoping
+│   │   ├── plan-mode.md         # Queued edits for batch review
+│   │   ├── snippets.md          # Reusable #handle prompt fragments
+│   │   └── session-persistence.md # Session lifecycle management
 │   └── validators/
 │       ├── architecture-validator.md
 │       ├── security-validator.md
+│       ├── security-guards.md     # Path safety + command deny-list
+│       ├── context-compaction.md  # Token-aware context management
+│       ├── system-prompt-tiers.md # Full/lite prompt tiers by model
+│       ├── model-registry.md      # Model capability scoring
 │       ├── operations-validator.md
 │       ├── integration-validator.md
 │       ├── test-validator.md
@@ -146,11 +154,16 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 ├── extensions/
 │   ├── validation-runner.ts   # Pi extension for validation commands
 │   ├── coordinator.ts         # Pi extension for scope classification + validation tools
-│   ├── bash-guard.ts          # Interactive destructive command blocking
+│   ├── bash-guard.ts          # Destructive command blocking + path safety guards
 │   ├── filechanges.ts         # File change tracking with accept/decline
 │   ├── read-only-mode.ts      # Safe exploration mode (read/grep/find/ls only)
 │   ├── ask-user-question.ts   # Structured question tool (text/single/multi-select)
-│   └── config-reload.ts       # Dynamic config reload on AGENTS.md change
+│   ├── config-reload.ts       # Dynamic config reload on AGENTS.md change
+│   ├── plan-mode.ts           # Queued mutations for batch review (/plan)
+│   ├── slash-commands.ts      # /init, /validate, /scope, /snippet commands
+│   ├── session-persistence.ts # Structured session lifecycle with auto-titling
+│   ├── snippets.ts            # #handle token expansion and management
+│   └── redaction.ts           # Automatic secret redaction in output
 │
 ├── workpad.md                 # Persistent session progress tracker
 ├── github/                    # GitHub Copilot CLI templates

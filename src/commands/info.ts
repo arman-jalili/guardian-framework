@@ -7,7 +7,12 @@
 import * as fs from "node:fs";
 import * as nodePath from "node:path";
 import { outro } from "@clack/prompts";
-import { hashDirectory, isFileModified, readManifest } from "../lib/manifest.js";
+import {
+	calculateTokenStats,
+	hashDirectory,
+	isFileModified,
+	readManifest,
+} from "../lib/manifest.js";
 
 /**
  * Run info command
@@ -16,7 +21,7 @@ export async function runInfo(targetDir: string): Promise<void> {
 	// Check for manifest
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		outro("No manifest found. Run 'guardian-framework-cli init' first.");
+		outro("No manifest found. Run 'guardian-cli init' first.");
 		return;
 	}
 
@@ -49,6 +54,50 @@ export async function runInfo(targetDir: string): Promise<void> {
 		exportSyncStatus[tool] = currentPiHash === storedHash;
 	}
 
+	// Calculate token stats
+	const tokenStats = calculateTokenStats(targetDir, manifest);
+
+	// Check for new Terax-adopted features
+	const hasSubagentRegistry = fs.existsSync(
+		nodePath.join(targetDir, ".pi/skills/agents/subagent-registry.md"),
+	);
+	const hasContextCompaction = fs.existsSync(
+		nodePath.join(targetDir, ".pi/skills/validators/context-compaction.md"),
+	);
+	const hasSecurityGuards = fs.existsSync(
+		nodePath.join(targetDir, ".pi/skills/validators/security-guards.md"),
+	);
+	const hasSystemPromptTiers = fs.existsSync(
+		nodePath.join(targetDir, ".pi/skills/validators/system-prompt-tiers.md"),
+	);
+	const hasPlanMode = fs.existsSync(nodePath.join(targetDir, ".pi/extensions/plan-mode.ts"));
+	const hasSnippets = fs.existsSync(nodePath.join(targetDir, ".pi/extensions/snippets.ts"));
+	const hasSessionPersistence = fs.existsSync(
+		nodePath.join(targetDir, ".pi/extensions/session-persistence.ts"),
+	);
+	const hasSlashCommands = fs.existsSync(
+		nodePath.join(targetDir, ".pi/extensions/slash-commands.ts"),
+	);
+	const hasRedaction = fs.existsSync(nodePath.join(targetDir, ".pi/extensions/redaction.ts"));
+	const hasModelRegistry = fs.existsSync(
+		nodePath.join(targetDir, ".pi/skills/validators/model-registry.md"),
+	);
+
+	const featureCount = [
+		hasSubagentRegistry,
+		hasContextCompaction,
+		hasSecurityGuards,
+		hasSystemPromptTiers,
+		hasPlanMode,
+		hasSnippets,
+		hasSessionPersistence,
+		hasSlashCommands,
+		hasRedaction,
+		hasModelRegistry,
+	].filter(Boolean).length;
+
+	const maxFeatures = 10;
+
 	// Output info
 	console.log(`
 ┌─────────────────────────────────────────────────────────────┐
@@ -63,6 +112,13 @@ export async function runInfo(targetDir: string): Promise<void> {
 │ Validators:        ${manifest.validators.join(", ").padEnd(38)}│
 │ Workflows:         ${(manifest.workflows.length > 0 ? manifest.workflows.join(", ") : "none").padEnd(38)}│
 ├─────────────────────────────────────────────────────────────┤
+│ Token Stats                                                  │
+├─────────────────────────────────────────────────────────────┤
+│ Total tokens:      ${String(tokenStats.totalTokens).padEnd(38)}│
+│ Framework tokens:  ${String(tokenStats.byCategory.framework ?? 0).padEnd(38)}│
+│ User tokens:       ${String(tokenStats.byCategory.user ?? 0).padEnd(38)}│
+│ Generated tokens:  ${String(tokenStats.byCategory.generated ?? 0).padEnd(38)}│
+├─────────────────────────────────────────────────────────────┤
 │ File Summary                                                 │
 ├─────────────────────────────────────────────────────────────┤
 │ Framework files:   ${String(frameworkFiles.length).padEnd(38)}│
@@ -75,9 +131,22 @@ export async function runInfo(targetDir: string): Promise<void> {
 ${Object.entries(exportSyncStatus)
 	.map(
 		([tool, synced]) =>
-			`│ .${tool}/            ${synced ? "✅ In sync" : "⚠️  Out of sync".padEnd(30)}│`,
+			`│ .${tool.padEnd(16)} ${synced ? "✅ In sync" : "⚠️  Out of sync".padEnd(30)}│`,
 	)
 	.join("\n")}
+├─────────────────────────────────────────────────────────────┤
+│ Terax-Adopted Features (${featureCount}/${maxFeatures})                               │
+├─────────────────────────────────────────────────────────────┤
+│ ${hasSubagentRegistry ? "✅" : "❌"} Subagent delegation with tool scoping                   │
+│ ${hasContextCompaction ? "✅" : "❌"} Context compaction strategy                        │
+│ ${hasSecurityGuards ? "✅" : "❌"} Path safety + command deny-list                    │
+│ ${hasSystemPromptTiers ? "✅" : "❌"} Tiered system prompts (full/lite)                  │
+│ ${hasPlanMode ? "✅" : "❌"} Plan mode with queued edits                        │
+│ ${hasSnippets ? "✅" : "❌"} Snippet token expansion (#handle)                    │
+│ ${hasSessionPersistence ? "✅" : "❌"} Session persistence                              │
+│ ${hasSlashCommands ? "✅" : "❌"} Slash command system                              │
+│ ${hasRedaction ? "✅" : "❌"} Redaction layer                                   │
+│ ${hasModelRegistry ? "✅" : "❌"} Model capability registry                         │
 ├─────────────────────────────────────────────────────────────┤
 │ Timestamps                                                   │
 ├─────────────────────────────────────────────────────────────┤
@@ -87,6 +156,6 @@ ${Object.entries(exportSyncStatus)
 
 ${modifiedFiles.length > 0 ? `Modified files:\n  ${modifiedFiles.map(([p]) => p).join("\n  ")}` : "No modified files."}
 
-${Object.entries(exportSyncStatus).some(([_, s]) => !s) ? "⚠️  Some exports out of sync. Run: guardian-framework-cli generate" : "✅ All exports in sync."}
+${Object.entries(exportSyncStatus).some(([_, s]) => !s) ? "⚠️  Some exports out of sync. Run: guardian-cli generate" : "✅ All exports in sync."}
 `);
 }

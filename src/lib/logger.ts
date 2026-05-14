@@ -22,7 +22,9 @@ let logOutput: NodeJS.WriteStream = process.stderr;
 /**
  * Configure the logger.
  */
-export function configureLogger(options: { level?: LogLevel; output?: NodeJS.WriteStream } = {}): void {
+export function configureLogger(
+	options: { level?: LogLevel; output?: NodeJS.WriteStream } = {},
+): void {
 	if (options.level) logLevel = options.level;
 	if (options.output) logOutput = options.output;
 }
@@ -47,7 +49,7 @@ export function log(level: LogLevel, message: string, context?: Record<string, u
 		...(context ? { context } : {}),
 	};
 
-	logOutput.write(JSON.stringify(entry) + "\n");
+	logOutput.write(`${JSON.stringify(entry)}\n`);
 }
 
 /**
@@ -68,6 +70,9 @@ export const logger = {
 		log("info", message, { tool, ...context }),
 
 	// Action-outcome logging
-	action: (action: string, outcome: "completed" | "failed" | "retrying" | "skipped", reason?: string) =>
-		log("info", `${action} ${outcome}`, { action, outcome, ...(reason ? { reason } : {}) }),
+	action: (
+		action: string,
+		outcome: "completed" | "failed" | "retrying" | "skipped",
+		reason?: string,
+	) => log("info", `${action} ${outcome}`, { action, outcome, ...(reason ? { reason } : {}) }),
 };

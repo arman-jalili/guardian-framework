@@ -20,15 +20,17 @@ const DEFAULT_OPTIONS: RetryOptions = {
 	baseDelayMs: 10000,
 };
 
-export type RetryResult<T> = {
-	ok: true;
-	value: T;
-	attempts: number;
-} | {
-	ok: false;
-	error: Error;
-	attempts: number;
-};
+export type RetryResult<T> =
+	| {
+			ok: true;
+			value: T;
+			attempts: number;
+	  }
+	| {
+			ok: false;
+			error: Error;
+			attempts: number;
+	  };
 
 /**
  * Execute a function with exponential backoff retry.
@@ -55,7 +57,7 @@ export async function retry<T>(
 		}
 	}
 
-	return { ok: false, error: lastError!, attempts: opts.maxAttempts };
+	return { ok: false, error: lastError ?? new Error("unknown error"), attempts: opts.maxAttempts };
 }
 
 /**
@@ -67,7 +69,7 @@ export function calculateBackoff(
 	baseDelayMs: number,
 	maxBackoffMs: number,
 ): number {
-	const delay = baseDelayMs * Math.pow(2, attempt - 1);
+	const delay = baseDelayMs * 2 ** (attempt - 1);
 	return Math.min(delay, maxBackoffMs);
 }
 

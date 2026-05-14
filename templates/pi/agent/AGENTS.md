@@ -15,6 +15,10 @@ agent:
   max_retry_backoff_ms: 300000  # 5 minutes
   stall_timeout_ms: 300000      # 5 minutes no activity = stall
 
+# System prompt tier: "full" (default) or "lite" for fast/cheap models
+# Use "lite" for: GPT-4o-mini, Claude Haiku, Gemini Flash, Cerebras, Groq
+system_prompt_tier: full
+
 # Generation settings
 generate:
   on_conflict: warn       # "overwrite" | "warn" | "skip" — what to do when exports modified externally
@@ -105,6 +109,17 @@ validate:
 | Complex | 5-15 | 200-500 | All validators |
 | Critical | 15+ or core | 500+ | All validators + human approval |
 
+## Subagent Delegation
+
+| Task | Subagent | Tools |
+|------|----------|-------|
+| Explore codebase | `explore` | read-only (read, grep, glob) |
+| Code review | `code-review` | read-only (read, grep, glob) |
+| Security audit | `security-review` | read-only (read, grep, glob) |
+| Multi-file research | `general-research` | read-only (read, grep, glob) |
+
+Subagents have **restricted tool access** and **fresh context**. Include all relevant context in the spawn prompt. They cannot spawn other subagents (no recursion).
+
 ## Key Files
 
 > Files every agent should know about. Keep under 10.
@@ -126,6 +141,18 @@ validate:
 | `[lint]` | [Lint check] |
 | `[audit]` | [Security audit] |
 
+## Snippets
+
+Available `#handle` tokens for quick instruction injection:
+
+| Handle | Purpose |
+|--------|---------|
+| `#security-review` | Security audit instructions |
+| `#no-comments` | Suppress comments unless WHY is non-obvious |
+| `#test-first` | TDD workflow instructions |
+
+See `.pi/skills/agents/snippets.md` for full snippet management.
+
 ## Environment
 
 > Variables agents may reference. Use `$VAR_NAME` in scripts — do NOT embed secrets in templates.
@@ -135,3 +162,13 @@ validate:
 | `$GITHUB_TOKEN` | GitHub API authentication |
 | `$CI` | CI environment indicator |
 | `$BUILD_NUMBER` | Build identifier |
+
+## Security Guards
+
+Path safety guards are enforced at the extension level (`.pi/extensions/bash-guard.ts`):
+
+- **Read blocklist:** `.env*`, `*.pem`, `*.key`, `.ssh/*`, `.aws/*`, `.git/*`
+- **Write blocklist:** Inherits read restrictions + `/etc/`, `/System/`, `/private/`
+- **Command deny-list:** `rm -rf /`, `mkfs`, `dd of=/dev/*`, `terraform destroy`, `kubectl delete`
+
+See `.pi/skills/validators/security-guards.md` for the full policy.

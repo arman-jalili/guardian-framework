@@ -1,5 +1,10 @@
+// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
+// biome-ignore lint/style/noNonNullAssertion: pi UI callbacks use non-null assertions
 /**
  * Ask User Question Extension for pi
+ *
+ * biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
+ * biome-ignore lint/style/noNonNullAssertion: pi UI callbacks use non-null assertions
  *
  * Registers a structured question tool that supports free-text, single-select,
  * and multi-select with an "Other" escape hatch.
@@ -70,6 +75,7 @@ function getOtherLabel(options: AskOption[]): string {
 	return options.some((o) => o.label.toLowerCase() === "other") ? "Other (custom)" : "Other";
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
 function createEditorTheme(theme: any): EditorTheme {
 	return {
 		borderColor: (s) => theme.fg("accent", s),
@@ -161,6 +167,7 @@ function buildResult(
 }
 
 async function askSingleChoice(
+	// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
 	ctx: any,
 	question: string,
 	context: string | undefined,
@@ -224,7 +231,7 @@ async function askSingleChoice(
 						type: "option",
 						label: selected.label,
 						value: selected.value,
-						index: selected.index!,
+						index: selected.index ?? 0,
 					});
 					return;
 				}
@@ -283,6 +290,7 @@ async function askSingleChoice(
 }
 
 async function askMultiChoice(
+	// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
 	ctx: any,
 	question: string,
 	context: string | undefined,
@@ -322,7 +330,7 @@ async function askMultiChoice(
 						type: "option",
 						label: item.label,
 						value: item.value,
-						index: item.index!,
+						index: item.index ?? 0,
 					});
 				refresh();
 			}

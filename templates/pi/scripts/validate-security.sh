@@ -56,7 +56,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Path Traversal ---"
-PATH_TRAVERSAL=$(grep -rn "\.\./\|\.\.\\\\" "$SRC_DIR" 2>/dev/null | grep -v "test" | grep -v "canonicalize\|starts_with\|validate_path" || true)
+PATH_TRAVERSAL=$(grep -rn "\.\./\|\.\.\\\\\\\\" "$SRC_DIR" 2>/dev/null | grep -v "test" | grep -v "canonicalize\|starts_with\|validate_path" || true)
 if [ -z "$PATH_TRAVERSAL" ]; then
     pass "No path traversal vulnerabilities detected"
 else
@@ -65,7 +65,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Security Audit
+# Sensitive File Exposure
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Sensitive File Exposure ---"
+SENSITIVE_FILES=$(find "$SRC_DIR" -name ".env" -o -name ".env.*" -o -name "*.pem" -o -name "*.key" -o -name "id_rsa*" -o -name "id_ed25519*" -o -name ".netrc" -o -name "credentials" -o -name "*.p12" -o -name "*.pfx" 2>/dev/null || true)
+if [ -z "$SENSITIVE_FILES" ]; then
+    pass "No sensitive files exposed in source tree"
+else
+    fail "Sensitive files found in source tree (should be in .gitignore):"
+    echo "$SENSITIVE_FILES" | head -10
+fi
+
+# ---------------------------------------------------------------------------
+# Protected Directory Access
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Protected Directory Access ---"
+PROTECTED_PATHS=$(grep -rn '"/\(etc\|var/db\|System\|private/etc\|private/var/db\)/' "$SRC_DIR" 2>/dev/null | grep -v "test" || true)
+if [ -z "$PROTECTED_PATHS" ]; then
+    pass "No protected directory path references"
+else
+    warn "References to protected system directories (verify not writable):"
+    echo "$PROTECTED_PATHS" | head -5
+fi
+
+# ---------------------------------------------------------------------------
+# Dependency Audit
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Dependency Audit ---"
@@ -75,8 +101,20 @@ if command -v cargo-audit &> /dev/null; then
     else
         fail "Vulnerable dependencies detected"
     fi
+elif command -v npm &> /dev/null && [ -f "package.json" ]; then
+    if npm audit --production 2>&1 | grep -q "found 0 vulnerabilities"; then
+        pass "No known vulnerabilities in dependencies"
+    else
+        warn "npm audit reported vulnerabilities (review manually)"
+    fi
+elif command -v pip &> /dev/null && [ -f "requirements.txt" ]; then
+    if pip-audit 2>&1; then
+        pass "No known vulnerabilities in dependencies"
+    else
+        warn "pip-audit reported vulnerabilities (review manually)"
+    fi
 else
-    warn "cargo-audit not installed, skipping audit"
+    warn "No package manager audit tool available, skipping audit"
 fi
 
 # ---------------------------------------------------------------------------

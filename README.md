@@ -20,8 +20,14 @@ Multi-agent AI workflows produce excellent results but burn tokens quadratically
 | Ad-hoc agent configuration | **WORKFLOW.md contract** — versioned prompt + runtime config |
 | No safety for agent runs | **Workspace hooks + path safety** — isolated, bounded execution |
 | Silent failures | **Retry with backoff + reconciliation** — recover from transient errors |
+| Unbounded context growth | **Context compaction** — budget-aware elision, read cache |
+| No tool scoping for subagents | **Subagent delegation** — read-only whitelists, anti-recursion |
+| Monolithic system prompts | **Tiered prompts** — full/lite by model capability |
+| Blind file mutations | **Plan mode** — queued edits for batch review |
+| Token-heavy skill loading | **Snippet expansion** — `#handle` tokens (70–90% savings) |
+| Secret leakage in output | **Redaction layer** — API keys, tokens, JWTs auto-stripped |
 
-**Result: 50–65% token reduction** compared to traditional multi-agent workflows.
+**Result: 50–70% token reduction** compared to traditional multi-agent workflows.
 
 ---
 
@@ -218,6 +224,11 @@ hooks:
 | `config-reload.ts` | Watches AGENTS.md for changes, reloads config without restart. `/reload-config` for manual trigger. |
 | `coordinator.ts` | guardian_scope, guardian_validate, guardian_coordinate tools + lightweight bash-guard. |
 | `validation-runner.ts` | `/validate` command for running validator scripts directly. |
+| `plan-mode.ts` | Queues file mutations for batch review. `/plan` to toggle, `/plan-apply` to review and apply. Shell refused in plan mode. |
+| `slash-commands.ts` | `/init`, `/validate`, `/scope`, `/snippet` commands with `send-prompt` outcome model. |
+| `session-persistence.ts` | Structured session lifecycle with lazy-loaded history, auto-derived titles, `/sessions` command. |
+| `snippets.ts` | `#handle` token expansion and management. `/snippet list\|add\|remove\|edit`. |
+| `redaction.ts` | Automatic secret redaction in tool results and user input. Covers API keys, tokens, JWTs, env assignments. |
 
 Zero external npm dependencies — all self-contained.
 
@@ -232,6 +243,29 @@ Zero external npm dependencies — all self-contained.
 | `pull` | Sync with latest origin/main before implementation |
 | `land` | PR merge loop with full validation — never `gh pr merge` directly |
 | `debug` | Systematic debugging: observe → reproduce → hypothesize → verify → fix |
+
+---
+
+## Terax-Adopted Patterns
+
+GuardianCLI incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), an AI-native terminal:
+
+| # | Pattern | Impact |
+|---|---------|--------|
+| 1 | **Subagent Delegation + Tool Scoping** | Read-only tool whitelists per agent type, anti-recursion guards |
+| 2 | **Context Compaction** | Budget-aware elision at 55/70/90% thresholds, superseded read dropping |
+| 3 | **Security Guards** | Pre-execution path safety (15 secret patterns, 9 protected dirs), 12-item command deny-list |
+| 4 | **Tiered System Prompts** | Full vs Lite prompts by model capability (~750 tokens/turn saved on fast models) |
+| 5 | **Plan Mode + Queued Edits** | Mutations queued for batch review, shell refused in plan mode |
+| 6 | **Snippet Token Expansion** | `#handle` → XML block expansion, 70–90% token savings vs full skill files |
+| 7 | **Session Persistence** | Lazy-loaded history, auto-derived titles, per-session state isolation |
+| 8 | **Read-Before-Edit Invariant** | Must read file before editing, read cache invalidation on mutation |
+| 9 | **Slash Command System** | `/init`, `/validate`, `/scope`, `/snippet` with `send-prompt` outcome |
+| 10 | **Tool Labeling** | Human-readable tool call labels for progress display |
+| 11 | **Model Registry** | Intelligence/speed/cost scoring, auto-selection by task type |
+| 12 | **Redaction Layer** | Automatic secret redaction (API keys, tokens, JWTs, env assignments) |
+
+See [CHANGELOG.md](CHANGELOG.md) for implementation details.
 
 ---
 

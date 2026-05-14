@@ -18,10 +18,10 @@ import {
 	readManifest,
 	writeManifest,
 } from "../lib/manifest.js";
+import { retry } from "../lib/retry.js";
 import { type Tool, templatesExist } from "../lib/templates.js";
 import { loadWorkflowConfig, resolveEnvVars } from "../lib/workflow-config.js";
-import { ensureWorkspace, runBeforeRunHook, runAfterRunHook } from "../lib/workspace-hooks.js";
-import { retry } from "../lib/retry.js";
+import { ensureWorkspace, runAfterRunHook, runBeforeRunHook } from "../lib/workspace-hooks.js";
 
 /**
  * Run generate command
@@ -65,18 +65,26 @@ export async function runGenerate(
 		const onConflict = config.generate.on_conflict;
 
 		// Reconciliation: check if any existing exports were modified externally
-		const modifiedExports = detectExternallyModifiedExports(targetDir, manifest, toolsToGenerate, onConflict);
+		const modifiedExports = detectExternallyModifiedExports(
+			targetDir,
+			manifest,
+			toolsToGenerate,
+			onConflict,
+		);
 		if (modifiedExports.length > 0 && !options.dryRun) {
 			if (onConflict === "skip") {
 				s.stop();
-				outro(`Skipping generation — ${modifiedExports.length} export files were modified externally.\nRun with --force to overwrite.`);
+				outro(
+					`Skipping generation — ${modifiedExports.length} export files were modified externally.\nRun with --force to overwrite.`,
+				);
 				return;
 			}
 			if (onConflict === "warn") {
 				// Warn but proceed (user can still Ctrl-C)
 				console.log(`\n⚠️  ${modifiedExports.length} export file(s) were modified externally:`);
 				for (const f of modifiedExports.slice(0, 5)) console.log(`    ${f}`);
-				if (modifiedExports.length > 5) console.log(`    ...and ${modifiedExports.length - 5} more`);
+				if (modifiedExports.length > 5)
+					console.log(`    ...and ${modifiedExports.length - 5} more`);
 				console.log();
 			}
 			// "overwrite" proceeds silently
@@ -113,12 +121,18 @@ export async function runGenerate(
 			}
 
 			// Generate export with retry
-			const genResult = await retry(() => {
-				generateExport(exportDir, tool as Tool, piDir, manifest, generatedFiles);
-				return Promise.resolve();
-			}, { maxAttempts: 3, onRetry: (attempt, _err, delay) => {
-				console.log(`  Retrying ${tool} generation (attempt ${attempt + 1})...`);
-			} });
+			const genResult = await retry(
+				() => {
+					generateExport(exportDir, tool as Tool, piDir, manifest, generatedFiles);
+					return Promise.resolve();
+				},
+				{
+					maxAttempts: 3,
+					onRetry: (attempt, _err, delay) => {
+						console.log(`  Retrying ${tool} generation (attempt ${attempt + 1})...`);
+					},
+				},
+			);
 
 			if (!genResult.ok) {
 				s.stop();

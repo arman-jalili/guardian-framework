@@ -68,7 +68,11 @@ function tokenizeCommand(cmd: string): { parts: string[]; ops: string[] } {
 
 			// Check for ||, &&, >>
 			const next = cmd[i + 1];
-			if ((ch === "|" && next === "|") || (ch === "&" && next === "&") || (ch === ">" && next === ">")) {
+			if (
+				(ch === "|" && next === "|") ||
+				(ch === "&" && next === "&") ||
+				(ch === ">" && next === ">")
+			) {
 				ops.push(ch + next);
 				i++;
 			} else {
@@ -101,12 +105,14 @@ function analyzeCommand(command: string): Risk | null {
 	const rest = parts.slice(1);
 
 	const hasFlag = (flag: string): boolean =>
-		rest.some((a) => a === flag || a.startsWith(flag + "="));
-	const hasFlagPrefix = (prefix: string): boolean =>
-		rest.some((a) => a.startsWith(prefix));
+		rest.some((a) => a === flag || a.startsWith(`${flag}=`));
+	const hasFlagPrefix = (prefix: string): boolean => rest.some((a) => a.startsWith(prefix));
 
 	// Shell injection
-	if (ops.includes("|") && (rest.includes("sh") || rest.includes("bash") || rest.includes("zsh") || rest.includes("fish"))) {
+	if (
+		ops.includes("|") &&
+		(rest.includes("sh") || rest.includes("bash") || rest.includes("zsh") || rest.includes("fish"))
+	) {
 		reasons.push("pipe to a shell (possible remote code execution)");
 		severity = "high";
 	}
@@ -121,7 +127,14 @@ function analyzeCommand(command: string): Risk | null {
 	if (cmd === "rm" || cmd === "rmdir" || cmd === "unlink") {
 		severity = "high";
 		reasons.push(`${cmd} (file deletion)`);
-		if (hasFlag("-r") || hasFlag("-R") || hasFlagPrefix("-rf") || hasFlagPrefix("-fr") || hasFlagPrefix("-Rf") || hasFlagPrefix("-fR")) {
+		if (
+			hasFlag("-r") ||
+			hasFlag("-R") ||
+			hasFlagPrefix("-rf") ||
+			hasFlagPrefix("-fr") ||
+			hasFlagPrefix("-Rf") ||
+			hasFlagPrefix("-fR")
+		) {
 			reasons.push("recursive delete (-r/-R)");
 		}
 		if (hasFlag("-f")) {
@@ -157,7 +170,10 @@ function analyzeCommand(command: string): Risk | null {
 			severity = "high";
 			reasons.push("git reset --hard (discard changes)");
 		}
-		if ((sub === "checkout" || sub === "restore") && (subArgs.includes(".") || hasFlag("--") || hasFlag("--source"))) {
+		if (
+			(sub === "checkout" || sub === "restore") &&
+			(subArgs.includes(".") || hasFlag("--") || hasFlag("--source"))
+		) {
 			reasons.push("git checkout/restore (can overwrite working tree)");
 		}
 		if (sub === "push" && (hasFlag("--force") || hasFlag("--force-with-lease") || hasFlag("-f"))) {
@@ -186,7 +202,21 @@ function analyzeCommand(command: string): Risk | null {
 	}
 
 	// Disk / volume management
-	const diskCmds = ["mkfs", "wipefs", "parted", "fdisk", "gdisk", "sgdisk", "lsblk", "cryptsetup", "zpool", "diskutil", "hdiutil", "gpt", "asr"];
+	const diskCmds = [
+		"mkfs",
+		"wipefs",
+		"parted",
+		"fdisk",
+		"gdisk",
+		"sgdisk",
+		"lsblk",
+		"cryptsetup",
+		"zpool",
+		"diskutil",
+		"hdiutil",
+		"gpt",
+		"asr",
+	];
 	for (const dc of diskCmds) {
 		if (cmd === dc || cmd.startsWith(`${dc}.`) || cmd.startsWith(`${dc}_`)) {
 			severity = "high";
@@ -259,6 +289,7 @@ function analyzeCommand(command: string): Risk | null {
 	return { severity, reasons: [...new Set(reasons)] };
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
 async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<"run" | "abort"> {
 	if (!ctx.hasUI) return "abort";
 
@@ -270,32 +301,37 @@ async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<
 		{ value: "abort", label: "Abort", description: "Block this command" },
 	];
 
-	const choice = await ctx.ui.custom<"run" | "abort">((tui, theme, _kb, done) => {
-		const container = new Container();
-		container.addChild(new Text(theme.fg("warning", theme.bold("⚠  Potentially destructive bash command")), 1, 0));
-		container.addChild(new Text(body, 1, 0));
+	const choice = await ctx.ui.custom<"run" | "abort">(
+		(tui, theme, _kb, done) => {
+			const container = new Container();
+			container.addChild(
+				new Text(theme.fg("warning", theme.bold("⚠  Potentially destructive bash command")), 1, 0),
+			);
+			container.addChild(new Text(body, 1, 0));
 
-		const list = new SelectList(items, items.length, {
-			selectedPrefix: (t) => theme.fg("accent", t),
-			selectedText: (t) => theme.fg("accent", t),
-			description: (t) => theme.fg("muted", t),
-			scrollInfo: (t) => theme.fg("dim", t),
-			noMatch: (t) => theme.fg("warning", t),
-		});
+			const list = new SelectList(items, items.length, {
+				selectedPrefix: (t) => theme.fg("accent", t),
+				selectedText: (t) => theme.fg("accent", t),
+				description: (t) => theme.fg("muted", t),
+				scrollInfo: (t) => theme.fg("dim", t),
+				noMatch: (t) => theme.fg("warning", t),
+			});
 
-		list.onSelect = (item) => done(item.value as "run" | "abort");
-		list.onCancel = () => done("abort");
-		container.addChild(list);
+			list.onSelect = (item) => done(item.value as "run" | "abort");
+			list.onCancel = () => done("abort");
+			container.addChild(list);
 
-		return {
-			render: (w) => container.render(w),
-			invalidate: () => container.invalidate(),
-			handleInput: (data) => {
-				list.handleInput(data);
-				tui.requestRender();
-			},
-		};
-	}, { overlay: true });
+			return {
+				render: (w) => container.render(w),
+				invalidate: () => container.invalidate(),
+				handleInput: (data) => {
+					list.handleInput(data);
+					tui.requestRender();
+				},
+			};
+		},
+		{ overlay: true },
+	);
 
 	return choice ?? "abort";
 }
@@ -304,23 +340,158 @@ async function promptRunOrAbort(ctx: any, command: string, risk: Risk): Promise<
 const subagentDepth = Number(process.env.PI_SUBAGENT_DEPTH ?? "0");
 const isSubagent = Number.isFinite(subagentDepth) && subagentDepth >= 1;
 
-// Hard-block patterns for subagent (headless) mode.
+// ── Path safety guards (Terax-inspired) ──
+// Pre-execution blocks for reads/writes of sensitive files and system directories.
+
+const SECRET_BASENAME_PATTERNS: RegExp[] = [
+	/^\.env(\..+)?$/i, // .env, .env.local, .env.production, etc.
+	/^.*\.pem$/i,
+	/^.*\.key$/i, // private keys
+	/^.*\.p12$/i,
+	/^.*\.pfx$/i,
+	/^id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$/i,
+	/^known_hosts$/i,
+	/^authorized_keys$/i,
+	/^htpasswd$/i,
+	/^\.netrc$/i,
+	/^credentials$/i,
+	/^\.pgpass$/i,
+	/^\.npmrc$/i,
+	/^\.pypirc$/i,
+	/^secrets?\.(json|ya?ml|toml)$/i,
+];
+
+const SECRET_PATH_SEGMENTS = [
+	"/.ssh/",
+	"/.gnupg/",
+	"/.aws/",
+	"/.azure/",
+	"/.kube/",
+	"/.docker/",
+	"/.config/gh/",
+	"/.config/git/",
+	"/.git/",
+];
+
+const FORBIDDEN_WRITE_PREFIXES = [
+	"/etc/",
+	"/var/db/",
+	"/System/",
+	"/Library/Keychains/",
+	"/private/etc/",
+	"/private/var/db/",
+];
+
+function basename(p: string): string {
+	const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+	return i >= 0 ? p.slice(i + 1) : p;
+}
+
+function normalizePath(p: string): string {
+	return p.replace(/\\/g, "/");
+}
+
+/** Check if a file path is safe to read. Refuses obvious secret files. */
+export function checkReadable(filePath: string): { ok: true } | { ok: false; reason: string } {
+	const norm = normalizePath(filePath);
+	const base = basename(norm);
+
+	for (const re of SECRET_BASENAME_PATTERNS) {
+		if (re.test(base)) {
+			return { ok: false, reason: `Refused: "${base}" matches a sensitive-file pattern.` };
+		}
+	}
+
+	for (const seg of SECRET_PATH_SEGMENTS) {
+		if (norm.includes(seg)) {
+			return {
+				ok: false,
+				reason: `Refused: path is inside a protected directory (${seg.trim()}).`,
+			};
+		}
+	}
+
+	return { ok: true };
+}
+
+/** Check if a file path is safe to write. Inherits read restrictions + system dir blocks. */
+export function checkWritable(filePath: string): { ok: true } | { ok: false; reason: string } {
+	const r = checkReadable(filePath);
+	if (!r.ok) return r;
+
+	const norm = normalizePath(filePath);
+	for (const prefix of FORBIDDEN_WRITE_PREFIXES) {
+		if (norm.startsWith(prefix)) {
+			return { ok: false, reason: `Refused: writes under "${prefix}" are not allowed.` };
+		}
+	}
+	return { ok: true };
+}
+
+/** Lightweight heuristic for blocking obviously destructive shell commands. */
+export function checkShellCommand(cmd: string): { ok: true } | { ok: false; reason: string } {
+	const c = cmd.trim();
+	if (
+		/\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*|--recursive\s+--force|--force\s+--recursive)\s+(['"]?\/?['"]?\s*($|;|&|\|))/.test(
+			c,
+		)
+	) {
+		return {
+			ok: false,
+			reason: "Refused: command attempts to recursively delete the filesystem root.",
+		};
+	}
+	if (/--no-preserve-root/.test(c)) {
+		return { ok: false, reason: "Refused: --no-preserve-root is not allowed." };
+	}
+	if (/\bdd\b[^|]*\bof=\/dev\/(disk|sd|nvme|hd)/i.test(c)) {
+		return { ok: false, reason: "Refused: dd to a block device is not allowed." };
+	}
+	if (/\b(mkfs(\.[a-z0-9]+)?|fdisk|parted)\b/.test(c) || /\bdiskutil\s+erase/i.test(c)) {
+		return { ok: false, reason: "Refused: disk-formatting commands are not allowed." };
+	}
+	return { ok: true };
+}
+
+// ── Hard-block patterns for subagent (headless) mode ──
+
 const HEADLESS_BLOCKED: Array<{ pattern: RegExp; reason: string }> = [
-	{ pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-\brecursive\b)/, reason: "recursive delete (rm -r / -rf)" },
+	{
+		pattern:
+			/\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*)\s+(['"]?\/?['"]?\s*($|;|&|\|))/,
+		reason: "recursive filesystem deletion (rm -rf /)",
+	},
+	{ pattern: /--no-preserve-root/, reason: "override root protection (--no-preserve-root)" },
+	{
+		pattern: /(?<!\bgit\s+)\brm\b[^#\n]*\s-(?:[a-zA-Z]*[rR]|-\brecursive\b)/,
+		reason: "recursive delete (rm -r / -rf)",
+	},
 	{ pattern: /\bsudo\b/, reason: "elevated privileges (sudo)" },
-	{ pattern: /\b(curl|wget)\b[^#\n]*\|\s*(ba?sh|zsh|fish|dash|sh)\b/, reason: "pipe to shell (remote code execution)" },
+	{
+		pattern: /\b(curl|wget)\b[^#\n]*\|\s*(ba?sh|zsh|fish|dash|sh)\b/,
+		reason: "pipe to shell (remote code execution)",
+	},
 	{ pattern: /\bmkfs/, reason: "filesystem formatting (mkfs)" },
 	{ pattern: /\bwipefs\b/, reason: "disk signature wipe" },
-	{ pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i, reason: "destructive disk operation (diskutil)" },
+	{
+		pattern: /\bdiskutil\s+(erase|zeroDisk|secureErase|reformat)/i,
+		reason: "destructive disk operation (diskutil)",
+	},
 	{ pattern: /\bdd\b[^#\n]*\bof=\/dev\//, reason: "raw disk write (dd of=/dev/...)" },
 	{ pattern: /\b(parted|fdisk|gdisk|sgdisk)\b/, reason: "partition table management" },
 	{ pattern: /\b(shutdown|reboot|halt|poweroff)\b/, reason: "system power operation" },
 	{ pattern: /\bterraform\s+destroy\b/, reason: "infrastructure teardown (terraform destroy)" },
 	{ pattern: /\bkubectl\s+delete\b/, reason: "Kubernetes resource deletion" },
-	{ pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/, reason: "bulk S3 deletion (aws s3 rm --recursive)" },
+	{
+		pattern: /\baws\s+s3\s+rm\b[^#\n]*--recursive/,
+		reason: "bulk S3 deletion (aws s3 rm --recursive)",
+	},
 	{ pattern: /\bgit\s+push\b/, reason: "git push (main-session operation)" },
 	{ pattern: /\bgit\s+commit\b/, reason: "git commit (main-session operation)" },
-	{ pattern: /\bgit\s+reset\b[^#\n]*--hard\b/, reason: "discard all uncommitted changes (git reset --hard)" },
+	{
+		pattern: /\bgit\s+reset\b[^#\n]*--hard\b/,
+		reason: "discard all uncommitted changes (git reset --hard)",
+	},
 	{ pattern: /\bgit\s+clean\b[^#\n]*-[a-zA-Z]*f/, reason: "delete untracked files (git clean -f)" },
 ];
 
@@ -342,7 +513,8 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.registerFlag("bash-guard-auto-allow", {
-		description: "If set, bash-guard will not block when no UI is available (non-interactive modes).",
+		description:
+			"If set, bash-guard will not block when no UI is available (non-interactive modes).",
 		type: "boolean",
 		default: false,
 	});
@@ -362,7 +534,8 @@ export default function (pi: ExtensionAPI) {
 		if (lastAbort && now - lastAbort < ABORT_REMEMBER_MS) {
 			return {
 				block: true,
-				reason: "Blocked by bash-guard: command was already aborted recently. Ask the user for a safer alternative; do not retry the same command.",
+				reason:
+					"Blocked by bash-guard: command was already aborted recently. Ask the user for a safer alternative; do not retry the same command.",
 			};
 		}
 
@@ -376,7 +549,8 @@ export default function (pi: ExtensionAPI) {
 		recentlyAborted.set(command, now);
 		return {
 			block: true,
-			reason: "Blocked by user via bash-guard (potentially destructive command). Ask the user for confirmation or propose a non-destructive alternative.",
+			reason:
+				"Blocked by user via bash-guard (potentially destructive command). Ask the user for confirmation or propose a non-destructive alternative.",
 		};
 	});
 }

@@ -8,7 +8,12 @@
 
 type ExtensionContext = {
 	ui: { notify(message: string, level?: string): void };
-	shell: { execute(command: string, options?: { signal?: AbortSignal }): Promise<{ exitCode: number; stdout: string }> };
+	shell: {
+		execute(
+			command: string,
+			options?: { signal?: AbortSignal },
+		): Promise<{ exitCode: number; stdout: string }>;
+	};
 	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
 };
 
@@ -117,7 +122,8 @@ export default function (pi: ExtensionAPI) {
 		description: "Run GuardianCLI validation scripts for specific categories",
 		parameters: Type.Object({
 			validators: Type.Array(Type.String(), {
-				description: "Categories: ci, tests, operations, security, integration, architecture, canonical",
+				description:
+					"Categories: ci, tests, operations, security, integration, architecture, canonical",
 			}),
 			scope: Type.Optional(
 				Type.String({ description: "Scope: simple, moderate, complex, critical" }),
@@ -130,7 +136,9 @@ export default function (pi: ExtensionAPI) {
 				: [];
 
 			if (validators.length === 0) {
-				return toolError("No validators specified. Available: ci, tests, operations, security, integration, architecture, canonical");
+				return toolError(
+					"No validators specified. Available: ci, tests, operations, security, integration, architecture, canonical",
+				);
 			}
 
 			for (const validator of validators) {
@@ -162,7 +170,7 @@ export default function (pi: ExtensionAPI) {
 				const output = result.output.trim();
 				if (output) {
 					const tail = output.split("\n").slice(-15).join("\n");
-					lines.push("```\n" + tail + "\n```");
+					lines.push(`\`\`\`\n${tail}\n\`\`\``);
 				}
 				lines.push("");
 			}
@@ -187,7 +195,8 @@ export default function (pi: ExtensionAPI) {
 			if (!scope) {
 				const scopeResult = await ctx.tools.execute("guardian_scope", {});
 				// Parse the text result to extract scope
-				const text = (scopeResult as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
+				const text =
+					(scopeResult as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
 				const match = text.match(/Scope:\s+\*\*(\w+)\*\*/);
 				scope = match?.[1] ?? "moderate";
 			}
@@ -199,12 +208,20 @@ export default function (pi: ExtensionAPI) {
 				simple: ["ci", "canonical"],
 				moderate: ["ci", "architecture", "canonical"],
 				complex: ["ci", "architecture", "security", "tests", "integration", "canonical"],
-				critical: ["ci", "architecture", "security", "operations", "tests", "integration", "canonical"],
+				critical: [
+					"ci",
+					"architecture",
+					"security",
+					"operations",
+					"tests",
+					"integration",
+					"canonical",
+				],
 			};
 
 			const validators = Array.isArray(params.validators)
 				? params.validators.filter((v): v is string => typeof v === "string")
-				: validatorMap[scope] ?? validatorMap.moderate;
+				: (validatorMap[scope] ?? validatorMap.moderate);
 
 			onUpdate({ type: "progress", message: `Validators: ${validators.join(", ")}` });
 
@@ -213,18 +230,21 @@ export default function (pi: ExtensionAPI) {
 
 			// 4. Build coordination result
 			const lines: string[] = [
-				`## Coordination Report`,
-				``,
+				"## Coordination Report",
+				"",
 				`**Task:** ${params.task}`,
 				`**Scope:** ${scope}`,
 				`**Validators:** ${validators.join(", ")}`,
-				``,
-				`### Next Steps`,
-				scope === "critical" ? "- Request human approval before proceeding" : "- Proceed with implementation",
+				"",
+				"### Next Steps",
+				scope === "critical"
+					? "- Request human approval before proceeding"
+					: "- Proceed with implementation",
 			];
 
 			// Append validation results
-			const valText = (validationResults as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
+			const valText =
+				(validationResults as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? "";
 			if (valText) {
 				lines.push("", "### Validation", valText);
 			}
@@ -251,7 +271,10 @@ export default function (pi: ExtensionAPI) {
 
 		for (const { pattern, reason } of catastrophic) {
 			if (pattern.test(cmd)) {
-				return { block: true, reason: `Guardian blocked: ${reason}. Use safer alternatives or confirm with the user.` };
+				return {
+					block: true,
+					reason: `Guardian blocked: ${reason}. Use safer alternatives or confirm with the user.`,
+				};
 			}
 		}
 	});

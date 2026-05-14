@@ -60,7 +60,9 @@ export async function executeHook(
 			if (stallTimer) clearTimeout(stallTimer);
 			stallTimer = setTimeout(() => {
 				if (!proc.killed) {
-					console.error(`[warn] Hook '${hookName}' stalled (no output for ${stallTimeoutMs}ms), terminating`);
+					console.error(
+						`[warn] Hook '${hookName}' stalled (no output for ${stallTimeoutMs}ms), terminating`,
+					);
 					proc.kill("SIGTERM");
 				}
 			}, stallTimeoutMs);
@@ -120,8 +122,8 @@ export async function runBeforeRunHook(
 	const result = await executeHook("before_run", hooks.before_run, workspacePath, hooks.timeout_ms);
 
 	if (!result.success) {
-		const detail = result.stderr || result.stdout || "exit code " + result.exitCode;
-		const truncated = detail.length > 500 ? detail.slice(0, 500) + "..." : detail;
+		const detail = result.stderr || result.stdout || `exit code ${result.exitCode}`;
+		const truncated = detail.length > 500 ? `${detail.slice(0, 500)}...` : detail;
 		return {
 			ok: false,
 			error: `before_run hook failed (${result.durationMs}ms): ${truncated}`,
@@ -135,17 +137,16 @@ export async function runBeforeRunHook(
  * Run after_run hook if configured.
  * Failure is logged but ignored (best effort).
  */
-export async function runAfterRunHook(
-	workspacePath: string,
-	hooks: HookConfig,
-): Promise<void> {
+export async function runAfterRunHook(workspacePath: string, hooks: HookConfig): Promise<void> {
 	if (!hooks.after_run) return;
 
 	const result = await executeHook("after_run", hooks.after_run, workspacePath, hooks.timeout_ms);
 
 	if (!result.success) {
 		// Best effort: log but don't fail
-		console.error(`[warn] after_run hook failed (${result.durationMs}ms): ${result.stderr || result.stdout}`);
+		console.error(
+			`[warn] after_run hook failed (${result.durationMs}ms): ${result.stderr || result.stdout}`,
+		);
 	}
 }
 
@@ -159,11 +160,16 @@ export async function runAfterCreateHook(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
 	if (!hooks.after_create) return { ok: true };
 
-	const result = await executeHook("after_create", hooks.after_create, workspacePath, hooks.timeout_ms);
+	const result = await executeHook(
+		"after_create",
+		hooks.after_create,
+		workspacePath,
+		hooks.timeout_ms,
+	);
 
 	if (!result.success) {
-		const detail = result.stderr || result.stdout || "exit code " + result.exitCode;
-		const truncated = detail.length > 500 ? detail.slice(0, 500) + "..." : detail;
+		const detail = result.stderr || result.stdout || `exit code ${result.exitCode}`;
+		const truncated = detail.length > 500 ? `${detail.slice(0, 500)}...` : detail;
 		return {
 			ok: false,
 			error: `after_create hook failed (${result.durationMs}ms): ${truncated}`,
@@ -177,16 +183,20 @@ export async function runAfterCreateHook(
  * Run before_remove hook if configured.
  * Failure is logged but cleanup proceeds.
  */
-export async function runBeforeRemoveHook(
-	workspacePath: string,
-	hooks: HookConfig,
-): Promise<void> {
+export async function runBeforeRemoveHook(workspacePath: string, hooks: HookConfig): Promise<void> {
 	if (!hooks.before_remove) return;
 
-	const result = await executeHook("before_remove", hooks.before_remove, workspacePath, hooks.timeout_ms);
+	const result = await executeHook(
+		"before_remove",
+		hooks.before_remove,
+		workspacePath,
+		hooks.timeout_ms,
+	);
 
 	if (!result.success) {
-		console.error(`[warn] before_remove hook failed (${result.durationMs}ms): ${result.stderr || result.stdout}`);
+		console.error(
+			`[warn] before_remove hook failed (${result.durationMs}ms): ${result.stderr || result.stdout}`,
+		);
 	}
 }
 
@@ -229,10 +239,7 @@ export async function ensureWorkspace(
  * Clean up workspace directory.
  * Runs before_remove hook first.
  */
-export async function cleanupWorkspace(
-	workspacePath: string,
-	hooks: HookConfig,
-): Promise<void> {
+export async function cleanupWorkspace(workspacePath: string, hooks: HookConfig): Promise<void> {
 	if (fs.existsSync(workspacePath)) {
 		await runBeforeRemoveHook(workspacePath, hooks);
 		try {

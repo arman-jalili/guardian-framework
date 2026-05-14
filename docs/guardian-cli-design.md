@@ -1600,3 +1600,39 @@ Templates will be extracted from Rigorix framework and adapted to pi format:
 ---
 
 **End of Specification**
+---
+
+## Appendix: Terax-Adopted Patterns
+
+The following patterns from [Terax AI](https://github.com/crynta/terax-ai) have been adopted into GuardianCLI templates:
+
+| # | Pattern | Files | Impact |
+|---|---------|-------|--------|
+| 1 | **Subagent Delegation + Tool Scoping** | `skills/agents/subagent-registry.md`, `skills/agents/plan-mode.md` | Restricted tool whitelists per agent type, anti-recursion guards |
+| 2 | **Context Compaction** | `skills/validators/context-compaction.md`, `skills/agents/code-developer.md` | Budget-aware elision, superseded read dropping, tail preservation |
+| 3 | **Security Guards** | `skills/validators/security-guards.md`, `extensions/bash-guard.ts`, `scripts/validate-security.sh` | Pre-execution path safety, command deny-list, sensitive file blocklist |
+| 4 | **Tiered System Prompts** | `skills/validators/system-prompt-tiers.md`, `agent/AGENTS.md` | Full prompt for capable models, lite prompt for fast/cheap models (~75% token savings) |
+| 5 | **Plan Mode + Queued Edits** | `skills/agents/plan-mode.md`, `extensions/plan-mode.ts` | Mutations queued for batch review, shell refused in plan mode |
+| 6 | **Snippet Token Expansion** | `skills/agents/snippets.md`, `extensions/snippets.ts` | `#handle` to XML block expansion, persistent snippet management |
+| 7 | **Session Persistence** | `skills/agents/session-persistence.md`, `extensions/session-persistence.ts` | Lazy-loaded history, auto-derived titles, per-session state isolation |
+| 8 | **Read-Before-Edit Invariant** | `skills/agents/code-developer.md` | Must read file before editing, read cache invalidation on mutation |
+| 9 | **Slash Command System** | `skills/agents/slash-commands.md`, `extensions/slash-commands.ts` | `/init`, `/validate`, `/scope`, `/snippet` with `send-prompt` outcome |
+| 10 | **Tool Labeling** | Design spec (UX pattern) | Human-readable tool call labels for progress display |
+| 11 | **Model Registry** | `skills/validators/model-registry.md` | Intelligence/speed/cost scoring, auto-selection by task type |
+| 12 | **Redaction Layer** | `extensions/redaction.ts` | Automatic secret redaction (API keys, tokens, JWTs, env assignments) |
+
+### Token Optimization Impact
+
+Combined, these patterns target **50-70% token reduction** in agentic workflows:
+
+| Pattern | Estimated Savings |
+|---------|------------------|
+| Lite system prompts (fast models) | 750 tokens/turn x 20 turns = 15,000 tokens |
+| Context compaction (superseded reads) | 2,000-8,000 tokens/session |
+| Snippet expansion vs full skill load | 70-90% per skill reference |
+| Read-before-edit cache | Eliminates redundant re-reads |
+| Subagent isolation | Prevents context pollution |
+
+---
+
+**End of Specification**

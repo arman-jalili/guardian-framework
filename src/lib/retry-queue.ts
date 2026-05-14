@@ -11,11 +11,11 @@ import * as path from "node:path";
 const RETRY_STATE_FILE = ".guardian-retry-state.json";
 
 export interface RetryEntry {
-	key: string;        // Unique identifier (e.g., tool name or operation key)
-	attempt: number;    // 1-based attempt count
-	scheduledAtMs: number;  // Monotonic timestamp when this retry becomes due
-	error: string;      // Last error message
-	meta?: Record<string, unknown>;  // Arbitrary context
+	key: string; // Unique identifier (e.g., tool name or operation key)
+	attempt: number; // 1-based attempt count
+	scheduledAtMs: number; // Monotonic timestamp when this retry becomes due
+	error: string; // Last error message
+	meta?: Record<string, unknown>; // Arbitrary context
 }
 
 export interface RetryState {
@@ -129,6 +129,6 @@ export function calculateBackoff(
 	baseDelayMs: number,
 	maxBackoffMs: number,
 ): number {
-	const delay = baseDelayMs * Math.pow(2, attempt - 1);
+	const delay = baseDelayMs * 2 ** (attempt - 1);
 	return Math.min(delay, maxBackoffMs);
 }

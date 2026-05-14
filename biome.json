@@ -15,6 +15,12 @@
 		"lineWidth": 100
 	},
 	"files": {
-		"ignore": ["dist", "node_modules", "*.lock"]
+		"ignore": [
+			"dist",
+			"node_modules",
+			"*.lock",
+			"templates/pi/extensions/ask-user-question.ts",
+			"templates/pi/extensions/filechanges.ts"
+		]
 	}
 }

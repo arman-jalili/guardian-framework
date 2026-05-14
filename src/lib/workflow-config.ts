@@ -75,7 +75,7 @@ const DEFAULTS: GuardianWorkflowConfig = {
 
 function parseSimpleYaml(text: string): Record<string, unknown> {
 	const result: Record<string, unknown> = {};
-	let currentPath: string[] = [];
+	const currentPath: string[] = [];
 	let currentIndent = -1;
 
 	for (const line of text.split("\n")) {
@@ -161,7 +161,10 @@ function setNested(obj: Record<string, unknown>, path: string[], value: unknown)
 
 function parseScalar(value: string): unknown {
 	// Quoted strings
-	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+	if (
+		(value.startsWith('"') && value.endsWith('"')) ||
+		(value.startsWith("'") && value.endsWith("'"))
+	) {
 		return value.slice(1, -1);
 	}
 	// Booleans
@@ -174,7 +177,10 @@ function parseScalar(value: string): unknown {
 	if (!Number.isNaN(num)) return num;
 	// Array shorthand [a, b, c]
 	if (value.startsWith("[") && value.endsWith("]")) {
-		const items = value.slice(1, -1).split(",").map((s) => parseScalar(s.trim()));
+		const items = value
+			.slice(1, -1)
+			.split(",")
+			.map((s) => parseScalar(s.trim()));
 		return items;
 	}
 	return value;
@@ -195,7 +201,10 @@ export function loadWorkflowConfig(piDir: string): GuardianWorkflowConfig {
 		frontMatter = parseFrontMatter(content);
 	}
 
-	return deepMerge(DEFAULTS, frontMatter) as GuardianWorkflowConfig;
+	return deepMerge(
+		DEFAULTS as unknown as Record<string, unknown>,
+		frontMatter,
+	) as unknown as GuardianWorkflowConfig;
 }
 
 /**
@@ -238,7 +247,10 @@ export function resolveEnvVars(value: string): string {
 /**
  * Deep merge: src overrides defaults, preserving nested structure.
  */
-function deepMerge(defaults: Record<string, unknown>, src: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+	defaults: Record<string, unknown>,
+	src: Record<string, unknown>,
+): Record<string, unknown> {
 	const result = { ...defaults };
 
 	for (const [key, value] of Object.entries(src)) {
@@ -250,7 +262,10 @@ function deepMerge(defaults: Record<string, unknown>, src: Record<string, unknow
 			typeof defaults[key] === "object" &&
 			!Array.isArray(defaults[key])
 		) {
-			result[key] = deepMerge(defaults[key] as Record<string, unknown>, value as Record<string, unknown>);
+			result[key] = deepMerge(
+				defaults[key] as Record<string, unknown>,
+				value as Record<string, unknown>,
+			);
 		} else {
 			result[key] = value;
 		}

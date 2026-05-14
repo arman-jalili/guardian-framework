@@ -1,3 +1,5 @@
+// biome-ignore lint/suspicious/noExplicitAny: pi ExtensionContext has no published types
+// biome-ignore lint/style/noNonNullAssertion: pi UI callbacks use non-null assertions
 /**
  * File-Changes Extension for pi
  *
@@ -118,7 +120,11 @@ function createUnifiedPatch(
 	ops.reverse();
 
 	// Build detailed changes with line content
-	interface Change { type: "equal" | "delete" | "insert"; oldLine?: string; newLine?: string }
+	interface Change {
+		type: "equal" | "delete" | "insert";
+		oldLine?: string;
+		newLine?: string;
+	}
 	const detailed: Change[] = [];
 	let oi = 0;
 	let ni = 0;
@@ -204,7 +210,7 @@ function createUnifiedPatch(
 		}
 	}
 
-	return lines.join("\n") + "\n";
+	return `${lines.join("\n")}\n`;
 }
 
 function patchFromBaseline(displayPath: string, original: string | null, current: string): string {

@@ -1,8 +1,8 @@
 # GuardianCLI Architecture
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Living Document
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-14
 
 ---
 
@@ -12,7 +12,7 @@ GuardianCLI is a **token-optimized agentic framework scaffolder** that generates
 
 ### Design Goals
 
-1. **Token efficiency** — 50–65% reduction vs traditional multi-agent workflows
+1. **Token efficiency** — 50–70% reduction vs traditional multi-agent workflows
 2. **Architecture traceability** — every implementation file references its architecture source
 3. **Validation shift-left** — validate plans before code, not after
 4. **Pi-first** — single source of truth, multiple export targets
@@ -30,7 +30,27 @@ GuardianCLI's orchestration model is inspired by the [OpenAI Symphony specificat
 | Reconciliation before dispatch | External modification detection before overwrite |
 | `$VAR` env indirection | Template `$VAR_NAME` resolution from `process.env` |
 | Path safety invariants | Workspace root containment + identifier sanitization |
+| Agent tool scoping | Read-only subagent whitelists, anti-recursion guards (Terax AI) |
+| Context compaction | Budget-aware elision, superseded read dropping (Terax AI) |
+| Tiered system prompts | Full/lite prompts by model capability (Terax AI) |
 | Stall detection | Hook timeout + no-output stall kill |
+
+GuardianCLI also incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), a lightweight cross-platform AI-native terminal:
+
+| Terax Pattern | Guardian Implementation |
+|---------------|------------------------|
+| Subagent delegation + tool scoping | `skills/agents/subagent-registry.md` — 4 agent types with read-only whitelists |
+| Context compaction strategy | `skills/validators/context-compaction.md` — budget-aware elision at 55/70/90% |
+| Security guards (path + command) | `skills/validators/security-guards.md`, `extensions/bash-guard.ts` |
+| Tiered system prompts | `skills/validators/system-prompt-tiers.md` — full vs lite by model capability |
+| Plan mode with queued edits | `extensions/plan-mode.ts` — mutations queued for batch review |
+| Snippet token expansion | `extensions/snippets.ts` — `#handle` → XML block (70–90% token savings) |
+| Session persistence | `extensions/session-persistence.ts` — lazy-loaded history, auto-titling |
+| Read-before-edit invariant | `skills/agents/code-developer.md` — must read before mutating |
+| Slash command system | `extensions/slash-commands.ts` — `/init`, `/validate`, `/scope` |
+| Tool labeling | Progress display with human-readable tool call labels |
+| Model capability registry | `skills/validators/model-registry.md` — intelligence/speed/cost scoring |
+| Redaction layer | `extensions/redaction.ts` — auto-strip API keys, tokens, JWTs |
 
 ---
 
@@ -572,7 +592,7 @@ templates/pi/
 │   ├── patterns-base.md       ← Base patterns (all languages)
 │   ├── patterns.md            ← Language-specific patterns (overwritten)
 │   └── project.md             ← Project facts template
-├── extensions/                ← Pi TypeScript extensions
+├── extensions/                ← Pi TypeScript extensions (12 files)
 │   ├── ask-user-question.ts   ← Structured question tool
 │   ├── bash-guard.ts          ← Destructive command blocking
 │   ├── coordinator.ts         ← Scope + validation tools
@@ -583,8 +603,8 @@ templates/pi/
 ├── prompts/                   ← Workflow templates (16 files)
 ├── scripts/                   ← Validator shell scripts (13 files)
 ├── skills/
-│   ├── agents/                ← Agent definitions (15 files)
-│   └── validators/            ← Validator definitions (6 files)
+│   ├── agents/                ← Agent definitions (20 files)
+│   └── validators/            ← Validator definitions (10 files)
 ├── INDEX.md                   ← Quick reference
 └── README.md                  ← Framework docs
 ```

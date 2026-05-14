@@ -36,7 +36,7 @@ let lastKnownConfig = "";
 let watcher: fs.FSWatcher | undefined;
 let reloadCount = 0;
 
-function startWatching(ctx: any): void {
+function startWatching(ctx: unknown): void {
 	if (!fs.existsSync(CONFIG_FILE)) return;
 
 	lastKnownConfig = fs.readFileSync(CONFIG_FILE, "utf-8");
@@ -79,7 +79,7 @@ function stopWatching(): void {
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.on("session_start", async (_event, ctx: any) => {
+	pi.on("session_start", async (_event: unknown, ctx: unknown) => {
 		stopWatching();
 		startWatching(ctx);
 	});
@@ -90,7 +90,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("reload-config", {
 		description: "Manually reload workflow config from AGENTS.md",
-		handler: async (_args, ctx: any) => {
+		handler: async (_args: string[], ctx: unknown) => {
 			if (!fs.existsSync(CONFIG_FILE)) {
 				ctx?.ui?.notify("No .pi/agent/AGENTS.md found.", "warning");
 				return;

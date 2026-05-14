@@ -24,7 +24,6 @@ import {
 	readManifest,
 	writeManifest,
 } from "../lib/manifest.js";
-import { loadWorkflowConfig, parseFrontMatter, extractPromptBody } from "../lib/workflow-config.js";
 import {
 	type Language,
 	type RepoTool,
@@ -36,6 +35,7 @@ import {
 	renderTemplate,
 	templatesExist,
 } from "../lib/templates.js";
+import { extractPromptBody, loadWorkflowConfig, parseFrontMatter } from "../lib/workflow-config.js";
 import { generateExport } from "./generate.js";
 
 interface UpdateChange {
@@ -166,7 +166,11 @@ function analyzeChanges(
 
 		if (!modified || options.force) {
 			// Unchanged or force → auto-update
-			changes.push({ path: filePath, action: "update", reason: modified ? "forced update" : "unchanged" });
+			changes.push({
+				path: filePath,
+				action: "update",
+				reason: modified ? "forced update" : "unchanged",
+			});
 		} else {
 			// User modified → check for front-matter merge
 			const relativePath = filePath.replace(".pi/", "");
@@ -261,7 +265,12 @@ function applyChanges(
 
 // ── File Operations ────────────────────────────────────────────────
 
-function addFile(targetDir: string, manifest: GuardianManifest, filePath: string, context: TemplateContext): void {
+function addFile(
+	targetDir: string,
+	manifest: GuardianManifest,
+	filePath: string,
+	context: TemplateContext,
+): void {
 	const fullPath = path.join(targetDir, filePath);
 	const relativePath = filePath.replace(".pi/", "");
 	const content = renderTemplate(readTemplate(relativePath), context);
@@ -276,7 +285,12 @@ function addFile(targetDir: string, manifest: GuardianManifest, filePath: string
 	};
 }
 
-function updateFile(targetDir: string, manifest: GuardianManifest, filePath: string, context: TemplateContext): void {
+function updateFile(
+	targetDir: string,
+	manifest: GuardianManifest,
+	filePath: string,
+	context: TemplateContext,
+): void {
 	const fullPath = path.join(targetDir, filePath);
 	const relativePath = filePath.replace(".pi/", "");
 	const content = renderTemplate(readTemplate(relativePath), context);
@@ -410,8 +424,10 @@ async function confirmChanges(stats: Record<string, number>): Promise<boolean> {
 
 	if (stats.added) console.log(`  + Add:        ${stats.added} new file(s)`);
 	if (stats.update) console.log(`  ~ Update:     ${stats.update} file(s) (unchanged)`);
-	if (stats["merge-frontmatter"]) console.log(`  ⚡ Merge:      ${stats["merge-frontmatter"]} file(s) (user config + new body)`);
-	if (stats.preserved) console.log(`  ≡ Preserve:   ${stats.preserved} file(s) (user-modified, kept)`);
+	if (stats["merge-frontmatter"])
+		console.log(`  ⚡ Merge:      ${stats["merge-frontmatter"]} file(s) (user config + new body)`);
+	if (stats.preserved)
+		console.log(`  ≡ Preserve:   ${stats.preserved} file(s) (user-modified, kept)`);
 	if (stats.regenerated) console.log(`  ⟳ Regenerate: ${stats.regenerated} export(s)`);
 	if (stats.orphaned) console.log(`  ✗ Orphaned:   ${stats.orphaned} file(s) (template removed)`);
 	if (stats.conflicts) console.log(`  ⚠ Conflicts:  ${stats.conflicts} file(s)`);
@@ -488,11 +504,15 @@ function printSummary(result: UpdateResult): void {
 	}
 
 	if (result.conflicts.length > 0) {
-		lines.push(`Conflicts: ${result.conflicts.length} file(s) (user changes preserved, review manually)`);
+		lines.push(
+			`Conflicts: ${result.conflicts.length} file(s) (user changes preserved, review manually)`,
+		);
 		for (const f of result.conflicts) lines.push(`  ⚠ ${f}`);
 	}
 
-	outro(`\nFramework updated:\n\n${lines.join("\n")}\n\nRegenerate exports with:\n  guardian-framework-cli generate`);
+	outro(
+		`\nFramework updated:\n\n${lines.join("\n")}\n\nRegenerate exports with:\n  guardian-framework-cli generate`,
+	);
 }
 
 function buildTemplateContext(manifest: GuardianManifest): TemplateContext {
