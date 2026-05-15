@@ -378,6 +378,8 @@ export function validateManifest(manifest: unknown): GuardianManifest | null {
 /**
  * Estimate token count for a string.
  * Rough approximation: ~4 chars per token (consistent with pi's estimateTokens).
+ * Accuracy is approximately +/-15% for typical English text and code. Precise
+ * tokenization requires a model-specific tokenizer (e.g. tiktoken).
  */
 export function estimateTokens(text: string): number {
 	return Math.ceil(text.length / 4);

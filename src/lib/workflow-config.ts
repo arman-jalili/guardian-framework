@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import YAML from "yaml";
 
 // ── Config Schema with Defaults ──
 
@@ -71,120 +72,7 @@ const DEFAULTS: GuardianWorkflowConfig = {
 	},
 };
 
-// ── YAML Front Matter Parser (minimal, no external deps) ──
-
-function parseSimpleYaml(text: string): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
-	const currentPath: string[] = [];
-	let currentIndent = -1;
-
-	for (const line of text.split("\n")) {
-		// Skip empty lines and comments
-		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) continue;
-
-		// Calculate indent level
-		const indent = line.search(/\S/);
-
-		// Handle key: value pairs
-		const match = trimmed.match(/^(\w[\w.-]*)\s*:\s*(.*)$/);
-		if (!match) continue;
-
-		const key = match[1];
-		let value = match[2].trim();
-
-		// Remove inline comments
-		if (value.includes(" #") && !value.startsWith('"') && !value.startsWith("'")) {
-			value = value.slice(0, value.indexOf(" #")).trim();
-		}
-
-		// Adjust current path based on indent
-		while (currentPath.length > 0 && indent <= currentIndent) {
-			currentPath.pop();
-			currentIndent = findIndentOfPath(text, currentPath);
-		}
-
-		if (value === "" || value === "|") {
-			// Nested object or multiline string
-			currentPath.push(key);
-			currentIndent = indent;
-
-			// Check for inline YAML block (after |)
-			if (value === "|") {
-				// Collect indented lines
-				const lines: string[] = [];
-				const rawLines = text.split("\n");
-				const idx = rawLines.indexOf(line);
-				for (let i = idx + 1; i < rawLines.length; i++) {
-					const nextLine = rawLines[i];
-					if (nextLine.trim() === "") continue;
-					if (nextLine.search(/\S/) <= indent) break;
-					lines.push(nextLine.slice(indent + 2));
-				}
-				setNested(result, [...currentPath], lines.join("\n").trim());
-			} else {
-				setNested(result, [...currentPath], {});
-			}
-		} else {
-			// Scalar value
-			const parsed = parseScalar(value);
-			setNested(result, [...currentPath, key], parsed);
-		}
-	}
-
-	return result;
-}
-
-function findIndentOfPath(text: string, path: string[]): number {
-	for (const line of text.split("\n")) {
-		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) continue;
-		const key = trimmed.match(/^(\w[\w.-]*)\s*:/)?.[1];
-		if (key === path[path.length - 1]) return line.search(/\S/);
-	}
-	return -1;
-}
-
-function setNested(obj: Record<string, unknown>, path: string[], value: unknown): void {
-	let current = obj;
-	for (let i = 0; i < path.length - 1; i++) {
-		const p = path[i];
-		if (!(p in current) || typeof current[p] !== "object" || current[p] === null) {
-			current[p] = {};
-		}
-		current = current[p] as Record<string, unknown>;
-	}
-	if (path.length > 0) {
-		current[path[path.length - 1]] = value;
-	}
-}
-
-function parseScalar(value: string): unknown {
-	// Quoted strings
-	if (
-		(value.startsWith('"') && value.endsWith('"')) ||
-		(value.startsWith("'") && value.endsWith("'"))
-	) {
-		return value.slice(1, -1);
-	}
-	// Booleans
-	if (value === "true") return true;
-	if (value === "false") return false;
-	// Null
-	if (value === "null" || value === "~") return null;
-	// Numbers
-	const num = Number(value);
-	if (!Number.isNaN(num)) return num;
-	// Array shorthand [a, b, c]
-	if (value.startsWith("[") && value.endsWith("]")) {
-		const items = value
-			.slice(1, -1)
-			.split(",")
-			.map((s) => parseScalar(s.trim()));
-		return items;
-	}
-	return value;
-}
+// ── YAML Front Matter Parser (using yaml package) ──
 
 // ── Public API ──
 
@@ -218,7 +106,11 @@ export function parseFrontMatter(content: string): Record<string, unknown> {
 	if (endIdx === -1) return {};
 
 	const yamlBlock = content.slice(4, endIdx);
-	return parseSimpleYaml(yamlBlock);
+	try {
+		return (YAML.parse(yamlBlock) as Record<string, unknown>) ?? {};
+	} catch {
+		return {};
+	}
 }
 
 /**
@@ -231,6 +123,18 @@ export function extractPromptBody(content: string): string {
 	if (endIdx === -1) return content.trim();
 
 	return content.slice(endIdx + 5).trim();
+}
+
+/**
+ * Serialize an object to YAML front matter string (including --- delimiters).
+ * Uses the yaml package for proper formatting that round-trips correctly.
+ */
+export function toYamlFrontMatter(data: Record<string, unknown>): string {
+	const yamlContent = YAML.stringify(data, {
+		lineWidth: 0,
+		indent: 2,
+	});
+	return `---\n${yamlContent}---\n`;
 }
 
 /**

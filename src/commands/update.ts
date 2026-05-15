@@ -15,6 +15,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { confirm, intro, isCancel, outro, spinner } from "@clack/prompts";
+import YAML from "yaml";
 import {
 	type FileCategory,
 	type GuardianManifest,
@@ -35,7 +36,12 @@ import {
 	renderTemplate,
 	templatesExist,
 } from "../lib/templates.js";
-import { extractPromptBody, loadWorkflowConfig, parseFrontMatter } from "../lib/workflow-config.js";
+import {
+	extractPromptBody,
+	loadWorkflowConfig,
+	parseFrontMatter,
+	toYamlFrontMatter,
+} from "../lib/workflow-config.js";
 import { generateExport } from "./generate.js";
 
 interface UpdateChange {
@@ -363,40 +369,7 @@ function mergeFrontMatterFile(
 }
 
 function buildYamlFrontMatter(fm: Record<string, unknown>): string {
-	const lines = ["---"];
-	for (const [key, value] of Object.entries(fm)) {
-		buildYamlEntry(lines, key, value, 0);
-	}
-	lines.push("---");
-	return lines.join("\n");
-}
-
-function buildYamlEntry(lines: string[], key: string, value: unknown, indent: number): void {
-	const prefix = "  ".repeat(indent);
-
-	if (value && typeof value === "object" && !Array.isArray(value)) {
-		lines.push(`${prefix}${key}:`);
-		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-			buildYamlEntry(lines, k, v, indent + 1);
-		}
-	} else if (Array.isArray(value)) {
-		lines.push(`${prefix}${key}:`);
-		for (const item of value) {
-			if (typeof item === "string") {
-				lines.push(`${prefix}  - ${item}`);
-			} else {
-				buildYamlEntry(lines, "-", item, indent + 1);
-			}
-		}
-	} else if (typeof value === "string") {
-		lines.push(`${prefix}${key}: "${value}"`);
-	} else if (typeof value === "boolean") {
-		lines.push(`${prefix}${key}: ${value}`);
-	} else if (value === null) {
-		lines.push(`${prefix}${key}: null`);
-	} else {
-		lines.push(`${prefix}${key}: ${value}`);
-	}
+	return toYamlFrontMatter(fm);
 }
 
 function isFrontMatterFile(userContent: string, newContent: string): boolean {
