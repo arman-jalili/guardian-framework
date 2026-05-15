@@ -78,8 +78,9 @@ describe("init lifecycle", () => {
 			"agent/AGENTS.md",
 			"skills/agents/architecture-coordinator.md",
 		]) {
-			const content = readTemplate(relativePath);
-			const rendered = renderTemplate(content, context);
+			const result = readTemplate(relativePath);
+			if (!result.ok) continue;
+			const rendered = renderTemplate(result.value, context);
 			fs.writeFileSync(path.join(piDir, relativePath), rendered, "utf-8");
 		}
 
@@ -112,8 +113,9 @@ describe("generate lifecycle", () => {
 		const filesToScaffold = getPiTemplateFiles();
 		for (const relativePath of filesToScaffold) {
 			try {
-				const content = readTemplate(relativePath);
-				const rendered = renderTemplate(content, context);
+				const result = readTemplate(relativePath);
+				if (!result.ok) continue;
+				const rendered = renderTemplate(result.value, context);
 				const targetPath = path.join(piDir, relativePath);
 				fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 				fs.writeFileSync(targetPath, rendered, "utf-8");

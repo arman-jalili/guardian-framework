@@ -174,7 +174,9 @@ function analyzeChanges(
 		} else {
 			// User modified → check for front-matter merge
 			const relativePath = filePath.replace(".pi/", "");
-			const newContent = renderTemplate(readTemplate(relativePath), context);
+			const tmplResult = readTemplate(relativePath);
+			if (!tmplResult.ok) continue;
+			const newContent = renderTemplate(tmplResult.value, context);
 
 			if (isFrontMatterFile(currentContent, newContent)) {
 				changes.push({
@@ -273,7 +275,9 @@ function addFile(
 ): void {
 	const fullPath = path.join(targetDir, filePath);
 	const relativePath = filePath.replace(".pi/", "");
-	const content = renderTemplate(readTemplate(relativePath), context);
+	const tmplResult = readTemplate(relativePath);
+	if (!tmplResult.ok) return;
+	const content = renderTemplate(tmplResult.value, context);
 
 	fs.mkdirSync(path.dirname(fullPath), { recursive: true });
 	fs.writeFileSync(fullPath, content, "utf-8");
@@ -293,7 +297,9 @@ function updateFile(
 ): void {
 	const fullPath = path.join(targetDir, filePath);
 	const relativePath = filePath.replace(".pi/", "");
-	const content = renderTemplate(readTemplate(relativePath), context);
+	const tmplResult = readTemplate(relativePath);
+	if (!tmplResult.ok) return;
+	const content = renderTemplate(tmplResult.value, context);
 
 	fs.mkdirSync(path.dirname(fullPath), { recursive: true });
 	fs.writeFileSync(fullPath, content, "utf-8");
@@ -322,7 +328,9 @@ function mergeFrontMatterFile(
 	const relativePath = filePath.replace(".pi/", "");
 
 	const userContent = fs.readFileSync(fullPath, "utf-8");
-	const newContent = renderTemplate(readTemplate(relativePath), context);
+	const tmplResult = readTemplate(relativePath);
+	if (!tmplResult.ok) return false;
+	const newContent = renderTemplate(tmplResult.value, context);
 
 	const userFrontMatter = parseFrontMatter(userContent);
 	const newBody = extractPromptBody(newContent);

@@ -27,3 +27,6 @@ coverage/
 # Temporary
 *.tmp
 *.temp
+
+# Guardian runtime artifacts
+.guardian/

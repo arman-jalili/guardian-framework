@@ -250,8 +250,9 @@ function scaffoldPiDirectory(
 		}
 
 		// Read and render template
-		const content = readTemplate(relativePath);
-		const rendered = renderTemplate(content, context);
+		const templateResult = readTemplate(relativePath);
+		if (!templateResult.ok) continue;
+		const rendered = renderTemplate(templateResult.value, context);
 
 		// Write file
 		fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -265,8 +266,9 @@ function scaffoldPiDirectory(
 
 	// Add language patterns to context/patterns.md
 	const patternsPath = path.join(piDir, "context/patterns.md");
-	const patternsContent = readLanguagePatterns(context.language);
-	const renderedPatterns = renderTemplate(patternsContent, context);
+	const patternsResult = readLanguagePatterns(context.language);
+	if (!patternsResult.ok) return;
+	const renderedPatterns = renderTemplate(patternsResult.value, context);
 	fs.writeFileSync(patternsPath, renderedPatterns, "utf-8");
 	scaffoldedFiles[`${PI_DIR}/context/patterns.md`] = {
 		category: "user",
@@ -275,19 +277,21 @@ function scaffoldPiDirectory(
 
 	// Write INDEX.md and README.md
 	const indexPath = path.join(piDir, "INDEX.md");
-	const indexContent = readTemplate("INDEX.md");
-	fs.writeFileSync(indexPath, indexContent, "utf-8");
+	const indexResult = readTemplate("INDEX.md");
+	if (!indexResult.ok) return;
+	fs.writeFileSync(indexPath, indexResult.value, "utf-8");
 	scaffoldedFiles[`${PI_DIR}/INDEX.md`] = {
 		category: "framework",
-		content: indexContent,
+		content: indexResult.value,
 	};
 
 	const readmePath = path.join(piDir, "README.md");
-	const readmeContent = readTemplate("README.md");
-	fs.writeFileSync(readmePath, readmeContent, "utf-8");
+	const readmeResult = readTemplate("README.md");
+	if (!readmeResult.ok) return;
+	fs.writeFileSync(readmePath, readmeResult.value, "utf-8");
 	scaffoldedFiles[`${PI_DIR}/README.md`] = {
 		category: "framework",
-		content: readmeContent,
+		content: readmeResult.value,
 	};
 }
 

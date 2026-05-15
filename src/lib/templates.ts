@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { type Result, tryCatch } from "./result.js";
 
 // Template directory paths - resolve from package root
 const __filename = fileURLToPath(import.meta.url);
@@ -232,23 +233,23 @@ export function getPiTemplateFiles(): string[] {
 /**
  * Read a template file content
  */
-export function readTemplate(relativePath: string): string {
+export function readTemplate(relativePath: string): Result<string, Error> {
 	const fullPath = path.join(PI_TEMPLATE_DIR, relativePath);
 	if (!fs.existsSync(fullPath)) {
-		throw new Error(`Template not found: ${relativePath}`);
+		return { ok: false, error: new Error(`Template not found: ${relativePath}`) };
 	}
-	return fs.readFileSync(fullPath, "utf-8");
+	return tryCatch(() => fs.readFileSync(fullPath, "utf-8"));
 }
 
 /**
  * Read language patterns file
  */
-export function readLanguagePatterns(language: Language): string {
+export function readLanguagePatterns(language: Language): Result<string, Error> {
 	const fullPath = path.join(LANGUAGES_DIR, `${language}-patterns.md`);
 	if (!fs.existsSync(fullPath)) {
-		throw new Error(`Language patterns not found: ${language}`);
+		return { ok: false, error: new Error(`Language patterns not found: ${language}`) };
 	}
-	return fs.readFileSync(fullPath, "utf-8");
+	return tryCatch(() => fs.readFileSync(fullPath, "utf-8"));
 }
 
 /**

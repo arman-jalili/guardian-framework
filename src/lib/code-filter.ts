@@ -223,7 +223,7 @@ function aggressiveFilter(content: string, lang: Language): string {
 		rust: /^(pub\s+)?(async\s+)?(fn|struct|enum|trait|impl|type|const|static)\s+\w/,
 		python: /^(async\s+)?(def|class)\s+\w/,
 		javascript: /^(async\s+)?(function|class|const|let|var)\s+\w/,
-		typescript: /^(async\s+)?(function|class|const|let|var|interface|type|enum)\s+\w/,
+		typescript: /^(export\s+)?(async\s+)?(function|class|const|let|var|interface|type|enum)\s+\w/,
 		go: /^(func|type|const|var)\s+\w/,
 		c: /^\w[\w\s*]+\s+\w+\s*\(/,
 		cpp: /^\w[\w\s*&:]+\s+\w+\s*\(/,

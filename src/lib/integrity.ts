@@ -10,6 +10,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { type Result, tryCatch } from "./result.js";
 
 // ── Types ──
 
@@ -61,12 +62,15 @@ function hashPathFor(filePath: string): string {
 /**
  * Store SHA-256 hash for a file. Creates .guardian/<name>.sha256 (read-only 0o444).
  */
-export function storeHash(filePath: string): string {
+export function storeHash(filePath: string): Result<string, Error> {
 	const hash = hashFile(filePath);
 	const hashPath = hashPathFor(filePath);
 
-	fs.mkdirSync(HASH_DIR, { recursive: true });
-	fs.writeFileSync(hashPath, `${hash}  ${filePath}\n`, "utf-8");
+	const writeResult = tryCatch(() => {
+		fs.mkdirSync(HASH_DIR, { recursive: true });
+		fs.writeFileSync(hashPath, `${hash}  ${filePath}\n`, "utf-8");
+	});
+	if (!writeResult.ok) return writeResult;
 
 	try {
 		fs.chmodSync(hashPath, 0o444);
@@ -74,7 +78,7 @@ export function storeHash(filePath: string): string {
 		// Permission change may fail on some systems — non-fatal
 	}
 
-	return hash;
+	return { ok: true, value: hash };
 }
 
 /**
@@ -157,10 +161,13 @@ export function verifyDirectory(dirPath: string): VerificationReport {
 /**
  * Remove stored hash for a file.
  */
-export function removeHash(filePath: string): void {
-	const hashFile = hashPathFor(filePath);
-	if (fs.existsSync(hashFile)) {
-		fs.chmodSync(hashFile, 0o644);
-		fs.unlinkSync(hashFile);
+export function removeHash(filePath: string): Result<void, Error> {
+	const hashPath = hashPathFor(filePath);
+	if (fs.existsSync(hashPath)) {
+		return tryCatch(() => {
+			fs.chmodSync(hashPath, 0o644);
+			fs.unlinkSync(hashPath);
+		});
 	}
+	return { ok: true, value: undefined };
 }
