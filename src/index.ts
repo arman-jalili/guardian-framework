@@ -27,6 +27,7 @@ async function main() {
 			dryRun: { type: "boolean" },
 			force: { type: "boolean" },
 			regenerate: { type: "boolean" },
+			verbose: { type: "boolean" },
 		},
 	});
 
@@ -80,6 +81,7 @@ Uninstall options:
 Validate options:
   --filter <name>            Run only matching validator
   --verify                   Run inline tests, don't validate
+  --verbose                  Show detailed output during validation
 
 Stats options:
   --days <N>                 Time window (default: 30)

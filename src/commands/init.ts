@@ -8,11 +8,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { confirm, isCancel } from "@clack/prompts";
 import {
-	generateExportReadme,
-	getExportMappings,
-	getExportStructure,
-} from "../lib/export-mappings.js";
-import {
 	type FileCategory,
 	type GuardianManifest,
 	MANIFEST_FILE,
@@ -48,6 +43,7 @@ import {
 	renderTemplate,
 	templatesExist,
 } from "../lib/templates.js";
+import { generateExport } from "./generate.js";
 
 /**
  * Scaffold directory paths
@@ -146,46 +142,31 @@ async function scaffoldFramework(
 
 		// Scaffold .pi/ directory (always, as source of truth)
 		const piDir = path.join(targetDir, PI_DIR);
-		scaffoldPiDirectory(piDir, context, validators, workflows, scaffoldedFiles);
+		const scaffoldErrors = scaffoldPiDirectory(
+			piDir,
+			context,
+			validators,
+			workflows,
+			scaffoldedFiles,
+		);
 
-		// Generate exports for selected tools
+		// Generate exports for selected tools by delegating to generateExport
+		const generatedFiles: Record<string, { category: FileCategory; content: string }> = {};
 		for (const tool of options.tools) {
 			const exportDir =
 				tool === "pi" ? path.join(targetDir, AGENTS_DIR) : path.join(targetDir, `.${tool}`);
+			generateExport(exportDir, tool, piDir, manifest, generatedFiles);
+		}
 
-			// Create directory structure
-			const structure = getExportStructure(tool);
-			for (const dir of structure) {
-				fs.mkdirSync(path.join(exportDir, dir), { recursive: true });
-			}
+		// Merge generated files into scaffoldedFiles for manifest tracking
+		for (const [filePath, record] of Object.entries(generatedFiles)) {
+			scaffoldedFiles[filePath] = record;
+		}
 
-			// Map pi files to export files
-			const mappings = getExportMappings(tool);
-			for (const mapping of mappings) {
-				const sourcePath = path.join(piDir, mapping.source);
-				const targetPath = path.join(exportDir, mapping.dest);
-
-				if (!fs.existsSync(sourcePath)) {
-					continue;
-				}
-
-				const content = fs.readFileSync(sourcePath, "utf-8");
-				const transformed = mapping.transform ? mapping.transform(content) : content;
-				fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-				fs.writeFileSync(targetPath, transformed, "utf-8");
-
-				const manifestPath = `.${tool}/${mapping.dest}`;
-				scaffoldedFiles[manifestPath] = { category: "generated", content: transformed };
-			}
-
-			// Generate README for export
-			const readmePath = path.join(exportDir, "README.md");
-			const readmeContent = generateExportReadme(tool);
-			fs.writeFileSync(readmePath, readmeContent, "utf-8");
-			scaffoldedFiles[`.${tool}/README.md`] = {
-				category: "generated",
-				content: readmeContent,
-			};
+		if (scaffoldErrors.length > 0) {
+			console.warn(
+				`\n⚠️  Some template files failed to scaffold:\n  ${scaffoldErrors.join("\n  ")}`,
+			);
 		}
 
 		// Update and write manifest
@@ -212,7 +193,8 @@ Next steps:
 }
 
 /**
- * Scaffold .pi/ directory
+ * Scaffold .pi/ directory.
+ * Returns a list of non-fatal errors encountered during scaffolding.
  */
 function scaffoldPiDirectory(
 	piDir: string,
@@ -220,7 +202,8 @@ function scaffoldPiDirectory(
 	validators: Validator[],
 	workflows: Workflow[],
 	scaffoldedFiles: Record<string, { category: FileCategory; content: string }>,
-): void {
+): string[] {
+	const errors: string[] = [];
 	// Create directory structure
 	const directories = [
 		"agent",
@@ -251,7 +234,10 @@ function scaffoldPiDirectory(
 
 		// Read and render template
 		const templateResult = readTemplate(relativePath);
-		if (!templateResult.ok) continue;
+		if (!templateResult.ok) {
+			errors.push(`${relativePath}: ${templateResult.error.message}`);
+			continue;
+		}
 		const rendered = renderTemplate(templateResult.value, context);
 
 		// Write file
@@ -267,32 +253,43 @@ function scaffoldPiDirectory(
 	// Add language patterns to context/patterns.md
 	const patternsPath = path.join(piDir, "context/patterns.md");
 	const patternsResult = readLanguagePatterns(context.language);
-	if (!patternsResult.ok) return;
-	const renderedPatterns = renderTemplate(patternsResult.value, context);
-	fs.writeFileSync(patternsPath, renderedPatterns, "utf-8");
-	scaffoldedFiles[`${PI_DIR}/context/patterns.md`] = {
-		category: "user",
-		content: renderedPatterns,
-	};
+	if (patternsResult.ok) {
+		const renderedPatterns = renderTemplate(patternsResult.value, context);
+		fs.writeFileSync(patternsPath, renderedPatterns, "utf-8");
+		scaffoldedFiles[`${PI_DIR}/context/patterns.md`] = {
+			category: "user",
+			content: renderedPatterns,
+		};
+	} else {
+		errors.push(`context/patterns.md: ${patternsResult.error.message}`);
+	}
 
 	// Write INDEX.md and README.md
 	const indexPath = path.join(piDir, "INDEX.md");
 	const indexResult = readTemplate("INDEX.md");
-	if (!indexResult.ok) return;
-	fs.writeFileSync(indexPath, indexResult.value, "utf-8");
-	scaffoldedFiles[`${PI_DIR}/INDEX.md`] = {
-		category: "framework",
-		content: indexResult.value,
-	};
+	if (indexResult.ok) {
+		fs.writeFileSync(indexPath, indexResult.value, "utf-8");
+		scaffoldedFiles[`${PI_DIR}/INDEX.md`] = {
+			category: "framework",
+			content: indexResult.value,
+		};
+	} else {
+		errors.push(`INDEX.md: ${indexResult.error.message}`);
+	}
 
 	const readmePath = path.join(piDir, "README.md");
 	const readmeResult = readTemplate("README.md");
-	if (!readmeResult.ok) return;
-	fs.writeFileSync(readmePath, readmeResult.value, "utf-8");
-	scaffoldedFiles[`${PI_DIR}/README.md`] = {
-		category: "framework",
-		content: readmeResult.value,
-	};
+	if (readmeResult.ok) {
+		fs.writeFileSync(readmePath, readmeResult.value, "utf-8");
+		scaffoldedFiles[`${PI_DIR}/README.md`] = {
+			category: "framework",
+			content: readmeResult.value,
+		};
+	} else {
+		errors.push(`README.md: ${readmeResult.error.message}`);
+	}
+
+	return errors;
 }
 
 /**
