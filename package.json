@@ -8,6 +8,9 @@
 		"guardian-framework-cli": "./dist/index.js"
 	},
 	"files": ["dist/", "templates/"],
+	"engines": {
+		"bun": ">=1.0.0"
+	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
 		"test": "bun test",
@@ -15,6 +18,14 @@
 		"format": "biome format . --write",
 		"typecheck": "tsc --noEmit",
 		"dev": "bun run src/index.ts"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/arman-jalili/guardian-cli"
+	},
+	"homepage": "https://github.com/arman-jalili/guardian-cli#readme",
+	"bugs": {
+		"url": "https://github.com/arman-jalili/guardian-cli/issues"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.7.0",
@@ -25,7 +36,17 @@
 		"@types/bun": "latest",
 		"typescript": "^5.0.0"
 	},
-	"keywords": ["cli", "agentic", "framework", "ai", "scaffold", "pi-first", "token-optimized"],
-	"author": "",
+	"keywords": [
+		"cli",
+		"agentic",
+		"framework",
+		"ai",
+		"scaffold",
+		"pi-first",
+		"token-optimized",
+		"claude-code",
+		"github-copilot"
+	],
+	"author": "Arman Jalili",
 	"license": "MIT"
 }

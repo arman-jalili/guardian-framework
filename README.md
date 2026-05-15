@@ -29,7 +29,24 @@ Multi-agent AI workflows produce excellent results but burn tokens quadratically
 | Verbosity in command output | **TOML filter pipeline** — declarative 8-stage output compression |
 | No runtime token accounting | **SQLite tracking** — per-validator token savings + USD estimation |
 
-**Result: 60–90% token reduction** compared to traditional multi-agent workflows.
+**Result: significant token reduction** compared to traditional multi-agent workflows. See the [Token Reduction Methodology](#token-reduction-methodology) section for details.
+
+---
+
+## Token Reduction Methodology
+
+Token savings come from several mechanisms:
+
+| Mechanism | How It Works | Typical Savings |
+|-----------|-------------|----------------|
+| **DRY Context** | Shared templates loaded once per session instead of per-agent | 20–40% |
+| **Snippet Expansion** | `#handle` tokens replace full skill files | 70–90% per skill |
+| **TOML Filters** | 8-stage pipeline compresses command output | 30–60% of output |
+| **Validator Scripts** | Shell scripts replace LLM-based checks | 100% for mechanical checks |
+| **Tiered Prompts** | Lite prompts for fast models | ~750 tokens/turn |
+| **Context Compaction** | Budget-aware elision at thresholds | 15–30% of context |
+
+Actual savings vary by project size, language, and AI tool configuration.
 
 ---
 
@@ -40,7 +57,7 @@ Multi-agent AI workflows produce excellent results but burn tokens quadratically
 npx guardian-framework-cli init
 
 # Or install globally
-bun add -g guardian-framework-cli
+npm install -g guardian-framework-cli
 ```
 
 ---
@@ -155,10 +172,10 @@ Update preserves your config (`max_turns: 30`) and replaces the body with the ne
 ### Key options
 
 ```bash
-init --tool pi,claude --lang typescript --nonInteractive
-generate --tool all --dry-run
-update --regenerate
-info
+guardian-framework-cli init --tool pi,claude --lang typescript --nonInteractive
+guardian-framework-cli generate --tool all --dryRun
+guardian-framework-cli update --regenerate
+guardian-framework-cli info
 ```
 
 ---
@@ -244,7 +261,7 @@ GuardianCLI incorporates production-tested patterns from [RTK](https://github.co
 |---|---------|--------|
 | 1 | **TOML Filter Pipeline** | 8-stage declarative output compression (strip → replace → match → filter → truncate → head/tail → cap → empty) |
 | 2 | **Inline Test-Driven Validators** | Self-verifying validators with `[[tests.*]]` blocks, `guardian validate --verify` |
-| 3 | **SQLite Token Tracking** | Runtime token accounting with `guardian stats`, daily/weekly reports, USD estimation |
+| 3 | **JSON Token Tracking** | Runtime token accounting with `guardian stats`, daily/weekly reports, USD estimation |
 | 4 | **Language-Aware Code Filtering** | 3-level read filtering (None/Minimal/Aggressive) for 11 languages |
 | 5 | **Tee-on-Failure** | Raw validator output preserved on failure for debugging |
 | 6 | **Trust-Gated Project Config** | Prevents malicious extension injection — `guardian trust` workflow |
