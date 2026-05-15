@@ -1,5 +1,5 @@
 /**
- * Integration tests for GuardianCLI init → generate → update lifecycle.
+ * Integration tests for Guardian init → generate → update lifecycle.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -86,7 +86,7 @@ describe("init lifecycle", () => {
 
 		// Verify files exist and contain expected content
 		const indexContent = fs.readFileSync(path.join(piDir, "INDEX.md"), "utf-8");
-		expect(indexContent).toContain("GuardianCLI Agent Framework");
+		expect(indexContent).toContain("Guardian Agent Framework");
 		expect(indexContent).toContain("Pi-first");
 
 		const agentsContent = fs.readFileSync(path.join(piDir, "agent/AGENTS.md"), "utf-8");
@@ -151,7 +151,7 @@ describe("generate lifecycle", () => {
 		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
 			const readme = generateExportReadme(tool);
 			expect(readme.length).toBeGreaterThan(50);
-			expect(readme).toContain("GuardianCLI");
+			expect(readme).toContain("Guardian");
 		}
 	});
 

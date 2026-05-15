@@ -1,6 +1,6 @@
 # Rust Code Patterns
 
-> **Purpose:** Reusable Rust patterns for GuardianCLI projects.
+> **Purpose:** Reusable Rust patterns for Guardian projects.
 > **Source:** Extracted from Rigorix framework.
 
 ---

@@ -1,6 +1,6 @@
 # Go Code Patterns
 
-> **Purpose:** Reusable Go patterns for GuardianCLI projects.
+> **Purpose:** Reusable Go patterns for Guardian projects.
 > **Generic:** Adapt for your framework (standard library, third-party).
 
 ---

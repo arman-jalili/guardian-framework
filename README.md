@@ -1,4 +1,4 @@
-# GuardianCLI
+# Guardian
 
 **Token-Optimized Agentic Framework Scaffolder**
 
@@ -6,9 +6,9 @@ A CLI that scaffolds deterministic, validated AI-assisted development workflows.
 
 ---
 
-## Why GuardianCLI
+## Why Guardian
 
-Multi-agent AI workflows produce excellent results but burn tokens quadratically and drift from architecture. GuardianCLI solves this:
+Multi-agent AI workflows produce excellent results but burn tokens quadratically and drift from architecture. Guardian solves this:
 
 | Problem | Solution |
 |---------|----------|
@@ -54,10 +54,10 @@ Actual savings vary by project size, language, and AI tool configuration.
 
 ```bash
 # Run directly (no installation needed)
-npx guardian-framework-cli init
+npx guardian-framework init
 
 # Or install globally
-npm install -g guardian-framework-cli
+npm install -g guardian-framework
 ```
 
 ---
@@ -68,7 +68,7 @@ npm install -g guardian-framework-cli
 
 ```bash
 cd your-project
-npx guardian-framework-cli init
+npx guardian-framework init
 ```
 
 Interactive prompts guide you through project name, language, AI tools, validators, and workflows.
@@ -83,7 +83,7 @@ bash .pi/scripts/validate-canonical.sh
 ### 3. Update framework
 
 ```bash
-npx guardian-framework-cli update
+npx guardian-framework update
 ```
 
 Smart-merges new template versions into your project — preserves user edits, merges YAML config.
@@ -91,7 +91,7 @@ Smart-merges new template versions into your project — preserves user edits, m
 ### 4. Generate exports
 
 ```bash
-npx guardian-framework-cli generate
+npx guardian-framework generate
 ```
 
 Creates `.claude/`, `.opencode/`, `.agents/`, `.github/` from `.pi/` source.
@@ -129,7 +129,7 @@ Read the full [Architecture Document](docs/architecture.md) for system design, d
 
 ### `update` — Smart Merge
 
-Updates `.pi/` files from new GuardianCLI templates without losing your work:
+Updates `.pi/` files from new Guardian templates without losing your work:
 
 ```bash
 # See what would change (safe, no writes)
@@ -172,10 +172,10 @@ Update preserves your config (`max_turns: 30`) and replaces the body with the ne
 ### Key options
 
 ```bash
-guardian-framework-cli init --tool pi,claude --lang typescript --nonInteractive
-guardian-framework-cli generate --tool all --dryRun
-guardian-framework-cli update --regenerate
-guardian-framework-cli info
+guardian-framework init --tool pi,claude --lang typescript --nonInteractive
+guardian-framework generate --tool all --dryRun
+guardian-framework update --regenerate
+guardian-framework info
 ```
 
 ---
@@ -255,7 +255,7 @@ Zero external npm dependencies — all self-contained.
 
 ## RTK-Adopted Patterns
 
-GuardianCLI incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
+Guardian incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
 
 | # | Pattern | Impact |
 |---|---------|--------|
@@ -284,7 +284,7 @@ GuardianCLI incorporates production-tested patterns from [RTK](https://github.co
 
 ## Terax-Adopted Patterns
 
-GuardianCLI incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), an AI-native terminal:
+Guardian incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), an AI-native terminal:
 
 | # | Pattern | Impact |
 |---|---------|--------|
@@ -375,7 +375,7 @@ Every implementation file references its architecture source:
 ## Token Accounting
 
 ```bash
-npx guardian-framework-cli info
+npx guardian-framework info
 ```
 
 Shows token stats per category and per file, with total context size estimation (~4 chars/token).
@@ -424,7 +424,7 @@ MIT
 
 ## Links
 
-- **Source:** https://github.com/arman-jalili/guardian-cli
-- **Design Spec:** [docs/guardian-cli-design.md](docs/guardian-cli-design.md)
+- **Source:** https://github.com/arman-jalili/guardian-framework
+- **Design Spec:** [docs/guardian-framework-design.md](docs/guardian-framework-design.md)
 - **Architecture:** [docs/architecture.md](docs/architecture.md)
 - **Pi Framework:** https://github.com/badlogic/pi-mono

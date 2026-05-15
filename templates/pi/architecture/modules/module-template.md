@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/architecture/modules/[module-name].md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 Generated: NEVER (this is the source)
 -->
 

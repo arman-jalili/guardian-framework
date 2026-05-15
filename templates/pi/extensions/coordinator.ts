@@ -1,7 +1,7 @@
 /**
  * Coordinator Extension for pi
  *
- * Master orchestrator for GuardianCLI workflows.
+ * Master orchestrator for Guardian workflows.
  * Uses guardian_scope, guardian_validate, and ask_user_question tools.
  * Zero external dependencies — self-contained pi extension.
  */
@@ -84,7 +84,7 @@ function toolError(text: string) {
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
-		ctx.ui.notify("GuardianCLI coordinator ready", "info");
+		ctx.ui.notify("Guardian coordinator ready", "info");
 	});
 
 	// ── guardian_scope ──
@@ -119,7 +119,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "guardian_validate",
 		label: "Guardian Validate",
-		description: "Run GuardianCLI validation scripts for specific categories",
+		description: "Run Guardian validation scripts for specific categories",
 		parameters: Type.Object({
 			validators: Type.Array(Type.String(), {
 				description:
@@ -183,7 +183,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "guardian_coordinate",
 		label: "Guardian Coordinate",
-		description: "Orchestrate a GuardianCLI workflow with scope classification and validation",
+		description: "Orchestrate a Guardian workflow with scope classification and validation",
 		parameters: Type.Object({
 			task: Type.String({ description: "Task description" }),
 			scope: Type.Optional(Type.String({ description: "Override scope classification" })),

@@ -32,25 +32,25 @@ async function main() {
 	});
 
 	if (args.values.version) {
-		console.log(`guardian-framework-cli v${VERSION}`);
+		console.log(`guardian-framework v${VERSION}`);
 		return;
 	}
 
 	if (args.values.help) {
 		console.log(`
-guardian-framework-cli - Token-optimized agentic framework scaffolder
+guardian-framework - Token-optimized agentic framework scaffolder
 
 Usage:
-  guardian-framework-cli init          Initialize framework in current directory
-  guardian-framework-cli generate      Generate exports from .pi source
-  guardian-framework-cli update        Smart merge framework updates
-  guardian-framework-cli upgrade       Migrate to new version
-  guardian-framework-cli uninstall     Remove Guardian-managed files
-  guardian-framework-cli info          Display manifest information
-  guardian-framework-cli stats         Token savings analytics and USD estimation
-  guardian-framework-cli validate      Run TOML-based validators
-  guardian-framework-cli verify        File integrity verification
-  guardian-framework-cli trust         Trust-gated config management
+  guardian-framework init          Initialize framework in current directory
+  guardian-framework generate      Generate exports from .pi source
+  guardian-framework update        Smart merge framework updates
+  guardian-framework upgrade       Migrate to new version
+  guardian-framework uninstall     Remove Guardian-managed files
+  guardian-framework info          Display manifest information
+  guardian-framework stats         Token savings analytics and USD estimation
+  guardian-framework validate      Run TOML-based validators
+  guardian-framework verify        File integrity verification
+  guardian-framework trust         Trust-gated config management
 
 Options:
   -v, --version              Show version
@@ -166,7 +166,7 @@ async function runCommand(
 			break;
 		default:
 			console.error(`Unknown command: ${command}`);
-			console.log("Run 'guardian-framework-cli --help' for usage");
+			console.log("Run 'guardian-framework --help' for usage");
 	}
 }
 

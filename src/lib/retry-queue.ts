@@ -1,5 +1,5 @@
 /**
- * Persistent retry queue for GuardianCLI
+ * Persistent retry queue for Guardian
  *
  * Survives process restarts by storing retry state in `.pi/.guardian-retry-state.json`.
  * Based on Symphony spec Section 4.1.7 (RetryEntry) and Section 8.4 (Retry and Backoff).

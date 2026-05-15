@@ -1,5 +1,5 @@
 /**
- * Language-Aware Code Filtering for GuardianCLI
+ * Language-Aware Code Filtering for Guardian
  *
  * Strips comments, function bodies, and boilerplate from source code to save
  * tokens when reading files. Inspired by RTK's filter.rs.

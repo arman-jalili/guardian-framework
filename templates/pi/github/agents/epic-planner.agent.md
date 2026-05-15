@@ -10,7 +10,7 @@ tools:
 ---
 <!--
 Canonical Reference: .pi/github/agents/epic-planner.agent.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 DO NOT EDIT DIRECTLY - Source: .pi/prompts/epic-plan.md
 -->
 

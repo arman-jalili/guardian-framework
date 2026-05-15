@@ -1,5 +1,5 @@
 /**
- * Init command for GuardianCLI
+ * Init command for Guardian
  *
  * Scaffolds the agentic framework with interactive prompts
  */
@@ -177,14 +177,14 @@ async function scaffoldFramework(
 			t === "pi" ? ".agents/skills/ (pi skills)" : `.${t}/`,
 		);
 		showSuccess(`
-Scaffolded GuardianCLI framework:
+Scaffolded Guardian framework:
   .pi/         (source of truth)
   ${exportPaths.join("\n  ")}
 
 Next steps:
   1. Edit .pi/agent/AGENTS.md to customize project context
   2. Edit .pi/scripts/*.sh to set build/test/lint commands
-  3. Run: npx guardian-framework-cli generate (after editing .pi/)
+  3. Run: npx guardian-framework generate (after editing .pi/)
 `);
 	} catch (error) {
 		s.stop("Scaffold failed!");

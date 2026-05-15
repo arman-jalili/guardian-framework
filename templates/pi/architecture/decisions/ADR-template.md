@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/architecture/decisions/ADR-XXX-[title].md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 -->
 
 ## Title

@@ -1,6 +1,6 @@
-# Contributing to GuardianCLI
+# Contributing to Guardian
 
-Thank you for your interest in contributing! GuardianCLI is a token-optimized agentic framework scaffolder.
+Thank you for your interest in contributing! Guardian is a token-optimized agentic framework scaffolder.
 
 ## Getting Started
 
@@ -12,8 +12,8 @@ Thank you for your interest in contributing! GuardianCLI is a token-optimized ag
 ### Setup
 
 ```bash
-git clone https://github.com/arman-jalili/guardian-cli.git
-cd guardian-cli
+git clone https://github.com/arman-jalili/guardian-framework.git
+cd guardian-framework
 bun install
 ```
 
@@ -47,7 +47,7 @@ All quality gates must pass before submitting a PR:
 
 ## Architecture Overview
 
-GuardianCLI uses a **pi-first architecture**:
+Guardian uses a **pi-first architecture**:
 - `.pi/` is the source of truth (stored as templates in `templates/pi/`)
 - Other formats (`.claude/`, `.opencode/`, `.agents/`, `.github/`) are generated exports
 - Export mappings live in `src/lib/export-mappings.ts`
@@ -116,7 +116,7 @@ New features should include tests. Integration tests in `tests/integration.test.
 
 ## Reporting Issues
 
-- **Bug reports:** Include OS, Bun version, GuardianCLI version, and reproduction steps.
+- **Bug reports:** Include OS, Bun version, Guardian version, and reproduction steps.
 - **Feature requests:** Describe the use case and expected behavior.
 - **Security issues:** See [SECURITY.md](SECURITY.md) for responsible disclosure.
 

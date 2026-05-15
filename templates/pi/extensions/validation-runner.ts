@@ -60,7 +60,7 @@ function isValidatorName(value: string): value is ValidatorName {
 export default function (pi: ExtensionAPI) {
 	// Session initialization
 	pi.on("session_start", async (_event, ctx) => {
-		ctx.ui.notify("GuardianCLI validation runner initialized", "info");
+		ctx.ui.notify("Guardian validation runner initialized", "info");
 	});
 
 	// Register validate command — runs scripts directly via shell

@@ -1,5 +1,5 @@
 /**
- * Generate command for GuardianCLI
+ * Generate command for Guardian
  *
  * Regenerates exports from .pi/ source after edits
  */
@@ -44,7 +44,7 @@ export async function runGenerate(
 	// Check for manifest
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		outro("No manifest found. Run 'guardian-framework-cli init' first.");
+		outro("No manifest found. Run 'guardian-framework init' first.");
 		return;
 	}
 

@@ -1,4 +1,4 @@
-# GuardianCLI Architecture
+# Guardian Architecture
 
 **Version:** 2.2
 **Status:** Living Document
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-GuardianCLI is a **token-optimized agentic framework scaffolder** that generates deterministic, validated AI-assisted development workflows. It uses a **pi-first architecture** where `.pi/` is the version-controlled source of truth and all other formats (`.claude/`, `.opencode/`, `.agents/`, `.github/`) are generated exports.
+Guardian is a **token-optimized agentic framework scaffolder** that generates deterministic, validated AI-assisted development workflows. It uses a **pi-first architecture** where `.pi/` is the version-controlled source of truth and all other formats (`.claude/`, `.opencode/`, `.agents/`, `.github/`) are generated exports.
 
 ### Design Goals
 
@@ -20,7 +20,7 @@ GuardianCLI is a **token-optimized agentic framework scaffolder** that generates
 
 ### Inspirations
 
-GuardianCLI's orchestration model is inspired by the [OpenAI Symphony specification](https://github.com/openai/symphony), adapted for a scaffolding CLI rather than a long-running daemon:
+Guardian's orchestration model is inspired by the [OpenAI Symphony specification](https://github.com/openai/symphony), adapted for a scaffolding CLI rather than a long-running daemon:
 
 | Symphony Concept | Guardian Adaptation |
 |------------------|---------------------|
@@ -35,7 +35,7 @@ GuardianCLI's orchestration model is inspired by the [OpenAI Symphony specificat
 | Tiered system prompts | Full/lite prompts by model capability (Terax AI) |
 | Stall detection | Hook timeout + no-output stall kill |
 
-GuardianCLI also incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), a lightweight cross-platform AI-native terminal:
+Guardian also incorporates production-tested patterns from [Terax AI](https://github.com/crynta/terax-ai), a lightweight cross-platform AI-native terminal:
 
 | Terax Pattern | Guardian Implementation |
 |---------------|------------------------|
@@ -52,7 +52,7 @@ GuardianCLI also incorporates production-tested patterns from [Terax AI](https:/
 | Model capability registry | `skills/validators/model-registry.md` — intelligence/speed/cost scoring |
 | Redaction layer | `extensions/redaction.ts` — auto-strip API keys, tokens, JWTs |
 
-GuardianCLI also incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
+Guardian also incorporates production-tested patterns from [RTK](https://github.com/rtk-ai/rtk), a high-performance CLI proxy for LLM token reduction:
 
 | RTK Pattern | Guardian Implementation |
 |---------------|------------------------|
@@ -220,7 +220,7 @@ Flow:
 
 | Condition | Action | Rationale |
 |-----------|--------|----------|
-| File not in manifest + exists in templates | add | New GuardianCLI feature |
+| File not in manifest + exists in templates | add | New Guardian feature |
 | File in manifest + hash unchanged | update | Safe to overwrite |
 | File in manifest + hash changed + has YAML front-matter | merge-frontmatter | User's config + new body |
 | File in manifest + hash changed + no front-matter | preserve | Don't risk losing user content |

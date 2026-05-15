@@ -1,6 +1,6 @@
 # TypeScript/JavaScript Code Patterns
 
-> **Purpose:** Reusable TypeScript patterns for GuardianCLI projects.
+> **Purpose:** Reusable TypeScript patterns for Guardian projects.
 > **Generic:** Adapt for your framework (Node.js, Bun, etc.).
 
 ---

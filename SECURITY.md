@@ -8,10 +8,10 @@
 
 ## Reporting a Vulnerability
 
-GuardianCLI scaffolds files into user projects and executes validator commands. If you discover a security vulnerability, please report it responsibly:
+Guardian scaffolds files into user projects and executes validator commands. If you discover a security vulnerability, please report it responsibly:
 
 1. **Do not** open a public issue for security vulnerabilities.
-2. Email [your-email] or open a [GitHub Security Advisory](https://github.com/arman-jalili/guardian-cli/security/advisories/new).
+2. Email [your-email] or open a [GitHub Security Advisory](https://github.com/arman-jalili/guardian-framework/security/advisories/new).
 3. Include:
    - A description of the vulnerability
    - Steps to reproduce
@@ -24,7 +24,7 @@ We will respond within 48 hours and aim to resolve critical issues within 7 days
 
 ### Trust-Gated Configuration
 
-GuardianCLI uses a trust system for project-local validator configs (`.pi/validators/*.toml`). Untrusted configs are flagged. Use `guardian trust` to review and approve.
+Guardian uses a trust system for project-local validator configs (`.pi/validators/*.toml`). Untrusted configs are flagged. Use `guardian trust` to review and approve.
 
 ### Validator Execution
 

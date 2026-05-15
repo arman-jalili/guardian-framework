@@ -1,5 +1,5 @@
 /**
- * File Integrity Verification for GuardianCLI
+ * File Integrity Verification for Guardian
  *
  * SHA-256 hash verification for managed files to detect tampering or drift.
  * Inspired by RTK's integrity system.

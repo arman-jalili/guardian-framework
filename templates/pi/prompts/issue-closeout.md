@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/prompts/issue-closeout.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 -->
 
 **Purpose:** Verify all acceptance criteria are met, run validators (including canonical reference check), and create a compliance merge request (MR) with complete documentation.
@@ -272,7 +272,7 @@ Closes #[ISSUE_NUMBER]
 
 ---
 
-🤖 Generated with GuardianCLI compliance workflow
+🤖 Generated with Guardian compliance workflow
 ```
 
 ### 5. Create MR in Repository

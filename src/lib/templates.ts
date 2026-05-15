@@ -1,5 +1,5 @@
 /**
- * Template loading utility for GuardianCLI
+ * Template loading utility for Guardian
  *
  * Loads templates from templates/pi/ and templates/languages/
  * Provides template rendering with placeholder substitution
@@ -35,7 +35,7 @@ function findTemplateDir(): string {
 	// Fallback: try to find via package.json resolution
 	try {
 		// @ts-ignore - bun specific
-		const pkgPath = require.resolve("guardian-framework-cli/package.json");
+		const pkgPath = require.resolve("guardian-framework/package.json");
 		return path.join(path.dirname(pkgPath), "templates");
 	} catch {
 		// Last resort - check common locations

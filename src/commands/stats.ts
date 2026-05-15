@@ -1,5 +1,5 @@
 /**
- * Stats command for GuardianCLI
+ * Stats command for Guardian
  *
  * Display token tracking stats, USD savings, and validator performance.
  * Inspired by RTK's `rtk gain` command.

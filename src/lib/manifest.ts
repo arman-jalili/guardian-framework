@@ -1,5 +1,5 @@
 /**
- * Manifest schema and management for GuardianCLI
+ * Manifest schema and management for Guardian
  */
 
 import * as crypto from "node:crypto";
@@ -66,7 +66,7 @@ export interface GuardianManifest {
 	templateContext?: TemplateContext;
 	scaffoldedAt: string;
 	lastUpdatedAt: string;
-	// Token accounting (GuardianCLI addition)
+	// Token accounting (Guardian addition)
 	tokenStats?: TokenStats;
 }
 

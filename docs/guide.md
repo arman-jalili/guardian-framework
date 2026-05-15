@@ -1,7 +1,7 @@
-# GuardianCLI — Practical Guide
+# Guardian — Practical Guide
 
 **Version:** 2.2
-**Audience:** Developers who want to use GuardianCLI in a real project
+**Audience:** Developers who want to use Guardian in a real project
 
 ---
 
@@ -25,13 +25,13 @@
 
 ```bash
 cd your-project
-npx guardian-cli init
+npx guardian-framework init
 ```
 
 You'll get interactive prompts:
 
 ```
-│  Welcome to GuardianCLI
+│  Welcome to Guardian
 │
 ◆  Select AI tools:
 │  ● pi (Full features: extensions, skills)
@@ -254,7 +254,7 @@ validate:
 Or run interactively:
 
 ```bash
-npx guardian-cli init  # re-run to change validator selection
+npx guardian-framework init  # re-run to change validator selection
 ```
 
 ### 3.2 Configure TOML validators (RTK pattern)
@@ -281,13 +281,13 @@ expected = "error: type mismatch"
 Trust it (first run requires review):
 
 ```bash
-npx guardian-cli trust .pi/validators/custom.toml
+npx guardian-framework trust .pi/validators/custom.toml
 ```
 
 Verify inline tests pass:
 
 ```bash
-npx guardian-cli validate --verify
+npx guardian-framework validate --verify
 ```
 
 ### 3.3 Customize validation scripts
@@ -421,7 +421,7 @@ bash .pi/scripts/validate-canonical.sh
 ### 5.2 Run TOML validators
 
 ```bash
-npx guardian-cli validate
+npx guardian-framework validate
 ```
 
 Output:
@@ -447,7 +447,7 @@ Ensures every implementation file has a canonical reference pointing to valid ar
 ### 5.4 Check file integrity
 
 ```bash
-npx guardian-cli verify
+npx guardian-framework verify
 ```
 
 Output:
@@ -462,7 +462,7 @@ Verification complete: 42/45 verified
 ### 5.5 View token stats
 
 ```bash
-npx guardian-cli stats
+npx guardian-framework stats
 ```
 
 Output:
@@ -504,17 +504,17 @@ Use the `commit` and `land` skills:
 
 ### 6.1 Update framework
 
-When GuardianCLI releases new templates:
+When Guardian releases new templates:
 
 ```bash
 # See what would change
-npx guardian-cli update --dryRun
+npx guardian-framework update --dryRun
 
 # Apply changes (preserves your edits)
-npx guardian-cli update
+npx guardian-framework update
 
 # Update + regenerate exports
-npx guardian-cli update --regenerate
+npx guardian-framework update --regenerate
 ```
 
 **Smart merge behavior:**
@@ -532,7 +532,7 @@ npx guardian-cli update --regenerate
 After editing `.pi/` files:
 
 ```bash
-npx guardian-cli generate
+npx guardian-framework generate
 ```
 
 Regenerates `.agents/skills/` (and `.claude/`, `.opencode/`, `.agents/` if configured).
@@ -542,7 +542,7 @@ Regenerates `.agents/skills/` (and `.claude/`, `.opencode/`, `.agents/` if confi
 Guardian tracks export sync status:
 
 ```bash
-npx guardian-cli info
+npx guardian-framework info
 ```
 
 Shows whether exports are in sync with `.pi/` source. If out of sync:
@@ -551,7 +551,7 @@ Shows whether exports are in sync with `.pi/` source. If out of sync:
 ⚠️  .agents/  Out of sync
 ```
 
-Run `npx guardian-cli generate` to fix.
+Run `npx guardian-framework generate` to fix.
 
 ---
 
@@ -605,19 +605,19 @@ Project-local validators require explicit trust:
 
 ```bash
 # Review and trust
-npx guardian-cli trust .pi/validators/my-tool.toml
+npx guardian-framework trust .pi/validators/my-tool.toml
 
 # Revoke trust
-npx guardian-cli trust --revoke .pi/validators/my-tool.toml
+npx guardian-framework trust --revoke .pi/validators/my-tool.toml
 
 # List trusted files
-npx guardian-cli trust --list
+npx guardian-framework trust --list
 ```
 
 For CI, bypass trust:
 
 ```bash
-GUARDIAN_TRUST_OVERRIDE=1 npx guardian-cli validate
+GUARDIAN_TRUST_OVERRIDE=1 npx guardian-framework validate
 ```
 
 ---
@@ -760,15 +760,15 @@ bash .pi/scripts/validate-canonical.sh    # Check canonical references
 
 | Command | Purpose |
 |---------|---------|
-| `npx guardian-cli init` | Scaffold framework |
-| `npx guardian-cli update` | Smart merge updates |
-| `npx guardian-cli generate` | Regenerate exports |
-| `npx guardian-cli info` | Display status |
-| `npx guardian-cli stats` | Token savings analytics |
-| `npx guardian-cli validate` | Run TOML validators |
-| `npx guardian-cli validate --verify` | Run inline tests |
-| `npx guardian-cli verify` | File integrity check |
-| `npx guardian-cli trust <file>` | Trust project-local config |
+| `npx guardian-framework init` | Scaffold framework |
+| `npx guardian-framework update` | Smart merge updates |
+| `npx guardian-framework generate` | Regenerate exports |
+| `npx guardian-framework info` | Display status |
+| `npx guardian-framework stats` | Token savings analytics |
+| `npx guardian-framework validate` | Run TOML validators |
+| `npx guardian-framework validate --verify` | Run inline tests |
+| `npx guardian-framework verify` | File integrity check |
+| `npx guardian-framework trust <file>` | Trust project-local config |
 
 ### Slash Commands (in pi)
 
@@ -799,7 +799,7 @@ bash .pi/scripts/validate-canonical.sh    # Check canonical references
 ---
 
 **See also:**
-- [Design Spec](docs/guardian-cli-design.md)
+- [Design Spec](docs/guardian-framework-design.md)
 - [Architecture](docs/architecture.md)
 - [CHANGELOG](CHANGELOG.md)
 - [pi Extensions API](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/docs/extensions.md)

@@ -1,8 +1,8 @@
-# GuardianCLI Documentation
+# Guardian Documentation
 
 ## Overview
 
-- **[Design Specification](guardian-cli-design.md)** — Complete product requirements, user stories, and feature specification.
+- **[Design Specification](guardian-framework-design.md)** — Complete product requirements, user stories, and feature specification.
 - **[Architecture Document](architecture.md)** — System design, data flow, component interactions, and orchestration model.
 - **[User Guide](guide.md)** — Step-by-step usage instructions for all commands and features.
 
@@ -10,7 +10,7 @@
 
 | Topic | Document |
 |-------|----------|
-| How the CLI works | [Design Spec](guardian-cli-design.md) |
+| How the CLI works | [Design Spec](guardian-framework-design.md) |
 | System internals | [Architecture](architecture.md) |
 | Using the CLI | [User Guide](guide.md) |
 

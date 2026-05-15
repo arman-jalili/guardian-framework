@@ -1,5 +1,5 @@
 /**
- * Update command for GuardianCLI
+ * Update command for Guardian
  *
  * Smart merge framework updates preserving user edits.
  *
@@ -74,7 +74,7 @@ export async function runUpdate(
 
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		outro("No manifest found. Run 'guardian-framework-cli init' first.");
+		outro("No manifest found. Run 'guardian-framework init' first.");
 		return;
 	}
 
@@ -146,12 +146,12 @@ function analyzeChanges(
 
 		const fullPath = path.join(targetDir, filePath);
 
-		// Template was removed from GuardianCLI
+		// Template was removed from Guardian
 		if (!templatePaths.has(filePath.replace(".pi/", ""))) {
 			changes.push({
 				path: filePath,
 				action: "orphan",
-				reason: "Template removed from GuardianCLI",
+				reason: "Template removed from Guardian",
 			});
 			continue;
 		}
@@ -492,7 +492,7 @@ function printSummary(result: UpdateResult): void {
 	}
 
 	outro(
-		`\nFramework updated:\n\n${lines.join("\n")}\n\nRegenerate exports with:\n  guardian-framework-cli generate`,
+		`\nFramework updated:\n\n${lines.join("\n")}\n\nRegenerate exports with:\n  guardian-framework generate`,
 	);
 }
 

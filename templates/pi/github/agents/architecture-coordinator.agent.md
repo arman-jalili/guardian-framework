@@ -11,7 +11,7 @@ tools:
 ---
 <!--
 Canonical Reference: .pi/github/agents/architecture-coordinator.agent.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 DO NOT EDIT DIRECTLY - Source: .pi/skills/agents/architecture-coordinator.md
 -->
 

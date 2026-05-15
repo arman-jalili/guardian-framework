@@ -1,11 +1,11 @@
 {
-	"name": "guardian-framework-cli",
+	"name": "guardian-framework",
 	"version": "0.1.0",
 	"description": "Token-optimized agentic framework scaffolder with pi-first architecture",
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {
-		"guardian-framework-cli": "./dist/index.js"
+		"guardian-framework": "./dist/index.js"
 	},
 	"files": ["dist/", "templates/"],
 	"engines": {
@@ -21,11 +21,11 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/arman-jalili/guardian-cli"
+		"url": "https://github.com/arman-jalili/guardian-framework"
 	},
-	"homepage": "https://github.com/arman-jalili/guardian-cli#readme",
+	"homepage": "https://github.com/arman-jalili/guardian-framework#readme",
 	"bugs": {
-		"url": "https://github.com/arman-jalili/guardian-cli/issues"
+		"url": "https://github.com/arman-jalili/guardian-framework/issues"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.7.0",

@@ -1,5 +1,5 @@
 /**
- * Workflow config layer for GuardianCLI
+ * Workflow config layer for Guardian
  *
  * Parses YAML front matter from .pi/agent/AGENTS.md (the workflow contract file).
  * Provides typed getters with defaults, $VAR env indirection, and validation.

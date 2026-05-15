@@ -19,7 +19,7 @@
 ```markdown
 <!--
 Canonical Reference: .pi/INDEX.md#scope-classification
-Scope determination follows GuardianCLI framework rules
+Scope determination follows Guardian framework rules
 -->
 ```
 

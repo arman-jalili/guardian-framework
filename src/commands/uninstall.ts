@@ -1,5 +1,5 @@
 /**
- * Uninstall command for GuardianCLI
+ * Uninstall command for Guardian
  *
  * Removes Guardian-managed files recorded in guardian-manifest.json.
  */

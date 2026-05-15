@@ -1,4 +1,4 @@
-# GuardianCLI Agent Framework
+# Guardian Agent Framework
 
 **Version:** 1.2.0
 **Status:** Template
@@ -407,7 +407,7 @@ When architecture changes:
 
 ## Generation Mappings
 
-When running `guardian-framework-cli generate`, `.pi/` files are transformed:
+When running `guardian-framework generate`, `.pi/` files are transformed:
 
 | Source | Destination | Transformation |
 |--------|-------------|----------------|

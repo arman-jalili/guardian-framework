@@ -64,7 +64,7 @@ Generated exports (created by `guardian generate`):
 ### 1. Initialize Project
 
 ```bash
-npx guardian-cli init
+npx guardian-framework init
 ```
 
 Interactive prompts will:
@@ -82,7 +82,7 @@ Replace placeholder commands in `.pi/scripts/*.sh`:
 ### 3. Generate Exports
 
 ```bash
-npx guardian-cli generate
+npx guardian-framework generate
 ```
 
 Creates `.claude/`, `.opencode/`, `.agents/` from `.pi/` templates.
@@ -179,4 +179,4 @@ Selected during `guardian init` based on project language.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.0 | 2026-04-25 | Initial GuardianCLI template with pi-first architecture |
+| 1.0.0 | 2026-04-25 | Initial Guardian template with pi-first architecture |

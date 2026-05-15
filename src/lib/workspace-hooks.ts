@@ -1,5 +1,5 @@
 /**
- * Workspace hooks for GuardianCLI
+ * Workspace hooks for Guardian
  *
  * Executes lifecycle hooks around agent/generate runs:
  * - after_create: runs once when workspace is first created

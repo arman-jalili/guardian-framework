@@ -20,7 +20,7 @@
 ```markdown
 <!--
 Canonical Reference: .pi/[file].md
-Blueprint Source: GuardianCLI Framework v[X]
+Blueprint Source: Guardian Framework v[X]
 Updated from implementation: [date]
 Implementation source: src/[file].ts
 -->

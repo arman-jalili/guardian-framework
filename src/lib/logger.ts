@@ -1,5 +1,5 @@
 /**
- * Structured logging for GuardianCLI
+ * Structured logging for Guardian
  *
  * Emits JSON-structured log lines with timestamp, level, message, and context.
  * Based on Symphony's logging conventions (Section 13.1).

@@ -30,7 +30,7 @@ body:
     id: scope
     attributes:
       label: Scope
-      description: Which part of GuardianCLI does this affect?
+      description: Which part of Guardian does this affect?
       options:
         - CLI commands (init, generate, update, etc.)
         - Export mappings (new tool support)

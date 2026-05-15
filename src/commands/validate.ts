@@ -1,5 +1,5 @@
 /**
- * Validate command for GuardianCLI
+ * Validate command for Guardian
  *
  * Run TOML-based declarative validators with inline test verification.
  * Supports project-local, user-global, and built-in filter definitions.

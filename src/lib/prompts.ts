@@ -1,5 +1,5 @@
 /**
- * Interactive prompts for GuardianCLI using @clack/prompts
+ * Interactive prompts for Guardian using @clack/prompts
  */
 
 import {
@@ -38,7 +38,7 @@ export interface InitOptions {
  * Run interactive prompts for init command
  */
 export async function runInitPrompts(): Promise<InitOptions | null> {
-	intro("GuardianCLI - Token-Optimized Agentic Framework Scaffolder");
+	intro("Guardian - Token-Optimized Agentic Framework Scaffolder");
 
 	// Step 1: Project name
 	const projectName = await text({

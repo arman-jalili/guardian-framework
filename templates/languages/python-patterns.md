@@ -1,6 +1,6 @@
 # Python Code Patterns
 
-> **Purpose:** Reusable Python patterns for GuardianCLI projects.
+> **Purpose:** Reusable Python patterns for Guardian projects.
 > **Generic:** Adapt for your framework (FastAPI, Django, etc.).
 
 ---

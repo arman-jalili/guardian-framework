@@ -1,5 +1,5 @@
 /**
- * Upgrade command for GuardianCLI
+ * Upgrade command for Guardian
  *
  * Migrates a scaffolded project to the latest framework version.
  * Handles breaking changes between schema versions.
@@ -25,7 +25,7 @@ export async function runUpgrade(
 ): Promise<void> {
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		outro("No manifest found. Run 'guardian-framework-cli init' first.");
+		outro("No manifest found. Run 'guardian-framework init' first.");
 		return;
 	}
 

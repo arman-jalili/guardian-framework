@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/prompts/blueprint-validate.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 -->
 
 **Purpose:** Validate the `.pi/` blueprint is complete, consistent, and properly structured before starting implementation. Includes architecture documentation validation.
@@ -162,7 +162,7 @@ done
 ```markdown
 <!--
 Canonical Reference: .pi/[category]/[filename].md
-Blueprint Source: GuardianCLI Framework v[X]
+Blueprint Source: Guardian Framework v[X]
 Generated: NEVER (this is the source)
 -->
 ```

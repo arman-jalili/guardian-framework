@@ -96,7 +96,7 @@ const INIT_PROMPT = `Scan this workspace and produce a project memory file (.pi/
 - Paths to entry points
 Cap under 200 lines.`;
 
-const VALIDATE_PROMPT = `Run all GuardianCLI validators. For each validator:
+const VALIDATE_PROMPT = `Run all Guardian validators. For each validator:
 1. Run the script: .pi/scripts/validate-<name>.sh
 2. Report pass/fail with output
 3. If any fail, suggest fixes

@@ -1,5 +1,5 @@
 /**
- * JSON-Based Token Tracking for GuardianCLI
+ * JSON-Based Token Tracking for Guardian
  *
  * Tracks every command execution with input/output tokens, savings %,
  * execution time, and USD cost estimation. Inspired by RTK's tracking.rs.

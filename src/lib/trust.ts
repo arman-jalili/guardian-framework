@@ -1,5 +1,5 @@
 /**
- * Trust-Gated Project-Local Configuration for GuardianCLI
+ * Trust-Gated Project-Local Configuration for Guardian
  *
  * Prevents malicious extension/filter injection from repos by requiring
  * explicit trust before project-local TOML filters execute.

@@ -1,5 +1,5 @@
 /**
- * Retry utility with exponential backoff for GuardianCLI
+ * Retry utility with exponential backoff for Guardian
  *
  * Based on Symphony's retry specification (Section 8.4):
  * - Normal continuation: fixed 1s delay

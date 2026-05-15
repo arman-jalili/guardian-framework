@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/architecture/CHANGELOG.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 DO NOT EDIT GENERATED FILES - Modify this source only
 -->
 

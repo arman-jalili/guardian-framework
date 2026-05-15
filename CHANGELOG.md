@@ -40,4 +40,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TOML parser — fixed crash on global keys (`schema_version`) outside filter sections
 - TypeScript regex in `code-filter.ts` — now captures `export` keyword
 
-[Unreleased]: https://github.com/arman-jalili/guardian-cli/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/arman-jalili/guardian-framework/compare/v0.1.0...HEAD

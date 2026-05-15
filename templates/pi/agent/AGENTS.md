@@ -1,5 +1,5 @@
 ---
-# GuardianCLI Workflow Configuration
+# Guardian Workflow Configuration
 # This front matter defines runtime settings. The body below is the agent prompt.
 # Changes to this file are detected and re-applied without restart.
 

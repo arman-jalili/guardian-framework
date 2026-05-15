@@ -4,7 +4,7 @@ applyTo: 'src/**/*.ts,src/**/*.js,src/**/*.tsx,src/**/*.jsx'
 ---
 <!--
 Canonical Reference: .pi/github/instructions/architecture.instructions.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 DO NOT EDIT DIRECTLY - Source: .pi/architecture/modules/
 -->
 

@@ -1,5 +1,5 @@
 /**
- * Shared Result type for GuardianCLI.
+ * Shared Result type for Guardian.
  *
  * Used by library functions that can fail. Commands should check .ok before proceeding.
  *

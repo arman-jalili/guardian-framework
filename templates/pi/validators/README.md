@@ -1,4 +1,4 @@
-# GuardianCLI TOML Validators
+# Guardian TOML Validators
 
 Declarative validation rules with inline tests. Inspired by RTK's TOML filter pipeline.
 
@@ -37,7 +37,7 @@ Validators are loaded from:
 
 1. `.pi/validators/*.toml` — project-local (trust-gated)
 2. `~/.config/guardian/filters.toml` — user-global
-3. Built-in — from GuardianCLI templates
+3. Built-in — from Guardian templates
 
 ## Trust Model
 

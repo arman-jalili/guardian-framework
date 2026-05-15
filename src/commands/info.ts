@@ -1,5 +1,5 @@
 /**
- * Info command for GuardianCLI
+ * Info command for Guardian
  *
  * Display manifest and framework status
  */
@@ -22,7 +22,7 @@ export async function runInfo(targetDir: string): Promise<void> {
 	// Check for manifest
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		outro("No manifest found. Run 'guardian-cli init' first.");
+		outro("No manifest found. Run 'guardian-framework init' first.");
 		return;
 	}
 
@@ -105,7 +105,7 @@ export async function runInfo(targetDir: string): Promise<void> {
 	// Output info
 	console.log(`
 ┌─────────────────────────────────────────────────────────────┐
-│ GuardianCLI Framework Status                                 │
+│ Guardian Framework Status                                 │
 ├─────────────────────────────────────────────────────────────┤
 │ Schema Version:    ${manifest.schemaVersion.padEnd(38)}│
 │ Framework Version: ${manifest.frameworkVersion.padEnd(38)}│
@@ -161,6 +161,6 @@ ${Object.entries(exportSyncStatus)
 
 ${modifiedFiles.length > 0 ? `Modified files:\n  ${modifiedFiles.map(([p]) => p).join("\n  ")}` : "No modified files."}
 
-${Object.entries(exportSyncStatus).some(([_, s]) => !s) ? "⚠️  Some exports out of sync. Run: guardian-cli generate" : "✅ All exports in sync."}
+${Object.entries(exportSyncStatus).some(([_, s]) => !s) ? "⚠️  Some exports out of sync. Run: guardian-framework generate" : "✅ All exports in sync."}
 `);
 }

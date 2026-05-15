@@ -2,7 +2,7 @@
 
 <!--
 Canonical Reference: .pi/prompts/sync-check.md
-Blueprint Source: GuardianCLI Framework v1.2
+Blueprint Source: Guardian Framework v1.2
 -->
 
 **Purpose:** Verify generated exports (.claude/, .opencode/, .agents/) are in sync with .pi/ blueprint source. Includes architecture sync verification.
@@ -41,7 +41,7 @@ jq -r '.lastArchitectureSync' guardian.manifest.json
 ```typescript
 /**
  * Canonical Reference: .pi/[source-path].md
- * Blueprint Source: GuardianCLI Framework v[X]
+ * Blueprint Source: Guardian Framework v[X]
  * Generated: [timestamp]
  * DO NOT EDIT DIRECTLY - Modify source in .pi/
  */
@@ -51,7 +51,7 @@ jq -r '.lastArchitectureSync' guardian.manifest.json
 ```markdown
 <!--
 Canonical Reference: .pi/[source-path].md
-Blueprint Source: GuardianCLI Framework v[X]
+Blueprint Source: Guardian Framework v[X]
 Generated: [timestamp]
 DO NOT EDIT DIRECTLY - Modify source in .pi/
 -->
