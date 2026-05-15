@@ -212,6 +212,9 @@ export function parseTomlValidators(content: string): TomlFilterDef[] {
 		const key = line.slice(0, eqIdx).trim();
 		const rawVal = line.slice(eqIdx + 1).trim();
 
+		// Skip top-level keys (e.g., schema_version) outside of filter sections
+		if (!current) continue;
+
 		if (key === "command" || key === "description" || key === "on_empty") {
 			if (rawVal.startsWith('"""') || rawVal.startsWith("'''")) {
 				multilineField = key;

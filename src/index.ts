@@ -7,6 +7,7 @@ import { runInit } from "./commands/init.js";
 import { runStats } from "./commands/stats.js";
 import { runUninstall } from "./commands/uninstall.js";
 import { runUpdate } from "./commands/update.js";
+import { runUpgrade } from "./commands/upgrade.js";
 import { runTrust, runValidate, runVerify } from "./commands/validate.js";
 
 const VERSION = "0.1.0";
@@ -124,7 +125,9 @@ async function runCommand(
 			});
 			break;
 		case "upgrade":
-			console.log("Upgrade command - TODO");
+			await runUpgrade(targetDir, {
+				dryRun: args.values.dryRun as boolean | undefined,
+			});
 			break;
 		case "uninstall":
 			await runUninstall(targetDir, {

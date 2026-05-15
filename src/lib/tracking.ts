@@ -1,10 +1,10 @@
 /**
- * SQLite-Based Token Tracking for GuardianCLI
+ * JSON-Based Token Tracking for GuardianCLI
  *
  * Tracks every command execution with input/output tokens, savings %,
  * execution time, and USD cost estimation. Inspired by RTK's tracking.rs.
  *
- * Storage: ~/.local/share/guardian/history.db (90-day retention)
+ * Storage: ~/.local/share/guardian/history.json (90-day retention)
  */
 
 import * as fs from "node:fs";

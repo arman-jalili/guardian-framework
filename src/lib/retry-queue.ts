@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { calculateBackoff } from "./retry.js";
 
 const RETRY_STATE_FILE = ".guardian-retry-state.json";
 
@@ -120,15 +121,4 @@ export function clearAllRetries(targetDir: string): void {
 	saveRetryState(targetDir, { entries: [], lastUpdated: new Date().toISOString() });
 }
 
-/**
- * Calculate exponential backoff delay.
- * delay = min(baseDelayMs * 2^(attempt-1), maxBackoffMs)
- */
-export function calculateBackoff(
-	attempt: number,
-	baseDelayMs: number,
-	maxBackoffMs: number,
-): number {
-	const delay = baseDelayMs * 2 ** (attempt - 1);
-	return Math.min(delay, maxBackoffMs);
-}
+export { calculateBackoff };

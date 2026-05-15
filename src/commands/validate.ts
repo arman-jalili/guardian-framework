@@ -5,6 +5,7 @@
  * Supports project-local, user-global, and built-in filter definitions.
  */
 
+import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { outro, spinner } from "@clack/prompts";
@@ -16,7 +17,7 @@ import {
 	runValidatorTests,
 } from "../lib/toml-filter.js";
 import { track } from "../lib/tracking.js";
-import { type TrustStatus, checkTrust, trustStatusMessage } from "../lib/trust.js";
+import { checkTrust, trustStatusMessage } from "../lib/trust.js";
 
 const PI_VALIDATORS_DIR = ".pi/validators";
 const USER_GLOBAL_PATH = path.join(
@@ -137,7 +138,8 @@ export async function runValidate(
 					console.log(`    Actual:   ${o.actual}`);
 				}
 			}
-			if (process.exit) process.exit(1);
+			// Return error information instead of process.exit
+			outro(`\n${failed} test(s) failed. Fix inline tests and re-run.`);
 			return;
 		}
 
@@ -157,14 +159,14 @@ export async function runValidate(
 		return;
 	}
 
-	// Run validators (mock execution for now — in production this would execute actual commands)
+	// Run validators — actually execute the configured commands
 	s.start("Running validators...");
 
 	let totalInput = 0;
 	let totalOutput = 0;
 	let totalSaved = 0;
 	let passed = 0;
-	const failed = 0;
+	let failed = 0;
 
 	const targetFilters = options.filter
 		? filters.filter((f) => f.name.includes(options.filter as string))
@@ -176,10 +178,44 @@ export async function runValidate(
 	}
 
 	for (const filter of targetFilters) {
-		// In production, this would execute the actual command and capture output
-		// For now, we show the filter config and estimated savings
-		const sampleInput = "Sample output (execute actual command for real filtering)";
-		const savings = calculateSavings(filter, sampleInput);
+		const startTime = Date.now();
+
+		// Execute the actual validator command
+		let stdout = "";
+		let commandSuccess = false;
+
+		if (filter.command) {
+			try {
+				const result = child_process.spawnSync("bash", ["-lc", filter.command], {
+					cwd: targetDir,
+					timeout: 60_000,
+					maxBuffer: 10 * 1024 * 1024, // 10MB
+					encoding: "utf-8",
+				});
+
+				stdout = (result.stdout ?? "") + (result.stderr ?? "");
+				commandSuccess = (result.status ?? 1) === 0;
+			} catch (err) {
+				stdout = `Command execution error: ${err instanceof Error ? err.message : String(err)}`;
+				commandSuccess = false;
+			}
+		}
+
+		if (!commandSuccess) {
+			console.log(
+				`  ✗ ${filter.name.padEnd(25)} ${filter.description ?? "No description"} — command failed`,
+			);
+			if (options.verbose && stdout.trim()) {
+				const truncated = stdout.length > 200 ? `${stdout.slice(0, 200)}...` : stdout;
+				console.log(`    ${truncated.trim()}`);
+			}
+			failed++;
+			continue;
+		}
+
+		// Apply the filter pipeline to command output
+		const filtered = applyFilter(filter, stdout);
+		const savings = calculateSavings(filter, stdout);
 		totalInput += savings.inputTokens;
 		totalOutput += savings.outputTokens;
 		totalSaved += savings.savedTokens;
@@ -192,7 +228,7 @@ export async function runValidate(
 			validator: filter.name,
 			inputTokens: savings.inputTokens,
 			outputTokens: savings.outputTokens,
-			execTimeMs: 0,
+			execTimeMs: Date.now() - startTime,
 		});
 	}
 
@@ -203,6 +239,10 @@ export async function runValidate(
 	if (totalInput > 0) {
 		const savingsPct = ((totalSaved / totalInput) * 100).toFixed(1);
 		console.log(`  Savings: ${savingsPct}%`);
+	}
+
+	if (failed > 0) {
+		outro(`\n⚠️  ${failed} validator(s) failed. Check output above.`);
 	}
 }
 

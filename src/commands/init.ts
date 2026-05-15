@@ -6,7 +6,12 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cancel, intro, isCancel, outro, spinner } from "@clack/prompts";
+import { confirm, isCancel } from "@clack/prompts";
+import {
+	generateExportReadme,
+	getExportMappings,
+	getExportStructure,
+} from "../lib/export-mappings.js";
 import {
 	type FileCategory,
 	type GuardianManifest,
@@ -145,11 +150,42 @@ async function scaffoldFramework(
 
 		// Generate exports for selected tools
 		for (const tool of options.tools) {
-			// Pi is the source of truth; its "export" is pi-consumable SKILL.md packages
-			// under .agents/skills/, not .pi/ itself
 			const exportDir =
 				tool === "pi" ? path.join(targetDir, AGENTS_DIR) : path.join(targetDir, `.${tool}`);
-			generateExport(exportDir, tool, piDir, scaffoldedFiles);
+
+			// Create directory structure
+			const structure = getExportStructure(tool);
+			for (const dir of structure) {
+				fs.mkdirSync(path.join(exportDir, dir), { recursive: true });
+			}
+
+			// Map pi files to export files
+			const mappings = getExportMappings(tool);
+			for (const mapping of mappings) {
+				const sourcePath = path.join(piDir, mapping.source);
+				const targetPath = path.join(exportDir, mapping.dest);
+
+				if (!fs.existsSync(sourcePath)) {
+					continue;
+				}
+
+				const content = fs.readFileSync(sourcePath, "utf-8");
+				const transformed = mapping.transform ? mapping.transform(content) : content;
+				fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+				fs.writeFileSync(targetPath, transformed, "utf-8");
+
+				const manifestPath = `.${tool}/${mapping.dest}`;
+				scaffoldedFiles[manifestPath] = { category: "generated", content: transformed };
+			}
+
+			// Generate README for export
+			const readmePath = path.join(exportDir, "README.md");
+			const readmeContent = generateExportReadme(tool);
+			fs.writeFileSync(readmePath, readmeContent, "utf-8");
+			scaffoldedFiles[`.${tool}/README.md`] = {
+				category: "generated",
+				content: readmeContent,
+			};
 		}
 
 		// Update and write manifest
@@ -283,286 +319,25 @@ function shouldSkipFile(
 }
 
 /**
- * Generate export directory from .pi/ source
- */
-function generateExport(
-	exportDir: string,
-	tool: Tool,
-	piDir: string,
-	scaffoldedFiles: Record<string, { category: FileCategory; content: string }>,
-): void {
-	// Create directory structure based on tool
-	const structure = getExportStructure(tool);
-
-	for (const dir of structure) {
-		fs.mkdirSync(path.join(exportDir, dir), { recursive: true });
-	}
-
-	// Map pi files to export files
-	const mappings = getExportMappings(tool);
-
-	for (const mapping of mappings) {
-		const sourcePath = path.join(piDir, mapping.source);
-		const targetPath = path.join(exportDir, mapping.dest);
-
-		if (!fs.existsSync(sourcePath)) {
-			continue;
-		}
-
-		// Read source content
-		const content = fs.readFileSync(sourcePath, "utf-8");
-
-		// Apply transformation if needed
-		const transformed = mapping.transform ? mapping.transform(content) : content;
-
-		// Write to target
-		fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-		fs.writeFileSync(targetPath, transformed, "utf-8");
-
-		// Track in scaffolded files
-		const manifestPath = `.${tool}/${mapping.dest}`;
-		scaffoldedFiles[manifestPath] = { category: "generated", content: transformed };
-	}
-
-	// Generate README for export
-	const readmePath = path.join(exportDir, "README.md");
-	const readmeContent = generateExportReadme(tool);
-	fs.writeFileSync(readmePath, readmeContent, "utf-8");
-	scaffoldedFiles[`.${tool}/README.md`] = {
-		category: "generated",
-		content: readmeContent,
-	};
-}
-
-/**
- * Get export directory structure for tool
- */
-function getExportStructure(tool: Tool): string[] {
-	switch (tool) {
-		case "claude":
-			return [
-				"context",
-				"agents/orchestrators",
-				"agents/validators",
-				"agents/implementers",
-				"workflows",
-				"scripts",
-			];
-		case "opencode":
-			return ["context", "prompts", "workflows", "scripts"];
-		case "agents":
-			return ["agents", "context", "workflows", "scripts"];
-		case "pi":
-			return ["skills"];
-		default:
-			return [];
-	}
-}
-
-/**
- * Get export mappings for tool
- */
-interface ExportMapping {
-	source: string;
-	dest: string;
-	transform?: (content: string) => string;
-}
-
-function getExportMappings(tool: Tool): ExportMapping[] {
-	switch (tool) {
-		case "claude":
-			return [
-				{ source: "agent/AGENTS.md", dest: "context/project.md" },
-				{ source: "context/patterns.md", dest: "context/patterns.md" },
-				{ source: "context/checklists.md", dest: "context/checklists.md" },
-				{ source: "context/output-formats.md", dest: "context/output-formats.md" },
-				{
-					source: "skills/agents/architecture-coordinator.md",
-					dest: "agents/orchestrators/architecture-coordinator.md",
-				},
-				{
-					source: "skills/agents/architecture-validator.md",
-					dest: "agents/validators/architecture-validator.md",
-				},
-				{
-					source: "skills/agents/security-validator.md",
-					dest: "agents/validators/security-validator.md",
-				},
-				{
-					source: "skills/agents/operations-validator.md",
-					dest: "agents/validators/operations-validator.md",
-				},
-				{ source: "skills/agents/test-validator.md", dest: "agents/validators/test-validator.md" },
-				{
-					source: "skills/agents/integration-validator.md",
-					dest: "agents/validators/integration-validator.md",
-				},
-				{
-					source: "skills/agents/ci-mr-validator.md",
-					dest: "agents/validators/ci-mr-validator.md",
-				},
-				{
-					source: "skills/agents/code-developer.md",
-					dest: "agents/implementers/code-developer.md",
-				},
-				{ source: "skills/agents/issue-creator.md", dest: "agents/implementers/issue-creator.md" },
-				{
-					source: "skills/agents/documentation-maintainer.md",
-					dest: "agents/implementers/documentation-maintainer.md",
-				},
-				{ source: "INDEX.md", dest: "INDEX.md" },
-			];
-		case "opencode":
-			return [
-				{ source: "agent/AGENTS.md", dest: "context/project.md" },
-				{ source: "context/patterns.md", dest: "context/patterns.md" },
-				{ source: "context/checklists.md", dest: "context/checklists.md" },
-				{ source: "context/output-formats.md", dest: "context/output-formats.md" },
-				{ source: "INDEX.md", dest: "INDEX.md" },
-				// Agents as .txt prompts
-				{
-					source: "skills/agents/architecture-coordinator.md",
-					dest: "prompts/architecture-coordinator.txt",
-					transform: (c) => c.replace(/^---\n.*?\n---\n/, "").trim(),
-				},
-				{
-					source: "skills/agents/code-developer.md",
-					dest: "prompts/code-developer.txt",
-					transform: (c) => c.replace(/^---\n.*?\n---\n/, "").trim(),
-				},
-			];
-		case "agents":
-			return [
-				{ source: "agent/AGENTS.md", dest: "context/project.md" },
-				{ source: "context/patterns.md", dest: "context/patterns.md" },
-				{ source: "context/checklists.md", dest: "context/checklists.md" },
-				{ source: "context/output-formats.md", dest: "context/output-formats.md" },
-				// Flat agent structure
-				{
-					source: "skills/agents/architecture-coordinator.md",
-					dest: "agents/architecture-coordinator.md",
-				},
-				{
-					source: "skills/agents/architecture-validator.md",
-					dest: "agents/architecture-validator.md",
-				},
-				{ source: "skills/agents/security-validator.md", dest: "agents/security-validator.md" },
-				{ source: "skills/agents/operations-validator.md", dest: "agents/operations-validator.md" },
-				{ source: "skills/agents/test-validator.md", dest: "agents/test-validator.md" },
-				{
-					source: "skills/agents/integration-validator.md",
-					dest: "agents/integration-validator.md",
-				},
-				{ source: "skills/agents/ci-mr-validator.md", dest: "agents/ci-mr-validator.md" },
-				{ source: "skills/agents/code-developer.md", dest: "agents/code-developer.md" },
-				{ source: "skills/agents/issue-creator.md", dest: "agents/issue-creator.md" },
-				{
-					source: "skills/agents/documentation-maintainer.md",
-					dest: "agents/documentation-maintainer.md",
-				},
-				{ source: "INDEX.md", dest: "INDEX.md" },
-			];
-		case "pi":
-			return [
-				// Transform .pi/skills/agents/*.md → .agents/skills/<name>/SKILL.md
-				// Pi's skill system expects each skill in its own directory with a SKILL.md
-				{
-					source: "skills/agents/architecture-coordinator.md",
-					dest: "skills/architecture-coordinator/SKILL.md",
-				},
-				{
-					source: "skills/agents/architecture-validator.md",
-					dest: "skills/architecture-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/security-validator.md",
-					dest: "skills/security-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/operations-validator.md",
-					dest: "skills/operations-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/test-validator.md",
-					dest: "skills/test-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/integration-validator.md",
-					dest: "skills/integration-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/ci-mr-validator.md",
-					dest: "skills/ci-mr-validator/SKILL.md",
-				},
-				{
-					source: "skills/agents/code-developer.md",
-					dest: "skills/code-developer/SKILL.md",
-				},
-				{
-					source: "skills/agents/issue-creator.md",
-					dest: "skills/issue-creator/SKILL.md",
-				},
-				{
-					source: "skills/agents/documentation-maintainer.md",
-					dest: "skills/documentation-maintainer/SKILL.md",
-				},
-			];
-		default:
-			return [];
-	}
-}
-
-/**
- * Generate README for export directory
- */
-function generateExportReadme(tool: Tool): string {
-	return `# GuardianCLI Framework (${tool})
-
-Generated from .pi/ source.
-
-## Quick Reference
-
-See INDEX.md for framework structure.
-
-## Commands
-
-- \`npx guardian-framework-cli generate --tool ${tool}\` — Regenerate from .pi/
-- \`npx guardian-framework-cli update\` — Update .pi/ source
-
----
-
-Generated by GuardianCLI
-`;
-}
-
-/**
  * Run smart merge update
  */
 async function runMerge(targetDir: string): Promise<void> {
-	const s = startSpinner("Merging framework...");
-
 	const manifest = readManifest(targetDir);
 	if (!manifest) {
-		s.stop("No manifest found");
 		showError("Cannot merge without manifest. Run init --overwrite instead.");
 		return;
 	}
 
-	// TODO: Implement smart merge logic
-	// - Check checksums for framework files
-	// - Preserve user-editable files
-	// - Update unchanged framework files
-
-	s.stop("Merge completed (placeholder)");
-	showSuccess("Framework merged successfully.");
+	// Delegate to the update command with --force to apply changes
+	// without interactive confirmation (user already confirmed via prompt)
+	const { runUpdate } = await import("./update.js");
+	await runUpdate(targetDir, { dryRun: false, force: true, regenerate: true });
 }
 
 /**
  * Confirm overwrite
  */
 async function confirmOverwrite(targetDir: string): Promise<boolean> {
-	// Use @clack/prompts directly
-	const { confirm } = await import("@clack/prompts");
 	const result = await confirm({
 		message: `Overwrite existing framework in ${targetDir}?`,
 	});
