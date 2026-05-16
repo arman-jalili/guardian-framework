@@ -59,7 +59,7 @@ export interface HookEntryConfig {
 	timeout?: number;
 }
 
-export interface HookConfig {
+export interface EventHookConfig {
 	pre_tool_call?: HookEntryConfig[];
 	post_tool_call?: HookEntryConfig[];
 	pre_llm_call?: HookEntryConfig[];
