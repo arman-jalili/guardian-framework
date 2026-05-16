@@ -90,7 +90,7 @@ export interface GuardianWorkflowConfig {
 	validate: ValidateConfig;
 	goal: GoalConfig;
 	kanban: KanbanConfig;
-	hooks: HookConfig;
+	hooks: EventHookConfig;
 	curator: CuratorConfig;
 	delegation: DelegationConfig;
 }

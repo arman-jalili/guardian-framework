@@ -1,7 +1,7 @@
 /**
  * Kanban Extension for pi
  *
- * Durable SQLite-backed task board for multi-agent collaboration.
+ * Durable JSON-backed task board for multi-agent collaboration.
  * Tasks have states (triage → todo → ready → running → blocked → done → archived),
  * dependency links, comments, and workspace management.
  *

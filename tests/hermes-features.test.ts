@@ -3,15 +3,15 @@
  * goal loop, kanban board, shell hooks, skill curator, delegation roles.
  */
 
-import { describe, expect, test, beforeEach, beforeAll } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { tmpdir } from "node:os";
+import * as path from "node:path";
 import {
+	type GuardianWorkflowConfig,
+	loadWorkflowConfig,
 	parseFrontMatter,
 	validateWorkflowConfig,
-	loadWorkflowConfig,
-	type GuardianWorkflowConfig,
 } from "../src/lib/workflow-config";
 
 // ── Test helpers ──
@@ -113,11 +113,11 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 		const loaded = loadGoalState(dir);
 		expect(loaded).not.toBeNull();
-		expect(loaded!.goal).toBe("Fix all lint errors");
-		expect(loaded!.status).toBe("active");
-		expect(loaded!.turnsUsed).toBe(0);
-		expect(loaded!.maxTurns).toBe(20);
-		expect(loaded!.subgoals).toEqual([]);
+		expect(loaded?.goal).toBe("Fix all lint errors");
+		expect(loaded?.status).toBe("active");
+		expect(loaded?.turnsUsed).toBe(0);
+		expect(loaded?.maxTurns).toBe(20);
+		expect(loaded?.subgoals).toEqual([]);
 	});
 
 	test("goal state survives turn increments", () => {
@@ -128,8 +128,8 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.turnsUsed).toBe(5);
-		expect(loaded!.lastVerdict).toBe("continue");
+		expect(loaded?.turnsUsed).toBe(5);
+		expect(loaded?.lastVerdict).toBe("continue");
 	});
 
 	test("paused state with reason persists", () => {
@@ -139,8 +139,8 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.status).toBe("paused");
-		expect(loaded!.pausedReason).toBe("turn budget exhausted (20/20)");
+		expect(loaded?.status).toBe("paused");
+		expect(loaded?.pausedReason).toBe("turn budget exhausted (20/20)");
 	});
 
 	test("done state persists", () => {
@@ -151,8 +151,8 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.status).toBe("done");
-		expect(loaded!.lastReason).toBe("README created and validated");
+		expect(loaded?.status).toBe("done");
+		expect(loaded?.lastReason).toBe("README created and validated");
 	});
 
 	test("cleared state persists", () => {
@@ -161,7 +161,7 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.status).toBe("cleared");
+		expect(loaded?.status).toBe("cleared");
 	});
 
 	test("subgoals persist", () => {
@@ -170,8 +170,8 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.subgoals).toHaveLength(3);
-		expect(loaded!.subgoals[0]).toBe("Add tests");
+		expect(loaded?.subgoals).toHaveLength(3);
+		expect(loaded?.subgoals[0]).toBe("Add tests");
 	});
 
 	test("validator results persist", () => {
@@ -183,8 +183,8 @@ describe("Goal Loop — GoalState persistence", () => {
 		saveGoalState(dir, state);
 
 		const loaded = loadGoalState(dir);
-		expect(loaded!.validatorResults["ci"].passed).toBe(true);
-		expect(loaded!.validatorResults["canonical"].passed).toBe(false);
+		expect(loaded?.validatorResults.ci.passed).toBe(true);
+		expect(loaded?.validatorResults.canonical.passed).toBe(false);
 	});
 
 	test("returns null when no goal file exists", () => {
@@ -206,27 +206,33 @@ describe("Goal Loop — continuation prompt generation", () => {
 	test("continuation prompt with subgoals", () => {
 		const goal = "Implement feature X";
 		const subgoals = ["Add unit tests", "Update documentation"];
-		const prompt =
-			`[Continuing toward your standing goal]\nGoal: ${goal}\n` +
-			`Continue working toward this goal. Take the next concrete step. ` +
-			`If you believe the goal is complete, state so explicitly and stop. ` +
-			`If you are blocked and need input from the user, say so clearly and stop.` +
-			`\n\nAdditional criteria (all must be satisfied):\n` +
-			subgoals.map((s, i) => `  ${i + 1}. ${s}`).join("\n");
+		const prompt = `[Continuing toward your standing goal]\nGoal: ${goal}\nContinue working toward this goal. Take the next concrete step. If you believe the goal is complete, state so explicitly and stop. If you are blocked and need input from the user, say so clearly and stop.\n\nAdditional criteria (all must be satisfied):\n${subgoals.map((s, i) => `  ${i + 1}. ${s}`).join("\n")}`;
 		expect(prompt).toContain("1. Add unit tests");
 		expect(prompt).toContain("2. Update documentation");
 	});
 });
 
 describe("Goal Loop — judge response parsing", () => {
-	function parseJudgeResponse(raw: string): { done: boolean; reason: string; parseFailed: boolean } {
+	function parseJudgeResponse(raw: string): {
+		done: boolean;
+		reason: string;
+		parseFailed: boolean;
+	} {
 		if (!raw) return { done: false, reason: "judge returned empty response", parseFailed: true };
 
 		let text = raw.trim();
 		if (text.startsWith("```")) {
-			text = text.trim().replace(/^```+/g, "").replace(/^json\s*/, "").trim();
+			text = text
+				.trim()
+				.replace(/^```+/g, "")
+				.replace(/^json\s*/, "")
+				.trim();
 			const nl = text.indexOf("\n");
-			if (nl !== -1) text = text.slice(nl + 1).replace(/```+$/, "").trim();
+			if (nl !== -1)
+				text = text
+					.slice(nl + 1)
+					.replace(/```+$/, "")
+					.trim();
 			// Simple approach for the test
 			text = raw.replace(/```/g, "").replace(/^json/, "").trim();
 		}
@@ -247,13 +253,16 @@ describe("Goal Loop — judge response parsing", () => {
 		}
 
 		if (!data || typeof data !== "object") {
-			return { done: false, reason: `judge reply was not JSON: ${text.slice(0, 200)}`, parseFailed: true };
+			return {
+				done: false,
+				reason: `judge reply was not JSON: ${text.slice(0, 200)}`,
+				parseFailed: true,
+			};
 		}
 
 		const doneVal = (data as Record<string, unknown>).done;
-		const done = typeof doneVal === "string"
-			? doneVal.trim().toLowerCase() === "true"
-			: Boolean(doneVal);
+		const done =
+			typeof doneVal === "string" ? doneVal.trim().toLowerCase() === "true" : Boolean(doneVal);
 		const reason = String((data as Record<string, unknown>).reason || "no reason provided");
 
 		return { done, reason, parseFailed: false };
@@ -344,7 +353,16 @@ class TestKanbanManager {
 		this.board = loadBoard(cwd);
 	}
 
-	createTask(title: string, opts?: { body?: string; assignee?: string; priority?: string; parents?: string[]; workspace?: string }): TestTask {
+	createTask(
+		title: string,
+		opts?: {
+			body?: string;
+			assignee?: string;
+			priority?: string;
+			parents?: string[];
+			workspace?: string;
+		},
+	): TestTask {
 		const id = `TK-${String(this.board.nextId).padStart(4, "0")}`;
 		this.board.nextId++;
 		const task: TestTask = {
@@ -376,7 +394,9 @@ class TestKanbanManager {
 		if (filter?.status) tasks = tasks.filter((t) => t.status === filter.status);
 		if (filter?.assignee) tasks = tasks.filter((t) => t.assignee === filter.assignee);
 		const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-		tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority] || a.id.localeCompare(b.id));
+		tasks.sort(
+			(a, b) => priorityOrder[a.priority] - priorityOrder[b.priority] || a.id.localeCompare(b.id),
+		);
 		return tasks;
 	}
 
@@ -528,14 +548,14 @@ describe("Kanban — State transitions", () => {
 		expect(task.status).toBe("todo");
 
 		mgr.updateStatus(task.id, "running");
-		expect(mgr.getTask(task.id)!.status).toBe("running");
-		expect(mgr.getTask(task.id)!.claimedAt).not.toBeNull();
+		expect(mgr.getTask(task.id)?.status).toBe("running");
+		expect(mgr.getTask(task.id)?.claimedAt).not.toBeNull();
 
 		mgr.updateStatus(task.id, "done");
-		expect(mgr.getTask(task.id)!.status).toBe("done");
+		expect(mgr.getTask(task.id)?.status).toBe("done");
 
 		mgr.updateStatus(task.id, "archived");
-		expect(mgr.getTask(task.id)!.status).toBe("archived");
+		expect(mgr.getTask(task.id)?.status).toBe("archived");
 	});
 
 	test("blocks invalid transitions", () => {
@@ -555,8 +575,8 @@ describe("Kanban — State transitions", () => {
 	test("blocked status records reason", () => {
 		const task = mgr.createTask("Blocked task");
 		mgr.updateStatus(task.id, "blocked", "Waiting for API response");
-		expect(mgr.getTask(task.id)!.blockReason).toBe("Waiting for API response");
-		expect(mgr.getTask(task.id)!.status).toBe("blocked");
+		expect(mgr.getTask(task.id)?.blockReason).toBe("Waiting for API response");
+		expect(mgr.getTask(task.id)?.status).toBe("blocked");
 	});
 
 	test("blocked → todo → running", () => {
@@ -564,7 +584,7 @@ describe("Kanban — State transitions", () => {
 		mgr.updateStatus(task.id, "blocked", "Missing dependency");
 		mgr.updateStatus(task.id, "todo");
 		mgr.updateStatus(task.id, "running");
-		expect(mgr.getTask(task.id)!.status).toBe("running");
+		expect(mgr.getTask(task.id)?.status).toBe("running");
 	});
 });
 
@@ -627,8 +647,8 @@ describe("Kanban — Comments", () => {
 		const task = mgr.createTask("Commented task");
 		const comment = mgr.addComment(task.id, "agent", "Work in progress");
 		expect(comment).toBeDefined();
-		expect(comment!.text).toBe("Work in progress");
-		expect(comment!.author).toBe("agent");
+		expect(comment?.text).toBe("Work in progress");
+		expect(comment?.author).toBe("agent");
 	});
 
 	test("multiple comments accumulate", () => {
@@ -638,9 +658,9 @@ describe("Kanban — Comments", () => {
 		mgr.addComment(task.id, "agent", "Third");
 
 		const loaded = mgr.getTask(task.id);
-		expect(loaded!.comments).toHaveLength(3);
-		expect(loaded!.comments[0].text).toBe("First");
-		expect(loaded!.comments[1].text).toBe("Second");
+		expect(loaded?.comments).toHaveLength(3);
+		expect(loaded?.comments[0].text).toBe("First");
+		expect(loaded?.comments[1].text).toBe("Second");
 	});
 
 	test("comment updates task updatedAt", () => {
@@ -648,11 +668,13 @@ describe("Kanban — Comments", () => {
 		const originalUpdate = task.updatedAt;
 		// Ensure at least 1ms passes
 		const start = Date.now();
-		while (Date.now() - start < 2) { /* busy wait */ }
+		while (Date.now() - start < 2) {
+			/* busy wait */
+		}
 		mgr.addComment(task.id, "agent", "New comment");
 
 		const updated = mgr.getTask(task.id);
-		expect(updated!.updatedAt > originalUpdate).toBe(true);
+		expect(updated?.updatedAt > originalUpdate).toBe(true);
 	});
 });
 
@@ -673,10 +695,10 @@ describe("Kanban — Persistence and recovery", () => {
 		mgr = new TestKanbanManager(dir);
 		const loaded = mgr.getTask(task.id);
 		expect(loaded).toBeDefined();
-		expect(loaded!.title).toBe("Survives restart");
-		expect(loaded!.status).toBe("running");
-		expect(loaded!.assignee).toBe("test-agent");
-		expect(loaded!.comments).toHaveLength(1);
+		expect(loaded?.title).toBe("Survives restart");
+		expect(loaded?.status).toBe("running");
+		expect(loaded?.assignee).toBe("test-agent");
+		expect(loaded?.comments).toHaveLength(1);
 	});
 
 	test("creates empty board if file doesn't exist", () => {
@@ -693,7 +715,7 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 	let currentTopKey: string | null = null;
 	let currentList: unknown[] | null = null;
 	let currentDict: Record<string, unknown> | null = null;
-	let currentListMap: Record<string, unknown[]> = {};
+	const currentListMap: Record<string, unknown[]> = {};
 
 	for (const line of lines) {
 		const trimmed = line.trim();
@@ -717,7 +739,12 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 		}
 
 		// Under hooks: second-level key (one indent level)
-		if (currentTopKey === "hooks" && line.startsWith("  ") && !line.startsWith("    ") && trimmed.endsWith(":")) {
+		if (
+			currentTopKey === "hooks" &&
+			line.startsWith("  ") &&
+			!line.startsWith("    ") &&
+			trimmed.endsWith(":")
+		) {
 			const subKey = trimmed.slice(0, -1);
 			currentListMap[subKey] = [];
 			(result.hooks as Record<string, unknown>)[subKey] = currentListMap[subKey];
@@ -735,7 +762,11 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 					const parts = itemStr.split(/:\s*/);
 					if (parts.length >= 2) {
 						const key = parts[0].trim();
-						const val = parts.slice(1).join(":").trim().replace(/^["']|["']$/g, "");
+						const val = parts
+							.slice(1)
+							.join(":")
+							.trim()
+							.replace(/^["']|["']$/g, "");
 						dict[key] = val;
 					}
 					currentList.push(dict);
@@ -749,11 +780,20 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 		}
 
 		// Dict continuation for hooks entries
-		if (currentTopKey === "hooks" && trimmed.includes(":") && currentDict && !trimmed.startsWith("- ")) {
+		if (
+			currentTopKey === "hooks" &&
+			trimmed.includes(":") &&
+			currentDict &&
+			!trimmed.startsWith("- ")
+		) {
 			const parts = trimmed.split(/:\s*/);
 			if (parts.length >= 2) {
 				const key = parts[0].trim();
-				const val = parts.slice(1).join(":").trim().replace(/^["']|["']$/g, "");
+				const val = parts
+					.slice(1)
+					.join(":")
+					.trim()
+					.replace(/^["']|["']$/g, "");
 				currentDict[key] = Number.isNaN(Number(val)) ? val : Number(val);
 			}
 			continue;
@@ -768,7 +808,11 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 					const parts = itemStr.split(/:\s*/);
 					if (parts.length >= 2) {
 						const key = parts[0].trim();
-						const val = parts.slice(1).join(":").trim().replace(/^["']|["']$/g, "");
+						const val = parts
+							.slice(1)
+							.join(":")
+							.trim()
+							.replace(/^["']|["']$/g, "");
 						dict[key] = val;
 					}
 					currentList.push(dict);
@@ -786,7 +830,11 @@ function parseHookConfigYaml(yaml: string): Record<string, unknown> {
 			const parts = trimmed.split(/:\s*/);
 			if (parts.length >= 2) {
 				const key = parts[0].trim();
-				const val = parts.slice(1).join(":").trim().replace(/^["']|["']$/g, "");
+				const val = parts
+					.slice(1)
+					.join(":")
+					.trim()
+					.replace(/^["']|["']$/g, "");
 				currentDict[key] = Number.isNaN(Number(val)) ? val : Number(val);
 			}
 		}
@@ -960,10 +1008,15 @@ describe("Skill Curator — Usage tracking", () => {
 	test("record use increments counter", () => {
 		const skill: SkillUsage = {
 			name: "my-skill",
-			useCount: 0, viewCount: 0, patchCount: 0,
-			lastUsedAt: null, lastViewedAt: null, lastPatchedAt: null,
+			useCount: 0,
+			viewCount: 0,
+			patchCount: 0,
+			lastUsedAt: null,
+			lastViewedAt: null,
+			lastPatchedAt: null,
 			createdAt: new Date().toISOString(),
-			state: "active", pinned: false,
+			state: "active",
+			pinned: false,
 		};
 		state.skills[skill.name] = skill;
 
@@ -980,10 +1033,15 @@ describe("Skill Curator — Usage tracking", () => {
 	test("record view increments view counter", () => {
 		const skill: SkillUsage = {
 			name: "my-skill",
-			useCount: 0, viewCount: 0, patchCount: 0,
-			lastUsedAt: null, lastViewedAt: null, lastPatchedAt: null,
+			useCount: 0,
+			viewCount: 0,
+			patchCount: 0,
+			lastUsedAt: null,
+			lastViewedAt: null,
+			lastPatchedAt: null,
 			createdAt: new Date().toISOString(),
-			state: "active", pinned: false,
+			state: "active",
+			pinned: false,
 		};
 		state.skills[skill.name] = skill;
 
@@ -998,10 +1056,15 @@ describe("Skill Curator — Usage tracking", () => {
 	test("record patch increments patch counter", () => {
 		const skill: SkillUsage = {
 			name: "my-skill",
-			useCount: 0, viewCount: 0, patchCount: 0,
-			lastUsedAt: null, lastViewedAt: null, lastPatchedAt: null,
+			useCount: 0,
+			viewCount: 0,
+			patchCount: 0,
+			lastUsedAt: null,
+			lastViewedAt: null,
+			lastPatchedAt: null,
 			createdAt: new Date().toISOString(),
-			state: "active", pinned: false,
+			state: "active",
+			pinned: false,
 		};
 		state.skills[skill.name] = skill;
 
@@ -1026,18 +1089,32 @@ describe("Skill Curator — Stale and archival detection", () => {
 		const state: CuratorState = {
 			skills: {
 				"old-skill": {
-					name: "old-skill", useCount: 5, viewCount: 10, patchCount: 1,
-					lastUsedAt: oldDate, lastViewedAt: oldDate, lastPatchedAt: oldDate,
-					createdAt: oldDate, state: "active", pinned: false,
+					name: "old-skill",
+					useCount: 5,
+					viewCount: 10,
+					patchCount: 1,
+					lastUsedAt: oldDate,
+					lastViewedAt: oldDate,
+					lastPatchedAt: oldDate,
+					createdAt: oldDate,
+					state: "active",
+					pinned: false,
 				},
 				"new-skill": {
-					name: "new-skill", useCount: 10, viewCount: 20, patchCount: 3,
-					lastUsedAt: new Date().toISOString(), lastViewedAt: new Date().toISOString(),
+					name: "new-skill",
+					useCount: 10,
+					viewCount: 20,
+					patchCount: 3,
+					lastUsedAt: new Date().toISOString(),
+					lastViewedAt: new Date().toISOString(),
 					lastPatchedAt: new Date().toISOString(),
-					createdAt: new Date().toISOString(), state: "active", pinned: false,
+					createdAt: new Date().toISOString(),
+					state: "active",
+					pinned: false,
 				},
 			},
-			lastRunAt: null, runCount: 0,
+			lastRunAt: null,
+			runCount: 0,
 		};
 		saveCuratorState(dir, state);
 
@@ -1048,7 +1125,7 @@ describe("Skill Curator — Stale and archival detection", () => {
 
 		for (const [name, skill] of Object.entries(loaded.skills)) {
 			if (name === "old-skill") {
-				const age = now - new Date(skill.lastUsedAt!).getTime();
+				const age = now - new Date(skill.lastUsedAt ?? "").getTime();
 				expect(age).toBeGreaterThan(staleThreshold);
 			}
 		}
@@ -1059,12 +1136,20 @@ describe("Skill Curator — Stale and archival detection", () => {
 		const state: CuratorState = {
 			skills: {
 				"very-old-skill": {
-					name: "very-old-skill", useCount: 2, viewCount: 5, patchCount: 0,
-					lastUsedAt: veryOldDate, lastViewedAt: veryOldDate, lastPatchedAt: veryOldDate,
-					createdAt: veryOldDate, state: "active", pinned: false,
+					name: "very-old-skill",
+					useCount: 2,
+					viewCount: 5,
+					patchCount: 0,
+					lastUsedAt: veryOldDate,
+					lastViewedAt: veryOldDate,
+					lastPatchedAt: veryOldDate,
+					createdAt: veryOldDate,
+					state: "active",
+					pinned: false,
 				},
 			},
-			lastRunAt: null, runCount: 0,
+			lastRunAt: null,
+			runCount: 0,
 		};
 		saveCuratorState(dir, state);
 
@@ -1073,7 +1158,7 @@ describe("Skill Curator — Stale and archival detection", () => {
 		const archiveThreshold = 90 * 24 * 60 * 60 * 1000;
 
 		for (const skill of Object.values(loaded.skills)) {
-			const age = now - new Date(skill.lastUsedAt!).getTime();
+			const age = now - new Date(skill.lastUsedAt ?? "").getTime();
 			expect(age).toBeGreaterThan(archiveThreshold);
 		}
 	});
@@ -1083,12 +1168,20 @@ describe("Skill Curator — Stale and archival detection", () => {
 		const state: CuratorState = {
 			skills: {
 				"pinned-skill": {
-					name: "pinned-skill", useCount: 2, viewCount: 5, patchCount: 0,
-					lastUsedAt: veryOldDate, lastViewedAt: veryOldDate, lastPatchedAt: veryOldDate,
-					createdAt: veryOldDate, state: "active", pinned: true, // pinned!
+					name: "pinned-skill",
+					useCount: 2,
+					viewCount: 5,
+					patchCount: 0,
+					lastUsedAt: veryOldDate,
+					lastViewedAt: veryOldDate,
+					lastPatchedAt: veryOldDate,
+					createdAt: veryOldDate,
+					state: "active",
+					pinned: true, // pinned!
 				},
 			},
-			lastRunAt: null, runCount: 0,
+			lastRunAt: null,
+			runCount: 0,
 		};
 		saveCuratorState(dir, state);
 
@@ -1109,13 +1202,20 @@ describe("Skill Curator — Pin/unpin", () => {
 		const state: CuratorState = {
 			skills: {
 				"important-skill": {
-					name: "important-skill", useCount: 5, viewCount: 10, patchCount: 2,
-					lastUsedAt: new Date().toISOString(), lastViewedAt: new Date().toISOString(),
+					name: "important-skill",
+					useCount: 5,
+					viewCount: 10,
+					patchCount: 2,
+					lastUsedAt: new Date().toISOString(),
+					lastViewedAt: new Date().toISOString(),
 					lastPatchedAt: new Date().toISOString(),
-					createdAt: new Date().toISOString(), state: "active", pinned: false,
+					createdAt: new Date().toISOString(),
+					state: "active",
+					pinned: false,
 				},
 			},
-			lastRunAt: null, runCount: 0,
+			lastRunAt: null,
+			runCount: 0,
 		};
 
 		state.skills["important-skill"].pinned = true;
@@ -1129,13 +1229,20 @@ describe("Skill Curator — Pin/unpin", () => {
 		const state: CuratorState = {
 			skills: {
 				"was-pinned": {
-					name: "was-pinned", useCount: 5, viewCount: 10, patchCount: 2,
-					lastUsedAt: new Date().toISOString(), lastViewedAt: new Date().toISOString(),
+					name: "was-pinned",
+					useCount: 5,
+					viewCount: 10,
+					patchCount: 2,
+					lastUsedAt: new Date().toISOString(),
+					lastViewedAt: new Date().toISOString(),
 					lastPatchedAt: new Date().toISOString(),
-					createdAt: new Date().toISOString(), state: "active", pinned: true,
+					createdAt: new Date().toISOString(),
+					state: "active",
+					pinned: true,
 				},
 			},
-			lastRunAt: null, runCount: 0,
+			lastRunAt: null,
+			runCount: 0,
 		};
 
 		state.skills["was-pinned"].pinned = false;
@@ -1165,7 +1272,7 @@ describe("Skill Curator — Review metadata", () => {
 	});
 
 	test("multiple reviews accumulate count", () => {
-		let state: CuratorState = { skills: {}, lastRunAt: null, runCount: 0 };
+		const state: CuratorState = { skills: {}, lastRunAt: null, runCount: 0 };
 		for (let i = 0; i < 5; i++) {
 			state.runCount++;
 			state.lastRunAt = new Date().toISOString();
@@ -1187,12 +1294,15 @@ describe("Workflow Config — goal settings", () => {
 	});
 
 	test("parses goal front matter", () => {
-		scaffoldAgentsMd(dir, `
+		scaffoldAgentsMd(
+			dir,
+			`
 goal:
   enabled: true
   max_turns: 15
   judge_validator: true
-`);
+`,
+		);
 		const config = loadWorkflowConfig(path.join(dir, ".pi"));
 		expect((config as Record<string, unknown>).goal).toBeDefined();
 		const goal = (config as Record<string, unknown>).goal as Record<string, unknown>;
@@ -1219,11 +1329,14 @@ describe("Workflow Config — kanban settings", () => {
 	});
 
 	test("parses kanban front matter", () => {
-		scaffoldAgentsMd(dir, `
+		scaffoldAgentsMd(
+			dir,
+			`
 kanban:
   enabled: true
   auto_create_tasks: true
-`);
+`,
+		);
 		const config = loadWorkflowConfig(path.join(dir, ".pi"));
 		const kanban = (config as Record<string, unknown>).kanban as Record<string, unknown>;
 		expect(kanban.enabled).toBe(true);
@@ -1239,13 +1352,16 @@ describe("Workflow Config — delegation settings", () => {
 	});
 
 	test("parses delegation front matter with orchestrator support", () => {
-		scaffoldAgentsMd(dir, `
+		scaffoldAgentsMd(
+			dir,
+			`
 delegation:
   max_spawn_depth: 2
   max_concurrent_children: 5
   max_iterations: 100
   child_timeout_ms: 1200000
-`);
+`,
+		);
 		const config = loadWorkflowConfig(path.join(dir, ".pi"));
 		const delegation = (config as Record<string, unknown>).delegation as Record<string, unknown>;
 		expect(delegation.max_spawn_depth).toBe(2);
@@ -1272,13 +1388,16 @@ describe("Workflow Config — curator settings", () => {
 	});
 
 	test("parses curator front matter", () => {
-		scaffoldAgentsMd(dir, `
+		scaffoldAgentsMd(
+			dir,
+			`
 curator:
   enabled: true
   stale_after_days: 14
   archive_after_days: 60
   auto_review: true
-`);
+`,
+		);
 		const config = loadWorkflowConfig(path.join(dir, ".pi"));
 		const curator = (config as Record<string, unknown>).curator as Record<string, unknown>;
 		expect(curator.enabled).toBe(true);
@@ -1296,7 +1415,9 @@ describe("Workflow Config — hooks section", () => {
 	});
 
 	test("parses hooks front matter", () => {
-		scaffoldAgentsMd(dir, `
+		scaffoldAgentsMd(
+			dir,
+			`
 hooks:
   pre_tool_call:
     - command: "block-rm-rf.sh"
@@ -1304,7 +1425,8 @@ hooks:
       timeout: 5
   post_tool_call:
     - command: "auto-format.sh"
-`);
+`,
+		);
 		const config = loadWorkflowConfig(path.join(dir, ".pi"));
 		const hooks = (config as Record<string, unknown>).hooks as Record<string, unknown>;
 		expect(hooks.pre_tool_call).toBeDefined();

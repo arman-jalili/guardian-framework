@@ -70,7 +70,7 @@ Guardian also incorporates production-tested patterns from [Hermes-Agent](https:
 | Hermes Pattern | Guardian Implementation |
 |----------------|------------------------|
 | `/goal` persistent standing goals (Ralph loop) | `extensions/goal-loop.ts` — dual judge (validators + LLM), turn budget, `/subgoal` |
-| Kanban durable task board | `extensions/kanban.ts` — SQLite-backed state machine with dependencies, comments |
+| Kanban durable task board | `extensions/kanban.ts` — JSON-backed state machine with dependencies, comments |
 | 3-layer hook system | `extensions/hooks.ts` — shell-script hooks for pre/post tool, pre/post LLM, lifecycle events |
 | Subagent roles (leaf vs orchestrator) | `skills/agents/subagent-registry.md` — role-based delegation depth control |
 | Skill curator lifecycle management | `extensions/curator.ts` — usage tracking, stale detection, archival, pin/restore |
