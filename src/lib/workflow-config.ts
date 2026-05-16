@@ -42,11 +42,57 @@ export interface ValidateConfig {
 	timeout_ms: number;
 }
 
+export interface GoalConfig {
+	enabled: boolean;
+	max_turns: number;
+	judge_validator: boolean;
+}
+
+export interface KanbanConfig {
+	enabled: boolean;
+	auto_create_tasks: boolean;
+}
+
+export interface HookEntryConfig {
+	matcher?: string;
+	command: string;
+	timeout?: number;
+}
+
+export interface HookConfig {
+	pre_tool_call?: HookEntryConfig[];
+	post_tool_call?: HookEntryConfig[];
+	pre_llm_call?: HookEntryConfig[];
+	post_llm_call?: HookEntryConfig[];
+	on_session_start?: HookEntryConfig[];
+	on_session_end?: HookEntryConfig[];
+	subagent_stop?: HookEntryConfig[];
+}
+
+export interface CuratorConfig {
+	enabled: boolean;
+	stale_after_days: number;
+	archive_after_days: number;
+	auto_review: boolean;
+}
+
+export interface DelegationConfig {
+	max_spawn_depth: number;
+	max_concurrent_children: number;
+	max_iterations: number;
+	child_timeout_ms: number;
+}
+
 export interface GuardianWorkflowConfig {
 	workspace: WorkspaceConfig;
 	agent: AgentConfig;
 	generate: GenerateConfig;
 	validate: ValidateConfig;
+	goal: GoalConfig;
+	kanban: KanbanConfig;
+	hooks: HookConfig;
+	curator: CuratorConfig;
+	delegation: DelegationConfig;
 }
 
 // Built-in defaults (Symphony spec Section 6.4)
@@ -69,6 +115,28 @@ const DEFAULTS: GuardianWorkflowConfig = {
 	validate: {
 		fail_fast: false,
 		timeout_ms: 300000,
+	},
+	goal: {
+		enabled: true,
+		max_turns: 20,
+		judge_validator: true,
+	},
+	kanban: {
+		enabled: true,
+		auto_create_tasks: true,
+	},
+	hooks: {},
+	curator: {
+		enabled: true,
+		stale_after_days: 30,
+		archive_after_days: 90,
+		auto_review: true,
+	},
+	delegation: {
+		max_spawn_depth: 1,
+		max_concurrent_children: 3,
+		max_iterations: 50,
+		child_timeout_ms: 600000,
 	},
 };
 

@@ -74,6 +74,19 @@ function classifyScope(fileCount: number, lineChanges: number): string {
 	return "simple";
 }
 
+// ── Delegation role types ──
+// Role determines whether a subagent can spawn its own subagents.
+// "leaf" (default) = cannot delegate further.
+// "orchestrator" = can delegate, bounded by max_spawn_depth.
+const DELEGATION_ROLES = ["leaf", "orchestrator"] as const;
+type DelegationRole = (typeof DELEGATION_ROLES)[number];
+const DEFAULT_MAX_SPAWN_DEPTH = 1; // 1 = flat (leaf-only)
+
+function resolveDelegationRole(role?: string): DelegationRole {
+	if (role === "orchestrator") return "orchestrator";
+	return "leaf";
+}
+
 function toolResult(text: string) {
 	return { content: [{ type: "text" as const, text }] };
 }

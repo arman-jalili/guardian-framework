@@ -65,6 +65,16 @@ Guardian also incorporates production-tested patterns from [RTK](https://github.
 | Tee-on-failure | Raw validator output preserved on failure |
 | Economic analytics | `guardian stats` command with USD savings estimation |
 
+Guardian also incorporates production-tested patterns from [Hermes-Agent](https://github.com/nousresearch/hermes-agent), a full-featured AI agent framework by Nous Research:
+
+| Hermes Pattern | Guardian Implementation |
+|----------------|------------------------|
+| `/goal` persistent standing goals (Ralph loop) | `extensions/goal-loop.ts` — dual judge (validators + LLM), turn budget, `/subgoal` |
+| Kanban durable task board | `extensions/kanban.ts` — SQLite-backed state machine with dependencies, comments |
+| 3-layer hook system | `extensions/hooks.ts` — shell-script hooks for pre/post tool, pre/post LLM, lifecycle events |
+| Subagent roles (leaf vs orchestrator) | `skills/agents/subagent-registry.md` — role-based delegation depth control |
+| Skill curator lifecycle management | `extensions/curator.ts` — usage tracking, stale detection, archival, pin/restore |
+
 ---
 
 ## 2. System Architecture
@@ -705,6 +715,16 @@ export default function (pi: ExtensionAPI) {
 | `read-only-mode.ts` | read, grep, find, ls (override) | read-only | before_agent_start, tool_call, session_start/switch/fork |
 | `ask-user-question.ts` | ask_user_question | — | — |
 | `validation-runner.ts` | — | validate | session_start |
+| `goal-loop.ts` | guardian_goal_evaluate | goal, subgoal | session_start |
+| `kanban.ts` | kanban_create, kanban_list, kanban_show, kanban_complete, kanban_block, kanban_comment | kanban | session_start |
+| `hooks.ts` | — | hooks | session_start, tool_call, tool_result |
+| `curator.ts` | curator_review, curator_pin, curator_unpin | curator | session_start |
+| `config-reload.ts` | — | reload-config | session_start |
+| `plan-mode.ts` | — | plan, plan-apply, plan-decline | session_start |
+| `snippets.ts` | — | snippet list\|add\|remove\|edit | session_start |
+| `redaction.ts` | — | — | tool_result |
+| `slash-commands.ts` | — | init, validate, scope, snippet | session_start |
+| `session-persistence.ts` | — | sessions | session_start/switch/fork/shutdown |
 
 ### 6.3 Tool Result Format
 

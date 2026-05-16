@@ -29,6 +29,41 @@ validate:
   fail_fast: false        # Stop on first validator failure vs run all
   timeout_ms: 300000      # Per-validator timeout (5 min)
 
+# Standing goal settings (Hermes /goal pattern — Ralph loop)
+goal:
+  enabled: true
+  max_turns: 20           # Max auto-continuation turns before pause
+  judge_validator: true   # Run CI + canonical validators as part of completion judge
+
+# Kanban task board settings
+kanban:
+  enabled: true
+  auto_create_tasks: true # Auto-create tasks for multi-module work
+
+# Shell hook system settings
+hooks:
+  pre_tool_call: []       # Block dangerous ops, policy enforcement
+  post_tool_call: []      # Auto-format, logging, CI triggers
+  pre_llm_call: []        # Inject git status, validator results, context
+  post_llm_call: []       # Sync to external systems, metrics
+  on_session_start: []    # Initialize state, warm caches
+  on_session_end: []      # Cleanup, persist state
+  subagent_stop: []       # Log subagent completion, audit
+
+# Skill curator settings
+curator:
+  enabled: true
+  stale_after_days: 30    # Mark skill stale after N days unused
+  archive_after_days: 90  # Archive skill after N days unused
+  auto_review: true       # Auto-review on session start
+
+# Delegation settings
+delegation:
+  max_spawn_depth: 1      # 1 = flat (leaf-only), 2 = orchestrator can spawn leaves
+  max_concurrent_children: 3
+  max_iterations: 50
+  child_timeout_ms: 600000
+
 # Environment variable references
 # Use $VAR_NAME syntax in any template value. Resolved from process.env at runtime.
 ---

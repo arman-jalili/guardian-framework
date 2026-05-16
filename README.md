@@ -248,6 +248,10 @@ hooks:
 | `session-persistence.ts` | Structured session lifecycle with lazy-loaded history, auto-derived titles, `/sessions` command. |
 | `snippets.ts` | `#handle` token expansion and management. `/snippet list\|add\|remove\|edit`. |
 | `redaction.ts` | Automatic secret redaction in tool results and user input. Covers API keys, tokens, JWTs, env assignments. |
+| `goal-loop.ts` | Standing goals with validator-backed judge (`/goal`, `/subgoal`). Auto-iterates until validated. |
+| `kanban.ts` | Durable task board with state machine, dependencies, comments (`kanban_*` tools, `/kanban`). |
+| `hooks.ts` | Shell-script hooks for lifecycle events (block tools, inject context, observe). |
+| `curator.ts` | Skill lifecycle management: usage tracking, stale detection, archival (`/curator`). |
 
 Zero external npm dependencies — all self-contained.
 
@@ -267,6 +271,20 @@ Guardian incorporates production-tested patterns from [RTK](https://github.com/r
 | 6 | **Trust-Gated Project Config** | Prevents malicious extension injection — `guardian trust` workflow |
 | 7 | **File Integrity Verification** | SHA-256 hash verification, detects tampering/drift — `guardian verify` |
 | 8 | **Economic Analytics** | Estimated USD savings based on API pricing — shown in `guardian info` |
+
+---
+
+## Hermes-Adopted Patterns
+
+Guardian incorporates production-tested patterns from [Hermes-Agent](https://github.com/nousresearch/hermes-agent), a full-featured AI agent framework by Nous Research:
+
+| # | Pattern | Guardian Implementation |
+|---|---------|------------------------|
+| 1 | **`/goal` Standing Goals** | `goal-loop.ts` — persistent goals with validator-backed judge, turn budget, `/subgoal` criteria |
+| 2 | **Kanban Task Board** | `kanban.ts` — durable state machine with dependencies, comments, priority, workspaces |
+| 3 | **Shell Hook System** | `hooks.ts` — declarative hooks for pre/post tool, pre/post LLM, lifecycle events |
+| 4 | **Subagent Roles** | `subagent-registry.md` — leaf vs orchestrator roles with `max_spawn_depth` control |
+| 5 | **Skill Curator** | `curator.ts` — usage telemetry, stale detection, archival with pin/restore protection |
 
 ---
 

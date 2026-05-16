@@ -1,13 +1,25 @@
 ---
 name: subagent-registry
-description: Delegates isolated read-only investigations to scoped subagents with restricted tool access.
+description: Delegates isolated investigations to scoped subagents with restricted tool access. Supports leaf and orchestrator roles for nested delegation.
 model: inherit
 tools: [Read, Grep, Glob, Bash]
 ---
 
 # Subagent Registry
 
-Spawn subagents for self-contained investigations without polluting your context. Each subagent has a **restricted tool whitelist** and a **fresh message history**.
+Spawn subagents for self-contained investigations without polluting your context. Each subagent has a **restricted tool whitelist**, a **fresh message history**, and a **role** that controls whether it can delegate further.
+
+## Delegation Roles
+
+| Role | Can Delegate? | Use Case |
+|------|--------------|----------|
+| `leaf` (default) | No | Single-task investigations, code review, security audit |
+| `orchestrator` | Yes (bounded by `max_spawn_depth`) | Multi-stage workflows: research → synthesis, parallel decomposition |
+
+### Role Rules
+- **`leaf`** (default): Cannot spawn subagents. Identical to original flat-delegation behavior.
+- **`orchestrator`**: Can delegate to leaf children. Gated by `delegation.max_spawn_depth` (default 1 = flat, so orchestrator is a no-op at defaults). Raise to 2 to allow orchestrator children to spawn leaf grandchildren.
+- **Cost warning**: With `max_spawn_depth: 3` and `max_concurrent_children: 3`, the tree can reach 27 concurrent leaf agents. Each extra level multiplies spend.
 
 ## Subagent Types
 
@@ -44,7 +56,7 @@ Spawn subagents for self-contained investigations without polluting your context
 
 ## Anti-Recursion
 
-Subagents CANNOT spawn subagents. If a subagent needs to delegate, it returns its findings and the parent agent decides whether to spawn another.
+By default (`max_spawn_depth: 1`), subagents CANNOT spawn subagents. If a subagent needs to delegate, it returns its findings and the parent agent decides whether to spawn another. When `max_spawn_depth` is raised, only `role: orchestrator` subagents can spawn leaf children.
 
 ## Tool Scoping
 
