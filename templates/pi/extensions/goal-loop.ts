@@ -79,6 +79,7 @@ type GoalState = {
 	lastReason: string;
 	pausedReason: string | null;
 	subgoals: string[];
+	validators: string[]; // per-goal validator list (e.g. ["ci", "tests", "security"])
 	validatorResults: Record<string, { passed: boolean; lastRun: string }>;
 };
 
@@ -140,34 +141,47 @@ function clearGoalState(cwd: string): void {
 	if (existsSync(p)) writeFileSync(p, JSON.stringify({ status: "cleared" }, null, 2));
 }
 
+const VALIDATOR_SCRIPTS: Record<string, string> = {
+	ci: ".pi/scripts/validate-ci.sh",
+	canonical: ".pi/scripts/validate-canonical.sh",
+	tests: ".pi/scripts/validate-tests.sh",
+	security: ".pi/scripts/validate-security.sh",
+	operations: ".pi/scripts/validate-operations.sh",
+	architecture: ".pi/scripts/validate-architecture.sh",
+	integration: ".pi/scripts/validate-integration.sh",
+};
+
 // ── Validator-Backed Judge ──
 
 async function runValidatorsForGoal(
 	ctx: ExtensionContext,
+	validators: string[] = ["ci", "canonical"],
 ): Promise<{ pass: boolean; failures: string[]; results: Record<string, boolean> }> {
-	const scripts = [
-		{ name: "ci", path: ".pi/scripts/validate-ci.sh" },
-		{ name: "canonical", path: ".pi/scripts/validate-canonical.sh" },
-	];
 	const results: Record<string, boolean> = {};
 	const failures: string[] = [];
 
-	for (const script of scripts) {
-		const fullPath = join(ctx.cwd, script.path);
+	for (const name of validators) {
+		const relPath = VALIDATOR_SCRIPTS[name];
+		if (!relPath) {
+			results[name] = false;
+			failures.push(`${name}: unknown validator`);
+			continue;
+		}
+		const fullPath = join(ctx.cwd, relPath);
 		if (!existsSync(fullPath)) {
-			results[script.name] = true; // missing script = skip = pass
+			results[name] = true; // missing script = skip = pass
 			continue;
 		}
 		try {
-			const r = await ctx.shell.execute(`bash ${script.path}`, {
+			const r = await ctx.shell.execute(`bash ${relPath}`, {
 				signal: AbortSignal.timeout(60_000),
 			});
 			const passed = r.exitCode === 0;
-			results[script.name] = passed;
-			if (!passed) failures.push(`${script.name}: validator failed`);
+			results[name] = passed;
+			if (!passed) failures.push(`${name}: validator failed`);
 		} catch {
-			results[script.name] = false;
-			failures.push(`${script.name}: timeout or error`);
+			results[name] = false;
+			failures.push(`${name}: timeout or error`);
 		}
 	}
 
@@ -236,31 +250,40 @@ class GoalManager {
 			s.subgoals.length > 0
 				? `, ${s.subgoals.length} subgoal${s.subgoals.length > 1 ? "s" : ""}`
 				: "";
-		if (s.status === "active") return `⊙ Goal (active, ${turns}${subs}): ${s.goal}`;
+		const vals = s.validators.length > 0 ? ` [${s.validators.join(", ")}]` : "";
+		if (s.status === "active") return `⊙ Goal (active, ${turns}${vals}${subs}): ${s.goal}`;
 		if (s.status === "paused")
-			return `⏸ Goal (paused, ${turns}${subs}${s.pausedReason ? ` — ${s.pausedReason}` : ""}): ${s.goal}`;
-		if (s.status === "done") return `✓ Goal done (${turns}${subs}): ${s.goal}`;
-		return `Goal (${s.status}, ${turns}${subs}): ${s.goal}`;
+			return `⏸ Goal (paused, ${turns}${vals}${subs}${s.pausedReason ? ` — ${s.pausedReason}` : ""}): ${s.goal}`;
+		if (s.status === "done") return `✓ Goal done (${turns}${vals}${subs}): ${s.goal}`;
+		return `Goal (${s.status}, ${turns}${vals}${subs}): ${s.goal}`;
 	}
 
-	set(goalText: string, maxTurns?: number): GoalState {
+	set(goalText: string, opts?: { maxTurns?: number; validators?: string[] }): GoalState {
 		const goal = goalText.trim();
 		if (!goal) throw new Error("goal text is empty");
-		this.state = {
+		this._state = {
 			goal,
 			status: "active",
 			turnsUsed: 0,
-			maxTurns: maxTurns || DEFAULT_MAX_TURNS,
+			maxTurns: opts?.maxTurns || DEFAULT_MAX_TURNS,
 			createdAt: new Date().toISOString(),
 			lastTurnAt: new Date().toISOString(),
 			lastVerdict: "",
 			lastReason: "",
 			pausedReason: null,
 			subgoals: [],
+			validators: opts?.validators ?? [],
 			validatorResults: {},
 		};
-		saveGoalState(this.cwd, this.state);
-		return this.state;
+		saveGoalState(this.cwd, this._state);
+		return this._state;
+	}
+
+	setValidators(validators: string[]): string[] {
+		if (!this._state || !this.hasGoal) throw new Error("no active goal");
+		this._state.validators = validators;
+		saveGoalState(this.cwd, this._state);
+		return validators;
 	}
 
 	pause(reason = "user-paused"): void {
@@ -382,8 +405,9 @@ class GoalManager {
 		state.turnsUsed++;
 		state.lastTurnAt = new Date().toISOString();
 
-		// Step 1: Run deterministic validators (CI + canonical)
-		const valResult = await runValidatorsForGoal(ctx);
+		// Step 1: Run deterministic validators (per-goal list, or fallback)
+		const validatorsToRun = state.validators.length > 0 ? state.validators : ["ci", "canonical"];
+		const valResult = await runValidatorsForGoal(ctx, validatorsToRun);
 		state.validatorResults = {};
 		for (const [name, passed] of Object.entries(valResult.results)) {
 			state.validatorResults[name] = { passed, lastRun: new Date().toISOString() };
@@ -507,11 +531,59 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Setting a new goal — everything after "goal"
-			const goalText = args.join(" ");
+			if (sub === "validators") {
+				const valList = args.slice(1).join(" ");
+				if (!valList) {
+					if (!manager.hasGoal) {
+						ctx.ui.notify("No active goal. Set one first.", "info");
+						return;
+					}
+					const s = manager.state;
+					if (s && s.validators.length > 0) {
+						ctx.ui.notify(`Validators: ${s.validators.join(", ")}`, "info");
+					} else {
+						ctx.ui.notify("Validators: none (using default: ci, canonical)", "info");
+					}
+					return;
+				}
+				const validators = valList
+					.split(",")
+					.map((v) => v.trim())
+					.filter(Boolean);
+				if (validators.includes("all")) {
+					const known = Object.keys(VALIDATOR_SCRIPTS);
+					manager.setValidators(known);
+					ctx.ui.notify(`Validators set to all: ${known.join(", ")}`, "success");
+				} else {
+					manager.setValidators(validators);
+					ctx.ui.notify(`Validators set: ${validators.join(", ")}`, "success");
+				}
+				ctx.ui.setStatus("goal", manager.statusLine());
+				return;
+			}
+
+			// Setting a new goal — parse flags
+			const validatorsFlag = args.find((a) => a.startsWith("--validators="));
+			const validators = validatorsFlag
+				? validatorsFlag
+						.split("=")[1]
+						.split(",")
+						.map((v) => v.trim())
+						.filter(Boolean)
+				: [];
+			const goalParts = args.filter((a) => !a.startsWith("--"));
+			const goalText = goalParts.join(" ");
+			if (!goalText) {
+				ctx.ui.notify("Usage: /goal <text> [--validators=ci,tests,security]", "error");
+				return;
+			}
 			try {
-				const state = manager.set(goalText);
-				ctx.ui.notify(`⊙ Goal set (${state.maxTurns}-turn budget): ${state.goal}`, "success");
+				const state = manager.set(goalText, { validators });
+				const valInfo = validators.length > 0 ? ` [validators: ${validators.join(", ")}]` : "";
+				ctx.ui.notify(
+					`⊙ Goal set (${state.maxTurns}-turn budget${valInfo}): ${state.goal}`,
+					"success",
+				);
 				ctx.ui.setStatus("goal", manager.statusLine());
 			} catch (e) {
 				ctx.ui.notify(`Error: ${e}`, "error");

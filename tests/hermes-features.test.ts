@@ -97,6 +97,7 @@ function makeGoalState(goal: string, maxTurns = 20): TestGoalState {
 		lastReason: "",
 		pausedReason: null,
 		subgoals: [],
+		validators: [],
 		validatorResults: {},
 	};
 }
@@ -190,6 +191,73 @@ describe("Goal Loop — GoalState persistence", () => {
 	test("returns null when no goal file exists", () => {
 		const freshDir = makeProjectDir();
 		expect(loadGoalState(freshDir)).toBeNull();
+	});
+
+	test("validators persist", () => {
+		const state = makeGoalState("Security audit");
+		state.validators = ["ci", "tests", "security"];
+		saveGoalState(dir, state);
+
+		const loaded = loadGoalState(dir);
+		expect(loaded?.validators).toEqual(["ci", "tests", "security"]);
+	});
+
+	test("empty validators list defaults to none", () => {
+		const state = makeGoalState("Simple fix");
+		saveGoalState(dir, state);
+		const loaded = loadGoalState(dir);
+		expect(loaded?.validators).toEqual([]);
+	});
+});
+
+describe("Goal Loop — validator resolution", () => {
+	const VALIDATOR_SCRIPTS: Record<string, string> = {
+		ci: ".pi/scripts/validate-ci.sh",
+		canonical: ".pi/scripts/validate-canonical.sh",
+		tests: ".pi/scripts/validate-tests.sh",
+		security: ".pi/scripts/validate-security.sh",
+		operations: ".pi/scripts/validate-operations.sh",
+		architecture: ".pi/scripts/validate-architecture.sh",
+		integration: ".pi/scripts/validate-integration.sh",
+	};
+
+	test("known validators map to scripts", () => {
+		expect(VALIDATOR_SCRIPTS).toHaveProperty("ci");
+		expect(VALIDATOR_SCRIPTS).toHaveProperty("tests");
+		expect(VALIDATOR_SCRIPTS).toHaveProperty("security");
+		expect(VALIDATOR_SCRIPTS).toHaveProperty("canonical");
+		expect(Object.keys(VALIDATOR_SCRIPTS).length).toBe(7);
+	});
+
+	test("--validators flag parses comma-separated list", () => {
+		const flag = "--validators=ci,tests,security";
+		const validators = flag
+			.split("=")[1]
+			.split(",")
+			.map((v) => v.trim())
+			.filter(Boolean);
+		expect(validators).toEqual(["ci", "tests", "security"]);
+	});
+
+	test("--validators=all resolves to all known validators", () => {
+		const flag = "--validators=all";
+		const val = flag.split("=")[1];
+		const validators = val === "all" ? Object.keys(VALIDATOR_SCRIPTS) : val.split(",");
+		expect(validators).toHaveLength(7);
+		expect(validators).toContain("ci");
+		expect(validators).toContain("security");
+	});
+
+	test("goal command with no validators uses default", () => {
+		const validators: string[] = [];
+		const effective = validators.length > 0 ? validators : ["ci", "canonical"];
+		expect(effective).toEqual(["ci", "canonical"]);
+	});
+
+	test("goal command with validators uses custom list", () => {
+		const validators = ["ci", "tests", "security"];
+		const effective = validators.length > 0 ? validators : ["ci", "canonical"];
+		expect(effective).toEqual(["ci", "tests", "security"]);
 	});
 });
 

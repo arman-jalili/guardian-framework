@@ -14,17 +14,25 @@ Set an objective that auto-iterates across turns until validators + semantic che
 /goal Fix every lint error in src/ and verify CI passes
 ```
 
-The agent works toward the goal, and after each turn runs `validate-ci.sh` and `validate-canonical.sh`. If both pass and the agent's response confirms completion, the goal is marked done. If not, a continuation prompt is injected and the agent keeps going — up to the turn budget (default 20).
+The agent works toward the goal, and after each turn runs its configured validators.
+If all pass and the agent's response confirms completion, the goal is marked done.
+If not, a continuation prompt is injected and the agent keeps going — up to the
+turn budget (default 20). By default, `ci` + `canonical` validators run. Override
+with `--validators` for per-goal control.
 
 ### Commands
 
 | Command | Effect |
 |---------|--------|
 | `/goal <text>` | Set (or replace) the standing goal |
+| `/goal <text> --validators=ci,tests,security` | Set goal with specific validators |
+| `/goal <text> --validators=all` | Run every available validator |
 | `/goal` or `/goal status` | Show current goal, status, turns used |
 | `/goal pause` | Pause the auto-continuation loop |
 | `/goal resume` | Resume (resets turn counter to zero) |
 | `/goal clear` | Drop the goal entirely |
+| `/goal validators` | Show current validators |
+| `/goal validators ci,tests` | Set validators on the active goal |
 | `/subgoal <text>` | Add a criterion to the active goal |
 | `/subgoal list` | Show all subgoals |
 | `/subgoal remove <N>` | Remove subgoal by 1-based index |
@@ -33,24 +41,38 @@ The agent works toward the goal, and after each turn runs `validate-ci.sh` and `
 ### Example workflow
 
 ```
-You: /goal Refactor auth module to use proper logging instead of print()
+You: /goal Refactor auth module --validators ci,tests,security
 
-  ⊙ Goal set (20-turn budget): Refactor auth module...
+  ⊙ Goal set (20-turn budget [validators: ci, tests, security]): Refactor auth module...
 
 Agent: [works on first file, commits]
 
-  ↻ Continuing toward goal (1/20): CI passed but canonical refs need updating
+  ↻ Continuing toward goal (1/20): CI passed but security check found hardcoded secret
 
 Agent: [Continuing toward your standing goal]
-  Updates canonical references, runs validate-canonical.sh
+  Removes hardcoded secret, uses env var
 
-  ↻ Continuing toward goal (2/20): Validators passed but 3 more files remain
+  ↻ Continuing toward goal (2/20): All validators pass but 3 more files remain
 
 Agent: [Continuing toward your standing goal]
   [continues...]
 
-  ✓ Goal achieved: All files refactored, all validators pass, canonical refs updated
+  ✓ Goal achieved: All files refactored, all validators pass
 ```
+
+### Available validators
+
+| Validator | Script | Purpose |
+|-----------|--------|---------|
+| `ci` | `validate-ci.sh` | Build, lint, format, audit |
+| `tests` | `validate-tests.sh` | Unit/integration test suite |
+| `security` | `validate-security.sh` | Secrets, injection, path traversal |
+| `operations` | `validate-operations.sh` | Tracing, cancellation, atomic writes |
+| `architecture` | `validate-architecture.sh` | Layer structure, ADR compliance |
+| `canonical` | `validate-canonical.sh` | Reference integrity, coverage |
+| `integration` | `validate-integration.sh` | Integration test suite |
+
+Use `--validators=all` to run every available validator in one pass.
 
 ### With subgoals
 

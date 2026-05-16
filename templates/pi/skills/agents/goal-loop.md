@@ -14,10 +14,14 @@ Set a standing objective that survives across turns. After every turn, Guardian 
 | Command | What it does |
 |---------|-------------|
 | `/goal <text>` | Set (or replace) the standing goal |
+| `/goal <text> --validators=ci,tests,security` | Set goal with specific validators |
+| `/goal <text> --validators=all` | Set goal running all available validators |
 | `/goal` or `/goal status` | Show current goal, status, and turns used |
 | `/goal pause` | Stop auto-continuation without clearing |
 | `/goal resume` | Resume (resets turn counter to zero) |
 | `/goal clear` | Drop the goal entirely |
+| `/goal validators` | Show current goal's validators |
+| `/goal validators ci,tests` | Set validators on the active goal |
 | `/subgoal <text>` | Add criteria to the active goal |
 | `/subgoal list` | List current subgoals |
 | `/subgoal remove <N>` | Remove subgoal by 1-based index |
@@ -38,9 +42,21 @@ Tasks where the agent does one turn and stops don't need `/goal`. Tasks where **
 
 After every turn, the goal manager runs:
 
-1. **Validator judge (deterministic):** Runs `validate-ci.sh` and `validate-canonical.sh`. If either fails → verdict is `continue`.
+1. **Validator judge (deterministic):** Runs the goal's configured validators (default: `validate-ci.sh` + `validate-canonical.sh`). If any fails → verdict is `continue`.
 2. **Semantic judge:** Evaluates whether the agent's response explicitly confirms completion or produces the final deliverable.
 3. **Both must pass** for the goal to be marked `done`.
+
+### Available validators
+
+| Validator | Script | Purpose |
+|-----------|--------|---------|
+| `ci` | `validate-ci.sh` | Build, lint, format, audit |
+| `tests` | `validate-tests.sh` | Unit/integration test suite |
+| `security` | `validate-security.sh` | Secrets, injection, path traversal |
+| `operations` | `validate-operations.sh` | Tracing, cancellation, atomic writes |
+| `architecture` | `validate-architecture.sh` | Layer structure, ADR compliance |
+| `canonical` | `validate-canonical.sh` | Reference integrity, coverage |
+| `integration` | `validate-integration.sh` | Integration test suite |
 
 ### Fail-Open Semantics
 
