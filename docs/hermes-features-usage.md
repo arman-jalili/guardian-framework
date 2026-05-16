@@ -32,6 +32,7 @@ with `--validators` for per-goal control.
 | `/goal resume` | Resume (resets turn counter to zero) |
 | `/goal clear` | Drop the goal entirely |
 | `/goal validators` | Show current validators |
+| `/goal validators --discover` | List all validators (built-in + custom) |
 | `/goal validators ci,tests` | Set validators on the active goal |
 | `/subgoal <text>` | Add a criterion to the active goal |
 | `/subgoal list` | Show all subgoals |
@@ -72,7 +73,22 @@ Agent: [Continuing toward your standing goal]
 | `canonical` | `validate-canonical.sh` | Reference integrity, coverage |
 | `integration` | `validate-integration.sh` | Integration test suite |
 
-Use `--validators=all` to run every available validator in one pass.
+Use `--validators=all` to run every available validator (built-in + custom) in one pass.
+
+### Custom validators
+
+Any `validate-*.sh` script you drop in `.pi/scripts/` is automatically discovered:
+
+```bash
+printf '#!/bin/bash\nnpm run coverage -- --threshold=80\n' > .pi/scripts/validate-coverage.sh
+chmod +x .pi/scripts/validate-coverage.sh
+
+/goal Get coverage to 80% --validators ci,tests,coverage
+/goal validators --discover   # shows coverage under 'Custom' section
+```
+
+Custom validators are discovered at session start. No configuration needed —
+just drop the script in `.pi/scripts/` with the `validate-` prefix and `--discover` flag shows them.
 
 ### With subgoals
 

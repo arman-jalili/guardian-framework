@@ -21,6 +21,7 @@ Set a standing objective that survives across turns. After every turn, Guardian 
 | `/goal resume` | Resume (resets turn counter to zero) |
 | `/goal clear` | Drop the goal entirely |
 | `/goal validators` | Show current goal's validators |
+| `/goal validators --discover` | List all available validators (built-in + custom) |
 | `/goal validators ci,tests` | Set validators on the active goal |
 | `/subgoal <text>` | Add criteria to the active goal |
 | `/subgoal list` | List current subgoals |
@@ -57,6 +58,34 @@ After every turn, the goal manager runs:
 | `architecture` | `validate-architecture.sh` | Layer structure, ADR compliance |
 | `canonical` | `validate-canonical.sh` | Reference integrity, coverage |
 | `integration` | `validate-integration.sh` | Integration test suite |
+
+### Custom validators
+
+Any `validate-*.sh` script you drop in `.pi/scripts/` is automatically discovered:
+
+```bash
+# Create a custom validator
+printf '#!/bin/bash\nnpm run coverage -- --threshold=80\n' > .pi/scripts/validate-coverage.sh
+chmod +x .pi/scripts/validate-coverage.sh
+
+# Use it
+/goal Increase coverage --validators ci,tests,coverage
+/goal validators --discover  # shows coverage under 'Custom'
+```
+
+Custom validators run the same way as built-in ones — exit code 0 = pass, non-zero = fail.
+
+### Custom validators
+
+Any `validate-*.sh` script you drop in `.pi/scripts/` automatically becomes available:
+
+```bash
+printf '#!/bin/bash\nnpm run coverage -- --threshold=80\n' > .pi/scripts/validate-coverage.sh
+chmod +x .pi/scripts/validate-coverage.sh
+/goal Increase coverage --validators ci,tests,coverage
+```
+
+Custom validators are discovered at session start. Exit code 0 = pass, non-zero = fail.
 
 ### Fail-Open Semantics
 

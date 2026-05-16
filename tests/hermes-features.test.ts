@@ -211,7 +211,13 @@ describe("Goal Loop — GoalState persistence", () => {
 });
 
 describe("Goal Loop — validator resolution", () => {
-	const VALIDATOR_SCRIPTS: Record<string, string> = {
+	let dir: string;
+
+	beforeEach(() => {
+		dir = makeProjectDir();
+	});
+
+	const BUILTIN_VALIDATORS: Record<string, string> = {
 		ci: ".pi/scripts/validate-ci.sh",
 		canonical: ".pi/scripts/validate-canonical.sh",
 		tests: ".pi/scripts/validate-tests.sh",
@@ -221,12 +227,69 @@ describe("Goal Loop — validator resolution", () => {
 		integration: ".pi/scripts/validate-integration.sh",
 	};
 
-	test("known validators map to scripts", () => {
-		expect(VALIDATOR_SCRIPTS).toHaveProperty("ci");
-		expect(VALIDATOR_SCRIPTS).toHaveProperty("tests");
-		expect(VALIDATOR_SCRIPTS).toHaveProperty("security");
-		expect(VALIDATOR_SCRIPTS).toHaveProperty("canonical");
-		expect(Object.keys(VALIDATOR_SCRIPTS).length).toBe(7);
+	function discoverCustomValidators(cwd: string): Record<string, string> {
+		const scriptsDir = path.join(cwd, ".pi/scripts");
+		if (!fs.existsSync(scriptsDir)) return {};
+		const custom: Record<string, string> = {};
+		const builtinPaths = new Set(Object.values(BUILTIN_VALIDATORS));
+		try {
+			const files = fs.readdirSync(scriptsDir);
+			for (const file of files) {
+				if (!file.startsWith("validate-") || !file.endsWith(".sh")) continue;
+				const relPath = path.join(".pi/scripts", file);
+				if (builtinPaths.has(relPath)) continue;
+				const name = file.replace("validate-", "").replace(".sh", "");
+				custom[name] = relPath;
+			}
+		} catch {}
+		return custom;
+	}
+
+	function getAllValidators(cwd: string): Record<string, string> {
+		return { ...BUILTIN_VALIDATORS, ...discoverCustomValidators(cwd) };
+	}
+
+	test("built-in validators map to scripts", () => {
+		expect(BUILTIN_VALIDATORS).toHaveProperty("ci");
+		expect(BUILTIN_VALIDATORS).toHaveProperty("tests");
+		expect(BUILTIN_VALIDATORS).toHaveProperty("security");
+		expect(BUILTIN_VALIDATORS).toHaveProperty("canonical");
+		expect(Object.keys(BUILTIN_VALIDATORS).length).toBe(7);
+	});
+
+	test("discovers custom validators from .pi/scripts/", () => {
+		const scriptsDir = path.join(dir, ".pi/scripts");
+		fs.writeFileSync(path.join(scriptsDir, "validate-coverage.sh"), "#!/bin/bash\nexit 0");
+		fs.writeFileSync(path.join(scriptsDir, "validate-performance.sh"), "#!/bin/bash\nexit 0");
+
+		const custom = discoverCustomValidators(dir);
+		expect(Object.keys(custom)).toHaveLength(2);
+		expect(custom).toHaveProperty("coverage");
+		expect(custom).toHaveProperty("performance");
+		expect(custom.coverage).toBe(".pi/scripts/validate-coverage.sh");
+	});
+
+	test("ignores built-in scripts in custom discovery", () => {
+		const custom = discoverCustomValidators(dir);
+		expect(custom).not.toHaveProperty("ci");
+		expect(custom).not.toHaveProperty("canonical");
+		expect(custom).not.toHaveProperty("tests");
+	});
+
+	test("getAllValidators merges built-in and custom", () => {
+		const scriptsDir = path.join(dir, ".pi/scripts");
+		fs.writeFileSync(path.join(scriptsDir, "validate-lint.sh"), "#!/bin/bash\nexit 0");
+
+		const all = getAllValidators(dir);
+		expect(Object.keys(all).length).toBeGreaterThan(7);
+		expect(all).toHaveProperty("ci");
+		expect(all).toHaveProperty("lint");
+	});
+
+	test("returns empty custom dict when .pi/scripts missing", () => {
+		const emptyDir = makeProjectDir();
+		fs.rmSync(path.join(emptyDir, ".pi/scripts"), { recursive: true, force: true });
+		expect(discoverCustomValidators(emptyDir)).toEqual({});
 	});
 
 	test("--validators flag parses comma-separated list", () => {
@@ -240,10 +303,9 @@ describe("Goal Loop — validator resolution", () => {
 	});
 
 	test("--validators=all resolves to all known validators", () => {
-		const flag = "--validators=all";
-		const val = flag.split("=")[1];
-		const validators = val === "all" ? Object.keys(VALIDATOR_SCRIPTS) : val.split(",");
-		expect(validators).toHaveLength(7);
+		const all = getAllValidators(dir);
+		const validators = Object.keys(all);
+		expect(validators.length).toBeGreaterThanOrEqual(7);
 		expect(validators).toContain("ci");
 		expect(validators).toContain("security");
 	});

@@ -20,7 +20,7 @@
  *   /subgoal clear        Remove all subgoals
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 // ── Types ──
@@ -141,7 +141,7 @@ function clearGoalState(cwd: string): void {
 	if (existsSync(p)) writeFileSync(p, JSON.stringify({ status: "cleared" }, null, 2));
 }
 
-const VALIDATOR_SCRIPTS: Record<string, string> = {
+const BUILTIN_VALIDATORS: Record<string, string> = {
 	ci: ".pi/scripts/validate-ci.sh",
 	canonical: ".pi/scripts/validate-canonical.sh",
 	tests: ".pi/scripts/validate-tests.sh",
@@ -151,17 +151,43 @@ const VALIDATOR_SCRIPTS: Record<string, string> = {
 	integration: ".pi/scripts/validate-integration.sh",
 };
 
+/** Discover custom validators from `.pi/scripts/validate-*.sh` */
+function discoverCustomValidators(cwd: string): Record<string, string> {
+	const scriptsDir = join(cwd, ".pi/scripts");
+	if (!existsSync(scriptsDir)) return {};
+	const custom: Record<string, string> = {};
+	const builtinPaths = new Set(Object.values(BUILTIN_VALIDATORS));
+	try {
+		for (const file of readdirSync(scriptsDir)) {
+			if (!file.startsWith("validate-") || !file.endsWith(".sh")) continue;
+			const relPath = join(".pi/scripts", file);
+			if (builtinPaths.has(relPath)) continue;
+			custom[file.replace("validate-", "").replace(".sh", "")] = relPath;
+		}
+	} catch {
+		/* ignore */
+	}
+	return custom;
+}
+
+function getAllValidators(cwd: string): Record<string, string> {
+	return { ...BUILTIN_VALIDATORS, ...discoverCustomValidators(cwd) };
+}
+
+const BUILTIN_NAMES = Object.keys(BUILTIN_VALIDATORS);
+
 // ── Validator-Backed Judge ──
 
 async function runValidatorsForGoal(
 	ctx: ExtensionContext,
 	validators: string[] = ["ci", "canonical"],
 ): Promise<{ pass: boolean; failures: string[]; results: Record<string, boolean> }> {
+	const registry = getAllValidators(ctx.cwd);
 	const results: Record<string, boolean> = {};
 	const failures: string[] = [];
 
 	for (const name of validators) {
-		const relPath = VALIDATOR_SCRIPTS[name];
+		const relPath = registry[name];
 		if (!relPath) {
 			results[name] = false;
 			failures.push(`${name}: unknown validator`);
@@ -551,7 +577,7 @@ export default function (pi: ExtensionAPI) {
 					.map((v) => v.trim())
 					.filter(Boolean);
 				if (validators.includes("all")) {
-					const known = Object.keys(VALIDATOR_SCRIPTS);
+					const known = Object.keys(getAllValidators(ctx.cwd));
 					manager.setValidators(known);
 					ctx.ui.notify(`Validators set to all: ${known.join(", ")}`, "success");
 				} else {
