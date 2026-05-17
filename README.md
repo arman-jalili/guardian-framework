@@ -253,6 +253,7 @@ hooks:
 | `hooks.ts` | Shell-script hooks for lifecycle events (block tools, inject context, observe). |
 | `curator.ts` | Skill lifecycle management: usage tracking, stale detection, archival (`/curator`). |
 | `pipeline.ts` | Multi-step workflow engine with per-step acceptance gates (`/pipeline`). Guardian-native feature. |
+| `architect.ts` | **THE ARCHITECTURE TOOL** — end-to-end epic orchestration from architecture discovery to implementation, validation, MR creation, merge, and close (`/architect`). |
 | `pipeline.ts` | Multi-step workflow engine with per-step acceptance gates (`/pipeline`). |
 
 Zero external npm dependencies — all self-contained.
