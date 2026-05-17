@@ -1,59 +1,12 @@
-# Guardian Architect — The Architecture Tool
+# Guardian — The Architecture Tool
 
-> **From canonical architecture to running code, fully validated, zero babysitting.**
-
-Guardian Architect is Guardian's flagship feature. It turns your `.pi/architecture/modules/*.md` files into an automated implementation pipeline where every slice must prove architectural conformance before it can merge.
+**Guardian** is a CLI that scaffolds, validates, and orchestrates architecture-first development workflows. It turns canonical architecture documents into executable implementation pipelines where every slice must prove architectural conformance before it can merge.
 
 ---
 
-## Table of Contents
+## Quick Start (5 Minutes)
 
-1. [What Is Guardian Architect?](#1-what-is-guardian-architect)
-2. [Quick Start (5 Minutes)](#2-quick-start-5-minutes)
-3. [The Full Process](#3-the-full-process)
-4. [Architecture Setup](#4-architecture-setup)
-5. [Commands Reference](#5-commands-reference)
-6. [The Hardening Pipeline](#6-the-hardening-pipeline)
-7. [Custom Validators](#7-custom-validators)
-8. [Git Integration](#8-git-integration)
-9. [Configuration Reference](#9-configuration-reference)
-10. [Language Support](#10-language-support)
-11. [Full Walkthrough: Auth Module](#11-full-walkthrough-auth-module)
-12. [Troubleshooting](#12-troubleshooting)
-
----
-
-## 1. What Is Guardian Architect?
-
-Guardian Architect is the **single entry point** that chains the full process from architecture documentation to running, validated, merged code:
-
-```
-Architecture Docs  →  Epic Draft  →  Validation  →  Issues  →  Implementation  →  Hardening  →  Merge  →  Next Epic
-```
-
-### What Makes It Different
-
-| Traditional Development | Guardian Architect |
-|------------------------|-------------------|
-| Code first, docs later | Architecture first, code follows |
-| Ad-hoc validation | 10 mandatory hardening stages per MR |
-| Manual MR review | Agent implements, validates, creates MR, merges on green |
-| No architectural conformance checks | 11+ conformance checks enforced at CI level |
-| Babysitting required | Zero babysitting — fully automated loop |
-
-### Core Principles
-
-1. **Architecture-first** — Every piece of code traces back to canonical architecture docs
-2. **Deterministic validation** — Scripts decide if something is ready, not LLMs
-3. **Self-driving execution** — Once you approve the epic draft, everything runs automatically
-4. **Architecture readiness is mandatory** — No epic closes without runbook, DR plan, docs, and canonical sync
-5. **Infinite loop** — When one epic completes, the next one starts automatically
-
----
-
-## 2. Quick Start (5 Minutes)
-
-### Step 1: Initialize Guardian
+### 1. Initialize Guardian
 
 ```bash
 cd your-project
@@ -62,104 +15,72 @@ npx guardian-framework init
 
 This creates `.pi/` — your source of truth.
 
-### Step 2: Add Your First Architecture Module
+### 2. Add Your First Architecture Module
 
 Create `.pi/architecture/modules/auth-system.md`:
 
 ```markdown
 # Auth System
 
-## JWT Token Validation
+## Components
+
+### JWT Token Validation
 status: planned
 description: Validates JWT tokens from request headers, checks expiry, signature, and claims.
 depends: none
 
-## OAuth2 Provider Integration
+### OAuth2 Provider Integration
 status: planned
 description: Integrates with Google, GitHub OAuth2 providers for SSO.
 depends: JWT Token Validation
 
-## Session Management
+### Session Management
 status: planned
 description: Manages user sessions with Redis-backed storage, automatic expiry.
 depends: JWT Token Validation
 
-## Architecture Observability
+### Architecture Observability
 status: planned
 description: Runbook, DR plan, metrics, tracing for the auth module.
 depends: OAuth2 Provider Integration, Session Management
 ```
 
-### Step 3: Start Your First Epic
+### 3. Start Your First Epic
 
 ```
 /architect --epic "Auth Module v1"
 ```
 
-Guardian discovers your module, finds 4 planned components, generates 5 issues (4 implementation + 1 architecture readiness), and validates the epic draft.
+Guardian discovers your module, finds the 4 planned components, generates 5 issues (4 implementation + 1 architecture readiness), and validates the epic draft.
 
-### Step 4: Run the Pipeline
+### 4. Run the Pipeline
 
 ```
-/pipeline "Auth Module v1" --items "jwt-token-validation,oauth2-provider-integration,session-management,architecture-readiness" --steps "implement,validate,create-mr,merge" --merge-on-valid
+/pipeline "Auth Module v1" --items "issue-jwt-token-validation,issue-oauth2-provider-integration,issue-session-management,issue-architecture-readiness" --steps "implement,validate,create-mr,merge" --merge-on-valid
 ```
 
 The agent implements each issue, runs 10 hardening stages, creates MRs, merges on green, and closes the epic.
 
-### Step 5: Start the Next Epic
+---
 
-```
-/architect next-epic
-▶ Next epic: api-gateway (3 components planned)
+## Table of Contents
 
-/architect --epic "API Gateway v1"
-```
+1. [Architecture-First Setup](#1-architecture-first-setup)
+2. [The /architect Command](#2-the-architect-command)
+3. [The Hardening Pipeline](#3-the-hardening-pipeline)
+4. [The /pipeline Command](#4-the-pipeline-command)
+5. [The /goal Command](#5-the-goal-command)
+6. [Custom Validators](#6-custom-validators)
+7. [Git Integration](#7-git-integration)
+8. [Full Walkthrough: Auth Module](#8-full-walkthrough-auth-module)
+9. [Configuration Reference](#9-configuration-reference)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
-## 3. The Full Process
+## 1. Architecture-First Setup
 
-### Phase 1: Epic Generation
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. DISCOVER: Read .pi/architecture/modules/*.md            │
-│  2. PLAN: Generate epic draft + issue drafts                 │
-│  3. VALIDATE: Run deterministic validators on epic draft     │
-│  4. GENERATE: Create epic + issue markdown files             │
-│  5. PUBLISH: Create issues/epics on GitLab/GitHub            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Phase 2: Execution (per issue)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  6. IMPLEMENT → VALIDATE → CREATE MR → MERGE-ON-GREEN       │
-│     After each: 10 hardening stages must pass               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Phase 3: Architecture Readiness (final issue)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  7. runbook → DR plan → docs → canonical → observability    │
-│     validate-architecture-readiness.sh must pass            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Phase 4: Close & Next
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  8. CLOSE Epic + Tracking Issue → 9. NEXT EPIC (loop)       │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Architecture Setup
+Guardian requires your architecture to be documented in `.pi/architecture/modules/`. Each module is a Markdown file with components that have `status` fields.
 
 ### Module File Format
 
@@ -201,24 +122,12 @@ depends: Component Name
 ├── scripts/
 │   ├── validate-ci.sh
 │   ├── validate-security.sh
-│   ├── validate-architecture-readiness.sh
-│   ├── ci/
-│   │   ├── check_architecture_conformance.sh
-│   │   └── run_hardening_stages.sh
-│   └── git/
-│       ├── create-tracking-issue.sh
-│       ├── update-tracking-issue.sh
-│       ├── close-issue.sh
-│       ├── close-epic.sh
-│       └── link-issue-to-epic.sh
-├── extensions/
-│   ├── architect.ts
-│   ├── pipeline.ts
-│   └── goal-loop.ts
-└── prompts/
-    ├── epic-plan.md
-    ├── issue-implementation-series.md
-    └── issue-closeout.md
+│   └── ci/
+│       ├── check_architecture_conformance.sh
+│       └── run_hardening_stages.sh
+└── extensions/
+    ├── architect.ts
+    └── pipeline.ts
 ```
 
 ### Canonical References
@@ -237,47 +146,60 @@ The `validate-canonical.sh` script checks that all implementation files have the
 
 ---
 
-## 5. Commands Reference
+## 2. The /architect Command
 
-### `/architect`
+The single entry point for the full architecture-to-implementation process.
+
+### Starting an Epic
+
+```
+/architect --epic "Auth Module v1"
+```
+
+Guardian:
+1. Reads `.pi/architecture/modules/*.md`
+2. Finds components with `status: planned`
+3. Generates issues (one per component + one for architecture readiness)
+4. Validates the epic draft against architecture, security, and operations validators
+5. Creates a tracking issue on GitHub/GitLab (if configured)
+
+### With Tracking Issue
+
+```
+/architect --epic "Auth Module v1" --tracking-issue 100
+```
+
+Links the epic to an existing tracking issue.
+
+### Commands
 
 | Command | Effect |
 |---------|--------|
-| `/architect --epic "Name"` | Start a new epic from the next architecture slice |
-| `/architect --epic "Name" --tracking-issue 100` | Start epic linked to existing tracking issue |
+| `/architect --epic "Name"` | Start a new epic |
 | `/architect status` | Show current epic progress |
 | `/architect next-epic` | Discover the next logical epic |
 | `/architect abort` | Kill the current epic |
 
-### `/pipeline`
+### Tools (Agent-Callable)
 
-| Command | Effect |
-|---------|--------|
-| `/pipeline <name> --items "id1,id2" --steps "implement,validate"` | Start pipeline |
-| `/pipeline status` | Show current pipeline progress |
-| `/pipeline pause` | Pause at current step |
-| `/pipeline resume` | Resume from where paused |
-| `/pipeline skip-step` | Skip current step, move to next |
-| `/pipeline retry-step` | Retry current step |
-| `/pipeline abort` | Kill pipeline |
+| Tool | Description |
+|------|-------------|
+| `architect_status` | Returns current epic status |
+| `architect_discover` | Discovers architecture modules and next slice |
 
-### `/goal`
+### Epic Lifecycle
 
-| Command | Effect |
-|---------|--------|
-| `/goal <text>` | Set a standing goal |
-| `/goal <text> --validators=ci,tests,security` | Set goal with specific validators |
-| `/goal <text> --validators=all` | Run every available validator |
-| `/goal` or `/goal status` | Show current goal |
-| `/goal validators --discover` | List all available validators |
-| `/goal validators ci,tests` | Set validators on active goal |
-| `/subgoal <text>` | Add criteria to active goal |
+```
+planning → validating → publishing → executing → done
+                                    ↓
+                                aborted
+```
 
 ---
 
-## 6. The Hardening Pipeline
+## 3. The Hardening Pipeline
 
-Every MR must pass **10 mandatory stages** before it can merge.
+Every MR must pass 10 hardening stages before it can merge. This is Guardian's core innovation: **architectural conformance is enforced at the CI level, not just at the agent level.**
 
 ### The 10 Stages
 
@@ -309,6 +231,8 @@ bash .pi/scripts/ci/run_hardening_stages.sh --verbose
 
 ### Architecture Conformance (Stage 2)
 
+This is the most important stage. It checks 11+ architectural contracts:
+
 | Check | What It Verifies |
 |-------|-----------------|
 | `tenant_isolation` | Tenant-scoped data never crosses tenant boundaries |
@@ -317,41 +241,183 @@ bash .pi/scripts/ci/run_hardening_stages.sh --verbose
 | `replay_upcaster` | Event replay and schema upcasting work correctly |
 | `runstarted_publication` | Run-started events published correctly |
 | `runstarted_worker_activation` | Workers activate correctly on run-started events |
-| `bounded_execution` | AI executions bounded (timeout, token, step limits) |
+| `bounded_execution` | LangGraph/AI executions bounded (timeout, token, step limits) |
 | `artifact_proof_surfaces` | Artifact proof surfaces properly exposed |
 | `runtime_baseline` | Runtime environment meets baseline requirements |
 | `controlled_stage_progression` | State machines progress through defined stages only |
 | `architecture_sanity` | No orphaned imports, concurrency safety, no env collisions |
 | `import_boundaries` | No cross-layer violations (domain→infrastructure→api) |
 
----
+Each check tries a **language-specific validator** first (`.py` for Python, `.ts` for TypeScript, `.sh` for Rust/Go), then falls back to grep-based pattern matching.
 
-## 7. Custom Validators
+### Adding Language-Specific Validators
 
-### Simple Script Validators
+Drop your validators in `.pi/scripts/ci/`:
 
-Create `.pi/scripts/validate-coverage.sh`:
-
-```bash
-#!/bin/bash
-set -euo pipefail
-npm run coverage -- --threshold=80
+```
+.pi/scripts/ci/
+├── check_tenant_isolation.py      # Python validator
+├── check_tenant_isolation.ts      # TypeScript validator
+├── check_event_ordering.py
+├── check_outbox_dlq.py
+└── ...
 ```
 
+The conformance runner auto-detects the project language and runs the right validator.
+
+### Adding Custom Conformance Checks
+
+1. Create `.pi/scripts/ci/check_my_conformance.sh` (or `.py`/`.ts`)
+2. Add it to `check_architecture_conformance.sh` by calling your script
+3. The hardening pipeline will automatically include it in Stage 2
+
+---
+
+## 4. The /pipeline Command
+
+Multi-step workflow that iterates over items with per-step prompts and acceptance gates.
+
+### Starting a Pipeline
+
+```
+/pipeline "Auth Module v1" --items "issue-jwt,issue-oauth,issue-session" --steps "implement,validate,create-mr,merge" --merge-on-valid
+```
+
+### Built-in Steps
+
+| Step | Prompt Loaded | Acceptance Gate |
+|------|--------------|-----------------|
+| `implement` | `.pi/prompts/issue-implementation-series.md` | CI validator passes |
+| `validate` | — | CI + tests + security all pass |
+| `create-mr` | `.pi/prompts/issue-closeout.md` | None (always passes) |
+| `merge` | — | CI + canonical pass |
+| `document` | `.pi/prompts/blueprint-update.md` | Canonical validator passes |
+| `test` | — | Tests validator passes |
+| `security-review` | — | Security validator passes |
+
+### Commands
+
+| Command | Effect |
+|---------|--------|
+| `/pipeline <name> --items "..." --steps "..."` | Start pipeline |
+| `/pipeline status` | Show progress |
+| `/pipeline pause` | Pause at current step |
+| `/pipeline resume` | Resume from where paused |
+| `/pipeline skip-step` | Skip current step |
+| `/pipeline retry-step` | Retry current step |
+| `/pipeline abort` | Kill pipeline |
+
+### Acceptance Gates
+
+Each step can have a different gate:
+
+```
+validator → Runs specified validators (must all pass)
+shell     → Runs custom shell command (exit 0 = pass)
+llm       → LLM evaluates completion
+none      → No gate (always passes)
+```
+
+---
+
+## 5. The /goal Command
+
+Set a standing objective that auto-iterates until validators + semantic check confirm completion.
+
+### Basic Usage
+
+```
+/goal Fix every lint error in src/ and verify CI passes
+```
+
+### With Custom Validators
+
+```
+/goal Refactor auth module --validators ci,tests,security
+/goal Security audit --validators all
+/goal Increase coverage --validators ci,tests,coverage
+```
+
+### Commands
+
+| Command | Effect |
+|---------|--------|
+| `/goal <text>` | Set standing goal |
+| `/goal <text> --validators=ci,tests` | Set goal with specific validators |
+| `/goal <text> --validators=all` | Run every validator |
+| `/goal` or `/goal status` | Show current goal |
+| `/goal pause` | Pause auto-continuation |
+| `/goal resume` | Resume (resets counter) |
+| `/goal clear` | Drop goal |
+| `/goal validators` | Show current validators |
+| `/goal validators --discover` | List all available validators |
+| `/goal validators ci,tests` | Set validators on active goal |
+| `/subgoal <text>` | Add criteria to active goal |
+| `/subgoal list` | Show subgoals |
+| `/subgoal remove <N>` | Remove subgoal by index |
+| `/subgoal clear` | Remove all subgoals |
+
+### Available Validators
+
+| Validator | Script | Purpose |
+|-----------|--------|---------|
+| `ci` | `validate-ci.sh` | Build, lint, format, audit |
+| `tests` | `validate-tests.sh` | Unit/integration test suite |
+| `security` | `validate-security.sh` | Secrets, injection, path traversal |
+| `operations` | `validate-operations.sh` | Tracing, cancellation, atomic writes |
+| `architecture` | `validate-architecture.sh` | Layer structure, ADR compliance |
+| `canonical` | `validate-canonical.sh` | Reference integrity, coverage |
+| `integration` | `validate-integration.sh` | Integration test suite |
+
+### Custom Validators
+
+Any `validate-*.sh` script you drop in `.pi/scripts/` is auto-discovered:
+
 ```bash
+printf '#!/bin/bash\nnpm run coverage -- --threshold=80\n' > .pi/scripts/validate-coverage.sh
 chmod +x .pi/scripts/validate-coverage.sh
+
 /goal Increase coverage --validators ci,tests,coverage
 /goal validators --discover   # shows coverage under 'Custom'
 ```
 
-### Architecture Conformance Checks
+---
 
-Create `.pi/scripts/ci/check_my_conformance.py`:
+## 6. Custom Validators
+
+Guardian's validator system is extensible. You can add validators at three levels:
+
+### Level 1: Simple Script Validators
+
+Create `.pi/scripts/validate-my-check.sh`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Your check here
+if grep -r "TODO" src/ | grep -v "node_modules" | head -1 | grep -q .; then
+    echo "FAIL: TODOs found in source code"
+    exit 1
+fi
+
+echo "PASS: No TODOs in source code"
+exit 0
+```
+
+Make it executable: `chmod +x .pi/scripts/validate-my-check.sh`
+
+Use it: `/goal Clean codebase --validators ci,my-check`
+
+### Level 2: Architecture Conformance Checks
+
+Create `.pi/scripts/ci/check_my_conformance.py` (or `.ts`/`.sh`):
 
 ```python
 #!/usr/bin/env python3
 """Check that all database models have tenant_id scoping."""
-import sys, os
+import sys
+import os
 
 violations = 0
 for root, dirs, files in os.walk("app"):
@@ -366,15 +432,46 @@ for root, dirs, files in os.walk("app"):
 
 if violations > 0:
     sys.exit(1)
+
 print("PASS: All tenant-scoped models have proper filtering")
 sys.exit(0)
 ```
 
-The conformance runner auto-discovers and runs it in Stage 2.
+The architecture conformance runner (Stage 2 of the hardening pipeline) will auto-discover and run it.
+
+### Level 3: CI/CD Pipeline Stage
+
+Create `.pi/scripts/ci/stage_my_stage.sh`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "  Running my custom stage..."
+
+# Your check here
+if some_check; then
+    echo "  ✓ PASS: my custom stage"
+    exit 0
+else
+    echo "  ✗ FAIL: my custom stage"
+    exit 1
+fi
+```
+
+Add it to `run_hardening_stages.sh`:
+
+```bash
+run_stage "11" "my_custom_stage" \
+    "${SCRIPTS_DIR}/stage_my_stage.sh" \
+    "always"
+```
 
 ---
 
-## 8. Git Integration
+## 7. Git Integration
+
+Guardian wraps `gh` (GitHub CLI) and `glab` (GitLab CLI) for issue/epic management.
 
 ### Setup
 
@@ -386,7 +483,7 @@ gh auth login
 glab auth login
 ```
 
-### Scripts
+### Available Scripts
 
 | Script | Purpose |
 |--------|---------|
@@ -396,115 +493,39 @@ glab auth login
 | `close-epic.sh` | Close epic + tracking issue |
 | `link-issue-to-epic.sh` | Link issue to epic |
 
-### Platform Detection
+### Usage
 
-Guardian auto-detects:
-- `gh auth status` works → GitHub
-- `glab auth status` works → GitLab
-- Neither → local tracking files in `.pi/.tracking/`
+```bash
+# Create tracking issue
+bash .pi/scripts/git/create-tracking-issue.sh --title "Epic: Auth Module v2" --body "Tracking progress"
 
-Override with `GIT_PLATFORM=github` or `GIT_PLATFORM=gitlab`.
+# Update tracking issue
+bash .pi/scripts/git/update-tracking-issue.sh --id 100 --comment "✓ Issue #102 complete"
 
----
+# Close issue
+bash .pi/scripts/git/close-issue.sh --id 102
 
-## 9. Configuration Reference
+# Close epic
+bash .pi/scripts/git/close-epic.sh --epic-id 101 --tracking-id 100 --comment "Epic complete"
 
-### AGENTS.md Front Matter
-
-```yaml
-# Workspace settings
-workspace:
-  root: ".pi/workspaces"
-  hooks:
-    timeout_ms: 60000
-
-# Agent settings
-agent:
-  max_turns: 20
-  max_retry_backoff_ms: 300000
-  stall_timeout_ms: 300000
-
-# Goal settings
-goal:
-  enabled: true
-  max_turns: 20
-  judge_validator: true
-
-# Kanban settings
-kanban:
-  enabled: true
-  auto_create_tasks: true
-
-# Shell hooks
-hooks:
-  pre_tool_call:
-    - command: "~/.pi/hooks/block-rm-rf.sh"
-      matcher: "bash"
-      timeout: 5
-
-# Curator settings
-curator:
-  enabled: true
-  stale_after_days: 30
-  archive_after_days: 90
-  auto_review: true
-
-# Delegation settings
-delegation:
-  max_spawn_depth: 1
-  max_concurrent_children: 3
-  max_iterations: 50
-  child_timeout_ms: 600000
+# Link issue to epic
+bash .pi/scripts/git/link-issue-to-epic.sh --issue-id 102 --epic-id 101
 ```
 
-### Environment Variables
+### Platform Detection
 
-| Variable | Purpose |
-|----------|---------|
-| `GITHUB_TOKEN` | GitHub API authentication |
-| `GITLAB_TOKEN` | GitLab API authentication |
-| `GIT_PLATFORM` | Force platform: `github` or `gitlab` |
-| `COVERAGE_THRESHOLD` | Minimum coverage percentage (default: 80) |
-| `SONAR_TOKEN` | SonarQube authentication |
-| `SONAR_HOST_URL` | SonarQube host URL |
+Guardian auto-detects the platform:
+- If `gh auth status` works → GitHub
+- If `glab auth status` works → GitLab
+- Otherwise → local tracking files in `.pi/.tracking/`
+
+You can override with `GIT_PLATFORM=github` or `GIT_PLATFORM=gitlab`.
 
 ---
 
-## 10. Language Support
+## 8. Full Walkthrough: Auth Module
 
-Guardian's hardening pipeline and architecture conformance checks work with **Python, TypeScript, Rust, and Go**.
-
-### Auto-Detection
-
-Guardian auto-detects the project language from:
-- `pyproject.toml`, `requirements.txt`, `Pipfile` → **Python**
-- `package.json`, `tsconfig.json` → **TypeScript**
-- `Cargo.toml` → **Rust**
-- `go.mod` → **Go**
-
-### Language-Specific Validators
-
-Each architecture conformance check tries a language-specific validator first, then falls back to grep-based pattern matching:
-
-| Check | Python | TypeScript | Rust/Go | Fallback |
-|-------|--------|------------|---------|----------|
-| `tenant_isolation` | `check_tenant_isolation.py` | `check_tenant_isolation.ts` | `check_tenant_isolation.sh` | grep for `tenant_id` |
-| `event_ordering` | `check_event_ordering.py` | `check_event_ordering.ts` | — | grep for `sequence` |
-| `outbox_dlq` | `check_outbox_dlq.py` | `check_outbox_dlq.ts` | — | grep for `outbox` |
-| ... | ... | ... | ... | ... |
-
-### Language-Specific Linting
-
-| Language | Lint | Format | Type Check | Test | Runtime |
-|----------|------|--------|------------|------|---------|
-| **Python** | ruff/flake8 | ruff format | mypy | pytest | Python 3.10+ |
-| **TypeScript** | biome/eslint | biome format | tsc | bun test | Node 18+ |
-| **Rust** | cargo clippy | cargo fmt | cargo check | cargo test | rustc |
-| **Go** | golangci-lint | gofmt | go vet | go test | go |
-
----
-
-## 11. Full Walkthrough: Auth Module
+This is a complete end-to-end example.
 
 ### Step 1: Set Up Architecture
 
@@ -656,7 +677,73 @@ Next epic: api-gateway (3 components planned)
 
 ---
 
-## 12. Troubleshooting
+## 9. Configuration Reference
+
+### AGENTS.md Front Matter
+
+```yaml
+# Workspace settings
+workspace:
+  root: ".pi/workspaces"
+  hooks:
+    timeout_ms: 60000
+
+# Agent settings
+agent:
+  max_turns: 20
+  max_retry_backoff_ms: 300000
+  stall_timeout_ms: 300000
+
+# Goal settings
+goal:
+  enabled: true
+  max_turns: 20
+  judge_validator: true
+
+# Kanban settings
+kanban:
+  enabled: true
+  auto_create_tasks: true
+
+# Shell hooks
+hooks:
+  pre_tool_call:
+    - command: "~/.pi/hooks/block-rm-rf.sh"
+      matcher: "bash"
+      timeout: 5
+  post_tool_call:
+    - command: "~/.pi/hooks/auto-format.sh"
+      matcher: "write|edit"
+
+# Curator settings
+curator:
+  enabled: true
+  stale_after_days: 30
+  archive_after_days: 90
+  auto_review: true
+
+# Delegation settings
+delegation:
+  max_spawn_depth: 1
+  max_concurrent_children: 3
+  max_iterations: 50
+  child_timeout_ms: 600000
+```
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `GITHUB_TOKEN` | GitHub API authentication |
+| `GITLAB_TOKEN` | GitLab API authentication |
+| `GIT_PLATFORM` | Force platform: `github` or `gitlab` |
+| `COVERAGE_THRESHOLD` | Minimum coverage percentage (default: 80) |
+| `SONAR_TOKEN` | SonarQube authentication |
+| `SONAR_HOST_URL` | SonarQube host URL |
+
+---
+
+## 10. Troubleshooting
 
 ### "No architecture modules found"
 
@@ -682,7 +769,7 @@ Check which stage failed:
 bash .pi/scripts/ci/run_hardening_stages.sh --verbose
 ```
 
-Fix the issue, then `/pipeline retry-step`.
+Fix the issue, then retry the pipeline step.
 
 ### "Git platform not detected"
 
@@ -733,3 +820,30 @@ If validators are failing, fix them. If the turn budget is exhausted:
 ```
 /goal resume   # Resets counter, continues
 ```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    GUARDIAN ARCHITECT                           │
+│                                                                 │
+│  1. DISCOVER → 2. PLAN → 3. VALIDATE → 4. GENERATE             │
+│     ↓             ↓          ↓           ↓                     │
+│  Read modules   Generate   Run arch/   Create epic             │
+│  Find slices    epic+issues security/  + issues on             │
+│                 drafts      ops val.    GitLab/GitHub           │
+│                                                                 │
+│  5. EXECUTE (per issue via /pipeline)                          │
+│  implement → validate → create-MR → merge-on-green             │
+│  After each: 10 hardening stages must pass                     │
+│                                                                 │
+│  6. ARCHITECTURE READINESS (final issue)                       │
+│  runbook → DR plan → docs → canonical → observability          │
+│                                                                 │
+│  7. CLOSE → 8. NEXT EPIC (loop back to 1)                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Every MR must pass all mandatory hardening stages before it can merge. No exceptions. This is what makes Guardian **THE ARCHITECTURE TOOL**.
