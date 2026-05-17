@@ -22,9 +22,6 @@
  *   /architect abort
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
 // ── Types ──
 
 type ExtensionContext = {
@@ -33,15 +30,6 @@ type ExtensionContext = {
 		notify(message: string, level?: string): void;
 		setStatus(key: string, message: string | null): void;
 		confirm(title: string, message: string): Promise<boolean>;
-	};
-	shell: {
-		execute(
-			command: string,
-			options?: { signal?: AbortSignal },
-		): Promise<{
-			exitCode: number;
-			stdout: string;
-		}>;
 	};
 	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
 };
@@ -105,11 +93,14 @@ function log(ctx: ExtensionContext, message: string, level = "info") {
 	ctx.ui.notify(message, level);
 }
 
-function runScript(
-	ctx: ExtensionContext,
-	script: string,
-): Promise<{ exitCode: number; stdout: string }> {
-	return ctx.shell.execute(`bash ${script}`, { signal: AbortSignal.timeout(120_000) });
+function runScript(cwd: string, script: string): { exitCode: number; stdout: string } {
+	try {
+		const stdout = execSync(`bash ${script}`, { cwd, timeout: 120_000, encoding: "utf-8" });
+		return { exitCode: 0, stdout };
+	} catch (e: unknown) {
+		const err = e as { status?: number; stdout?: string; message?: string };
+		return { exitCode: err.status ?? 1, stdout: err.stdout ?? err.message ?? "" };
+	}
 }
 
 // ── Architecture Discovery ──
@@ -479,12 +470,81 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			try {
-				const state = await manager.startEpic(ctx, epicName, trackingIssueId);
+				const state = manager.startEpic(ctx, epicName, trackingIssueId);
 				const slice = state.slices[0];
+				const issues = state.issues;
+
+				// Step 1: Initialize git if not already done
+				let gitInitMessage = "";
+				try {
+					const gitCheck = runScript(ctx.cwd, "git rev-parse --git-dir 2>/dev/null");
+					if (gitCheck.exitCode !== 0) {
+						runScript(ctx.cwd, "git init");
+						runScript(ctx.cwd, "git add .");
+						runScript(ctx.cwd, 'git commit -m "Initial Guardian scaffold"');
+						gitInitMessage = "\n✓ Git repository initialized";
+					}
+				} catch (e) {
+					gitInitMessage = `\n⚠ Git init skipped: ${e}`;
+				}
+
+				// Step 2: Create GitLab repo if glab is available
+				let repoMessage = "";
+				let repoUrl = "";
+				try {
+					const createResult = runScript(
+						ctx.cwd,
+						`glab repo create --private --description "Epic: ${epicName}" --name "${slice.module}" 2>&1`,
+					);
+					if (createResult.exitCode === 0) {
+						repoMessage = "\n✓ GitLab repository created";
+						// Extract repo URL from output
+						const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
+						if (urlMatch) repoUrl = urlMatch[0];
+					}
+				} catch {
+					repoMessage = "\n⚠ GitLab repo creation skipped (glab not configured)";
+				}
+
+				// Step 3: Create GitLab epic and issues if glab is available
+				let issueMessage = "";
+				let epicId = "";
+				if (repoUrl) {
+					try {
+						// Create epic
+						const epicResult = runScript(
+							ctx.cwd,
+							`glab issue create --title "Epic: ${epicName}" --description "Epic for ${slice.module}" --label epic 2>&1`,
+						);
+						if (epicResult.exitCode === 0) {
+							const epicUrlMatch = epicResult.stdout.match(/https?:\/\/[^\s]+/);
+							if (epicUrlMatch) epicId = epicUrlMatch[0];
+							issueMessage = "\n✓ Epic created in GitLab";
+						}
+
+						// Create issues for each component
+						for (const issue of issues) {
+							const comp = slice.nextLogicalSlice.find((c) =>
+								issue.id.includes(c.name.toLowerCase().replace(/\s+/g, "-")),
+							);
+							const desc = comp?.description || "";
+							runScript(
+								ctx.cwd,
+								`glab issue create --title "${issue.title}" --description "${desc}" --label implementation 2>&1`,
+							);
+						}
+						issueMessage += `\n✓ ${issues.length} issues created in GitLab`;
+					} catch {
+						issueMessage = "\n⚠ GitLab issue creation skipped";
+					}
+				}
 
 				let message = `▶ Epic "${epicName}" started\n`;
 				message += `Module: ${slice.module}\n`;
-				message += "Components to implement:\n";
+				message += gitInitMessage;
+				message += repoMessage;
+				message += issueMessage;
+				message += "\n\nComponents to implement:\n";
 				for (const c of slice.nextLogicalSlice) {
 					const desc =
 						c.description.length > 100 ? `${c.description.slice(0, 100)}...` : c.description;
