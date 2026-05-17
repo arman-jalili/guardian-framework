@@ -252,6 +252,7 @@ hooks:
 | `kanban.ts` | Durable task board with state machine, dependencies, comments (`kanban_*` tools, `/kanban`). |
 | `hooks.ts` | Shell-script hooks for lifecycle events (block tools, inject context, observe). |
 | `curator.ts` | Skill lifecycle management: usage tracking, stale detection, archival (`/curator`). |
+| `pipeline.ts` | Multi-step workflow engine with per-step acceptance gates (`/pipeline`). Guardian-native feature. |
 | `pipeline.ts` | Multi-step workflow engine with per-step acceptance gates (`/pipeline`). |
 
 Zero external npm dependencies — all self-contained.
@@ -286,7 +287,6 @@ Guardian incorporates production-tested patterns from [Hermes-Agent](https://git
 | 3 | **Shell Hook System** | `hooks.ts` — declarative hooks for pre/post tool, pre/post LLM, lifecycle events |
 | 4 | **Subagent Roles** | `subagent-registry.md` — leaf vs orchestrator roles with `max_spawn_depth` control |
 | 5 | **Skill Curator** | `curator.ts` — usage telemetry, stale detection, archival with pin/restore protection |
-| 6 | **Pipeline Engine** | `pipeline.ts` — multi-step workflow across items, per-step gates, merge-on-valid |
 
 ---
 

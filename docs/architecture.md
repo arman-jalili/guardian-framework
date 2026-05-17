@@ -74,7 +74,7 @@ Guardian also incorporates production-tested patterns from [Hermes-Agent](https:
 | 3-layer hook system | `extensions/hooks.ts` — shell-script hooks for pre/post tool, pre/post LLM, lifecycle events |
 | Subagent roles (leaf vs orchestrator) | `skills/agents/subagent-registry.md` — role-based delegation depth control |
 | Skill curator lifecycle management | `extensions/curator.ts` — usage tracking, stale detection, archival, pin/restore |
-| Pipeline engine | `extensions/pipeline.ts` — multi-step workflow with per-step acceptance gates |
+| Pipeline engine | `extensions/pipeline.ts` — multi-step workflow across items with per-step acceptance gates |
 
 ---
 

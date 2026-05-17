@@ -113,6 +113,9 @@ goal:
 
 ## 2. Pipeline Engine
 
+> **Guardian-native feature.** The pipeline engine is original to Guardian — designed to solve the problem of
+> repeating structured workflows across multiple items with validation gates between each step.
+
 A multi-step workflow that iterates over items (issues, tasks, etc.) with per-step prompts and acceptance conditions.
 
 ### When to use it

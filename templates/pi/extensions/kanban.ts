@@ -51,7 +51,7 @@ type ExtensionAPI = {
 		name: string,
 		options: {
 			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
 	): void;
 };
@@ -501,7 +501,9 @@ export default function (pi: ExtensionAPI) {
 		description: "Manage the Guardian kanban board",
 		handler: async (args, ctx) => {
 			if (!manager) manager = new KanbanManager(ctx.cwd);
-			const action = args[0];
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const action = tokens[0];
 
 			if (!action || action === "status") {
 				const tasks = manager.listTasks();
@@ -517,7 +519,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "create") {
-				const title = args.slice(1).join(" ");
+				const title = tokens.slice(1).join(" ");
 				if (!title) {
 					ctx.ui.notify("Usage: /kanban create <title>", "error");
 					return;
@@ -528,7 +530,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "list") {
-				const status = args[1] as TaskStatus | undefined;
+				const status = tokens[1] as TaskStatus | undefined;
 				const tasks = manager.listTasks(status ? { status } : undefined);
 				if (tasks.length === 0) {
 					ctx.ui.notify("No tasks found", "info");

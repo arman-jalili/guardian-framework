@@ -63,7 +63,7 @@ type ExtensionAPI = {
 		name: string,
 		options: {
 			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
 	): void;
 };
@@ -529,7 +529,11 @@ export default function (pi: ExtensionAPI) {
 		description: "Set, manage, or query a standing goal",
 		handler: async (args, ctx) => {
 			if (!manager) manager = new GoalManager(ctx.cwd);
-			const sub = args[0];
+
+			// pi passes args as a string, not string[]. Split into tokens.
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const sub = tokens[0];
 
 			if (!sub || sub === "status") {
 				ctx.ui.notify(manager.statusLine(), "info");
@@ -558,8 +562,8 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (sub === "validators") {
-				const valList = args.slice(1).join(" ");
-				if (!valList) {
+				const valTokens = tokens.slice(1);
+				if (!valTokens.length) {
 					if (!manager.hasGoal) {
 						ctx.ui.notify("No active goal. Set one first.", "info");
 						return;
@@ -570,6 +574,29 @@ export default function (pi: ExtensionAPI) {
 					} else {
 						ctx.ui.notify("Validators: none (using default: ci, canonical)", "info");
 					}
+					return;
+				}
+				// Check for --discover
+				const valList = valTokens.join(" ");
+				if (valList.includes("--discover")) {
+					const all = getAllValidators(ctx.cwd);
+					const custom = Object.keys(all).filter((n) => !BUILTIN_NAMES.includes(n));
+					const lines = ["## Available Validators\n"];
+					lines.push("### Built-in");
+					for (const name of BUILTIN_NAMES) {
+						lines.push(`  - \`${name}\` \u2192 ${all[name]}`);
+					}
+					if (custom.length > 0) {
+						lines.push("\n### Custom (discovered from .pi/scripts/validate-*.sh)");
+						for (const name of custom) {
+							lines.push(`  - \`${name}\` \u2192 ${all[name]}`);
+						}
+					} else {
+						lines.push(
+							"\n### Custom\n  _(none \u2014 drop validate-*.sh scripts in .pi/scripts/)_",
+						);
+					}
+					ctx.ui.notify(lines.join("\n"), "info");
 					return;
 				}
 				const validators = valList
@@ -588,17 +615,15 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Setting a new goal — parse flags
-			const validatorsFlag = args.find((a) => a.startsWith("--validators="));
-			const validators = validatorsFlag
-				? validatorsFlag
-						.split("=")[1]
+			// Setting a new goal — parse flags from full string
+			const validatorsMatch = raw.match(/--validators=([^\s]+)/);
+			const validators = validatorsMatch
+				? validatorsMatch[1]
 						.split(",")
 						.map((v) => v.trim())
 						.filter(Boolean)
 				: [];
-			const goalParts = args.filter((a) => !a.startsWith("--"));
-			const goalText = goalParts.join(" ");
+			const goalText = raw.replace(/--validators=[^\s]+/g, "").trim();
 			if (!goalText) {
 				ctx.ui.notify("Usage: /goal <text> [--validators=ci,tests,security]", "error");
 				return;
@@ -607,7 +632,7 @@ export default function (pi: ExtensionAPI) {
 				const state = manager.set(goalText, { validators });
 				const valInfo = validators.length > 0 ? ` [validators: ${validators.join(", ")}]` : "";
 				ctx.ui.notify(
-					`⊙ Goal set (${state.maxTurns}-turn budget${valInfo}): ${state.goal}`,
+					`\u2299 Goal set (${state.maxTurns}-turn budget${valInfo}): ${state.goal}`,
 					"success",
 				);
 				ctx.ui.setStatus("goal", manager.statusLine());
@@ -622,7 +647,9 @@ export default function (pi: ExtensionAPI) {
 		description: "Add or manage subgoal criteria on the active goal",
 		handler: async (args, ctx) => {
 			if (!manager) manager = new GoalManager(ctx.cwd);
-			const sub = args[0];
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const sub = tokens[0];
 
 			if (!sub) {
 				ctx.ui.notify("Usage: /subgoal <text> | list | remove <N> | clear", "info");
@@ -635,7 +662,7 @@ export default function (pi: ExtensionAPI) {
 					return;
 				}
 				const s = manager.state;
-				if (!s.subgoals.length) {
+				if (!s || !s.subgoals.length) {
 					ctx.ui.notify("(no subgoals — use /subgoal <text> to add criteria)", "info");
 					return;
 				}
@@ -655,7 +682,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (sub === "remove") {
-				const idx = Number.parseInt(args[1] || "", 10);
+				const idx = Number.parseInt(tokens[1] || "", 10);
 				if (Number.isNaN(idx)) {
 					ctx.ui.notify("Usage: /subgoal remove <N>", "error");
 					return;
@@ -670,9 +697,8 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// Add subgoal
-			const text = args.join(" ");
 			try {
-				const added = manager.addSubgoal(text);
+				const added = manager.addSubgoal(raw);
 				ctx.ui.notify(`Added subgoal: ${added}`, "success");
 			} catch (e) {
 				ctx.ui.notify(`Error: ${e}`, "error");

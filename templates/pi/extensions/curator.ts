@@ -61,7 +61,7 @@ type ExtensionAPI = {
 		name: string,
 		options: {
 			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
 	): void;
 };
@@ -479,7 +479,9 @@ export default function (pi: ExtensionAPI) {
 		description: "Manage Guardian skill curator",
 		handler: async (args, ctx) => {
 			if (!curator) curator = new Curator(ctx.cwd);
-			const action = args[0];
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const action = tokens[0];
 
 			if (!action || action === "status") {
 				ctx.ui.notify(curator.statusReport(), "info");
@@ -487,14 +489,14 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "review") {
-				const dryRun = args.includes("--dry-run");
+				const dryRun = tokens.includes("--dry-run");
 				const result = curator.review(dryRun);
 				ctx.ui.notify(result.summary, dryRun ? "info" : "success");
 				return;
 			}
 
 			if (action === "pin") {
-				const name = args[1];
+				const name = tokens[1];
 				if (!name) {
 					ctx.ui.notify("Usage: /curator pin <skill-name>", "error");
 					return;
@@ -508,7 +510,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "unpin") {
-				const name = args[1];
+				const name = tokens[1];
 				if (!name) {
 					ctx.ui.notify("Usage: /curator unpin <skill-name>", "error");
 					return;
@@ -522,7 +524,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "restore") {
-				const name = args[1];
+				const name = tokens[1];
 				if (!name) {
 					ctx.ui.notify("Usage: /curator restore <skill-name>", "error");
 					return;

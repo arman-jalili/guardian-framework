@@ -67,7 +67,7 @@ type ExtensionAPI = {
 		name: string,
 		options: {
 			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
 	): void;
 };
@@ -391,7 +391,9 @@ export default function (pi: ExtensionAPI) {
 		description: "List or manage Guardian shell hooks",
 		handler: async (args, ctx) => {
 			hooksConfig = loadHooksConfig(ctx.cwd);
-			const action = args[0];
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const action = tokens[0];
 
 			if (!action || action === "list") {
 				if (Object.keys(hooksConfig).length === 0) {
@@ -415,7 +417,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "test") {
-				const eventName = args[1];
+				const eventName = tokens[1];
 				if (!eventName) {
 					ctx.ui.notify("Usage: /hooks test <event_name>", "error");
 					return;

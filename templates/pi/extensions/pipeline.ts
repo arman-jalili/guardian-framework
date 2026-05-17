@@ -59,7 +59,7 @@ type ExtensionAPI = {
 		name: string,
 		options: {
 			description: string;
-			handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
+			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
 	): void;
 };
@@ -344,7 +344,11 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
 			const state = manager.getState();
-			const action = args[0];
+
+			// pi passes args as a string. Split into tokens.
+			const raw = typeof args === "string" ? args : "";
+			const tokens = raw.split(/\s+/).filter(Boolean);
+			const action = tokens[0];
 
 			// Status
 			if (!action || action === "status") {
@@ -416,7 +420,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// Start new pipeline: /pipeline <name> --items "a,b,c" --steps "implement,validate" [--merge-on-valid]
-			const name = args[0];
+			const name = tokens[0];
 			if (!name) {
 				ctx.ui.notify(
 					'Usage: /pipeline <name> --items "id1,id2" --steps "implement,validate,create-mr" [--merge-on-valid]',
@@ -425,9 +429,9 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			const itemsFlag = args.find((a) => a.startsWith("--items="));
-			const stepsFlag = args.find((a) => a.startsWith("--steps="));
-			const mergeFlag = args.includes("--merge-on-valid");
+			const itemsFlag = tokens.find((a) => a.startsWith("--items="));
+			const stepsFlag = tokens.find((a) => a.startsWith("--steps="));
+			const mergeFlag = tokens.includes("--merge-on-valid");
 
 			if (!itemsFlag || !stepsFlag) {
 				ctx.ui.notify(
