@@ -99,7 +99,7 @@ function log(ctx: ExtensionContext, message: string, level = "info") {
 
 function runScript(cwd: string, script: string): { exitCode: number; stdout: string } {
 	try {
-		const stdout = execSync(`bash ${script}`, { cwd, timeout: 120_000, encoding: "utf-8" });
+		const stdout = execSync(`bash -c "${script}"`, { cwd, timeout: 120_000, encoding: "utf-8" });
 		return { exitCode: 0, stdout };
 	} catch (e: unknown) {
 		const err = e as { status?: number; stdout?: string; message?: string };
