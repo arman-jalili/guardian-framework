@@ -16,6 +16,7 @@ import { createManifest, readManifest, writeManifest } from "../src/lib/manifest
 import {
 	filterValidators,
 	filterWorkflows,
+	findTemplateDir,
 	getDefaultContext,
 	getPiTemplateFiles,
 	readTemplate,
@@ -387,4 +388,29 @@ describe("retry utilities", () => {
 		expect(fromRetry).toBe(fromQueue); // Same function reference
 		expect(fromRetry(1, 1000, 10000)).toBe(fromQueue(1, 1000, 10000));
 	});
+});
+
+// WORKFLOW.md template tests
+test("WORKFLOW.md template exists at template root", () => {
+	const templateDir = findTemplateDir();
+	const workflowPath = path.join(templateDir, "workflow.md");
+	expect(fs.existsSync(workflowPath)).toBe(true);
+});
+
+test("WORKFLOW.md renders placeholders correctly", () => {
+	const templateDir = findTemplateDir();
+	const workflowPath = path.join(templateDir, "workflow.md");
+	let content = fs.readFileSync(workflowPath, "utf-8");
+
+	content = content.replace(/\[Project Name\]/g, "my-app");
+	content = content.replace(/\[FrameworkVersion\]/g, "1.0.0");
+	content = content.replace(/\[Date\]/g, "2026-05-17");
+
+	expect(content).toContain("# my-app — Agent Workflow");
+	expect(content).toContain("1.0.0");
+	expect(content).toContain("2026-05-17");
+	expect(content).toContain("Agent Workflow");
+	expect(content).not.toContain("[Project Name]");
+	expect(content).not.toContain("[FrameworkVersion]");
+	expect(content).not.toContain("[Date]");
 });

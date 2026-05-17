@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { confirm, isCancel } from "@clack/prompts";
 import {
+	FRAMEWORK_VERSION,
 	type FileCategory,
 	type GuardianManifest,
 	MANIFEST_FILE,
@@ -28,6 +29,7 @@ import {
 import {
 	type Language,
 	type RepoTool,
+	TEMPLATE_DIR,
 	type TemplateContext,
 	type Tool,
 	type Validator,
@@ -163,6 +165,19 @@ async function scaffoldFramework(
 			scaffoldedFiles[filePath] = record;
 		}
 
+		// Generate WORKFLOW.md at project root
+		const workflowPath = path.join(targetDir, "WORKFLOW.md");
+		const workflowTemplatePath = path.join(TEMPLATE_DIR, "workflow.md");
+		if (fs.existsSync(workflowTemplatePath)) {
+			let workflowContent = fs.readFileSync(workflowTemplatePath, "utf-8");
+			workflowContent = workflowContent
+				.replace(/\[Project Name\]/g, options.projectName)
+				.replace(/\[FrameworkVersion\]/g, FRAMEWORK_VERSION)
+				.replace(/\[Date\]/g, new Date().toISOString().split("T")[0]);
+			await fs.promises.writeFile(workflowPath, workflowContent);
+			scaffoldedFiles["WORKFLOW.md"] = { category: "framework", content: workflowContent };
+		}
+
 		if (scaffoldErrors.length > 0) {
 			console.warn(
 				`\n⚠️  Some template files failed to scaffold:\n  ${scaffoldErrors.join("\n  ")}`,
@@ -180,11 +195,12 @@ async function scaffoldFramework(
 Scaffolded Guardian framework:
   .pi/         (source of truth)
   ${exportPaths.join("\n  ")}
+  WORKFLOW.md  (entry point for agents + humans)
 
 Next steps:
-  1. Edit .pi/agent/AGENTS.md to customize project context
-  2. Edit .pi/scripts/*.sh to set build/test/lint commands
-  3. Run: npx guardian-framework generate (after editing .pi/)
+  1. Open WORKFLOW.md — it's your entry point
+  2. Edit .pi/agent/AGENTS.md to customize project context (replace [bracketed] placeholders)
+  3. Run: bash .pi/scripts/ci/run_preflight.sh (before committing)
 `);
 	} catch (error) {
 		s.stop("Scaffold failed!");

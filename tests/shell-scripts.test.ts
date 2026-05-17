@@ -175,8 +175,7 @@ describe("CI scripts — argument handling", () => {
 		const result = Bun.spawnSync(["bash", p]);
 		expect(result.exitCode).toBe(1);
 		const output =
-			new TextDecoder().decode(result.stderr) +
-			new TextDecoder().decode(result.stdout);
+			new TextDecoder().decode(result.stderr) + new TextDecoder().decode(result.stdout);
 		expect(output.toLowerCase()).toContain("error");
 	});
 });

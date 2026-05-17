@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 // When bundled, we need to find the package root
 // Try multiple paths to handle both dev and linked/published scenarios
-function findTemplateDir(): string {
+export function findTemplateDir(): string {
 	const possiblePaths = [
 		// From dist/index.js -> project root
 		path.join(__dirname, "..", "..", "templates"),
@@ -48,7 +48,7 @@ function findTemplateDir(): string {
 	throw new Error("Templates not found. Ensure templates/pi/ exists in package.");
 }
 
-const TEMPLATE_DIR = findTemplateDir();
+export const TEMPLATE_DIR = findTemplateDir();
 const PI_TEMPLATE_DIR = path.join(TEMPLATE_DIR, "pi");
 const LANGUAGES_DIR = path.join(TEMPLATE_DIR, "languages");
 
