@@ -129,31 +129,61 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 	const content = readFileSync(filePath, "utf-8");
 	const components: ModuleComponent[] = [];
 
-	// Parse components from markdown — look for status: fields
+	// The module format uses ## Component Details (or ## Components)
+	// followed by ### ComponentName headers with status: and depends: fields.
+	// We only capture ### headers that appear under a "Component" ## section
+	// AND have a status: field defined.
+
 	const lines = content.split("\n");
+	let inComponentSection = false;
 	let currentName = "";
-	let currentStatus = "planned";
+	let currentStatus = "";
 	let currentDesc = "";
 	let currentDeps: string[] = [];
+
+	function saveCurrent() {
+		if (currentName && currentStatus) {
+			components.push({
+				name: currentName,
+				status: currentStatus as ModuleComponent["status"],
+				description: currentDesc.trim(),
+				dependencies: currentDeps,
+			});
+		}
+	}
 
 	for (const line of lines) {
 		const trimmed = line.trim();
 
-		if (trimmed.match(/^###?\s+/)) {
-			// Save previous component if exists
-			if (currentName) {
-				components.push({
-					name: currentName,
-					status: currentStatus as ModuleComponent["status"],
-					description: currentDesc,
-					dependencies: currentDeps,
-				});
-			}
-			currentName = trimmed.replace(/^###?\s+/, "");
-			currentStatus = "planned";
+		// Detect component section: ## Component Details, ## Components, etc.
+		if (trimmed.match(/^##\s+Component/i)) {
+			inComponentSection = true;
+			continue;
+		}
+		// Next top-level section ends the component section
+		if (inComponentSection && trimmed.match(/^##\s+/)) {
+			saveCurrent();
+			currentName = "";
+			currentStatus = "";
 			currentDesc = "";
 			currentDeps = [];
-		} else if (trimmed.startsWith("status:")) {
+			inComponentSection = false;
+			continue;
+		}
+
+		// Only process ### headers inside the component section
+		if (inComponentSection && trimmed.match(/^###\s+/)) {
+			saveCurrent();
+			currentName = trimmed.replace(/^###\s+/, "");
+			currentStatus = "";
+			currentDesc = "";
+			currentDeps = [];
+			continue;
+		}
+
+		if (!currentName) continue;
+
+		if (trimmed.startsWith("status:")) {
 			currentStatus = trimmed.replace("status:", "").trim().toLowerCase();
 		} else if (trimmed.startsWith("depends:")) {
 			currentDeps = trimmed
@@ -161,25 +191,13 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 				.split(",")
 				.map((d) => d.trim())
 				.filter(Boolean);
-		} else if (
-			trimmed &&
-			!trimmed.startsWith("#") &&
-			!trimmed.startsWith("-") &&
-			trimmed.length > 5
-		) {
-			currentDesc += ` ${trimmed}`;
+		} else if (trimmed.startsWith("**Purpose:**")) {
+			currentDesc = trimmed.replace(/\*\*Purpose:\*\*\s*/, "").trim();
 		}
 	}
 
 	// Save last component
-	if (currentName) {
-		components.push({
-			name: currentName,
-			status: currentStatus as ModuleComponent["status"],
-			description: currentDesc.trim(),
-			dependencies: currentDeps,
-		});
-	}
+	saveCurrent();
 
 	return components;
 }
@@ -468,16 +486,24 @@ export default function (pi: ExtensionAPI) {
 				message += `Module: ${slice.module}\n`;
 				message += "Components to implement:\n";
 				for (const c of slice.nextLogicalSlice) {
-					message += `  - ${c.name} (${c.description.slice(0, 80)})\n`;
+					const desc =
+						c.description.length > 100 ? `${c.description.slice(0, 100)}...` : c.description;
+					message += `  - ${c.name}${desc ? `: ${desc}` : ""}\n`;
 				}
 				message += `\nIssues generated: ${state.issues.length} (${state.issues.length - 1} implementation + 1 architecture readiness)\n`;
-				message += "\nNext steps:\n";
-				message += "1. /architect status — review epic\n";
-				message += "2. Run epic draft validation\n";
-				message += `3. Start pipeline: /pipeline "${epicName}" --items "${state.issues.map((i) => i.id).join(",")}" --steps "implement,validate,create-mr,merge"\n`;
+				message += "\nStarting pipeline now...\n";
 
 				ctx.ui.notify(message, "success");
-				ctx.ui.setStatus("architect", `Epic: ${epicName} (planning)`);
+				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
+
+				// Automatically start the pipeline
+				const items = state.issues.map((i) => i.id).join(",");
+				const pipelineCmd = `/pipeline "${epicName}" --items "${items}" --steps "implement,validate,create-mr,merge" --merge-on-valid`;
+
+				ctx.ui.notify(`\n🚀 Starting pipeline:\n${pipelineCmd}`, "info");
+
+				// The agent will execute the pipeline command as its next action
+				ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
 			} catch (e) {
 				ctx.ui.notify(`Error: ${e}`, "error");
 			}
