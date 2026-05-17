@@ -1,95 +1,93 @@
 ---
 # Guardian Workflow Configuration
-# This front matter defines runtime settings. The body below is the agent prompt.
+# YAML front matter = runtime settings. Body = agent prompt.
 # Changes to this file are detected and re-applied without restart.
 
-# Workspace settings
 workspace:
-  root: ".pi/workspaces"  # Workspace root for isolated agent runs
+  root: ".pi/workspaces"
   hooks:
-    timeout_ms: 60000     # Default hook timeout
+    timeout_ms: 60000
 
-# Retry and backoff
 agent:
   max_turns: 20
-  max_retry_backoff_ms: 300000  # 5 minutes
-  stall_timeout_ms: 300000      # 5 minutes no activity = stall
+  max_retry_backoff_ms: 300000
+  stall_timeout_ms: 300000
 
-# System prompt tier: "full" (default) or "lite" for fast/cheap models
-# Use "lite" for: GPT-4o-mini, Claude Haiku, Gemini Flash, Cerebras, Groq
 system_prompt_tier: full
 
-# Generation settings
 generate:
-  on_conflict: warn       # "overwrite" | "warn" | "skip" — what to do when exports modified externally
-  atomic_writes: true     # Use temp file + rename for all generated files
+  on_conflict: warn
+  atomic_writes: true
 
-# Validation settings
 validate:
-  fail_fast: false        # Stop on first validator failure vs run all
-  timeout_ms: 300000      # Per-validator timeout (5 min)
+  fail_fast: false
+  timeout_ms: 300000
 
-# Standing goal settings (Hermes /goal pattern — Ralph loop)
 goal:
   enabled: true
-  max_turns: 20           # Max auto-continuation turns before pause
-  judge_validator: true   # Run CI + canonical validators as part of completion judge
+  max_turns: 20
+  judge_validator: true
 
-# Kanban task board settings
 kanban:
   enabled: true
-  auto_create_tasks: true # Auto-create tasks for multi-module work
+  auto_create_tasks: true
 
-# Shell hook system settings
 hooks:
-  pre_tool_call: []       # Block dangerous ops, policy enforcement
-  post_tool_call: []      # Auto-format, logging, CI triggers
-  pre_llm_call: []        # Inject git status, validator results, context
-  post_llm_call: []       # Sync to external systems, metrics
-  on_session_start: []    # Initialize state, warm caches
-  on_session_end: []      # Cleanup, persist state
-  subagent_stop: []       # Log subagent completion, audit
+  pre_tool_call: []
+  post_tool_call: []
+  pre_llm_call: []
+  post_llm_call: []
+  on_session_start: []
+  on_session_end: []
+  subagent_stop: []
 
-# Skill curator settings
 curator:
   enabled: true
-  stale_after_days: 30    # Mark skill stale after N days unused
-  archive_after_days: 90  # Archive skill after N days unused
-  auto_review: true       # Auto-review on session start
+  stale_after_days: 30
+  archive_after_days: 90
+  auto_review: true
 
-# Delegation settings
 delegation:
-  max_spawn_depth: 1      # 1 = flat (leaf-only), 2 = orchestrator can spawn leaves
+  max_spawn_depth: 1
   max_concurrent_children: 3
   max_iterations: 50
   child_timeout_ms: 600000
-
-# Environment variable references
-# Use $VAR_NAME syntax in any template value. Resolved from process.env at runtime.
 ---
 
 # Project Context
 
-> **Purpose:** Single source of truth for project-specific knowledge. All agents load this ONCE, not scattered across individual agent files.
-> **Generic:** Replace bracketed placeholders with your project's values.
+> **Purpose:** Single source of truth for project-specific knowledge. All agents load this ONCE.
+> **Customize:** Fill in the sections below for your project. The YAML front matter above already has working defaults.
 
 ## Project Overview
 
 - **Name:** [Project Name]
-- **Version:** [0.1.0]
-- **Language:** [Rust / TypeScript / Python / etc.]
-- **Type:** [CLI / Web App / Library / etc.]
+- **Version:** 0.1.0
+- **Language:** [TypeScript / Python / Rust / Go]
+- **Type:** [CLI / Web App / Library]
 - **Repository:** [owner/repo]
 
 ## Core Principles
 
-> Keep to 5-8 bullet points. These are loaded into EVERY agent's context.
+> These are loaded into EVERY agent's context. Keep to 5-8 items.
 
-1. **[Principle 1]** - [One-line description]
-2. **[Principle 2]** - [One-line description]
-3. **[Principle 3]** - [One-line description]
-4. **[Principle 4]** - [One-line description]
-5. **[Principle 5]** - [One-line description]
+1. **Read before edit** — Always read a file before modifying it. Never mutate blindly.
+2. **Validate early** — Run `bash .pi/scripts/ci/run_preflight.sh` before committing.
+3. **Architecture traceability** — Every implementation file must reference its architecture source in `.pi/architecture/modules/`.
+4. **DRY context** — Shared knowledge lives in `.pi/context/`, not scattered across agent files.
+5. **Shift-left validation** — Plans are validated before code is written.
+
+## Commands
+
+> Essential commands agents need to run. Update these for your project.
+
+| Command | Purpose |
+|---------|---------|
+| `[build command]` | Build project |
+| `[test command]` | Run tests |
+| `[lint command]` | Lint check |
+| `bash .pi/scripts/ci/run_preflight.sh` | Run local preflight checks |
+| `bash .pi/scripts/validate-*.sh` | Run specific validator |
 
 ## Architecture
 
@@ -103,21 +101,24 @@ delegation:
 └── [other dirs]
 ```
 
-### Key Patterns
+### Key Files
 
-> List the 3-5 patterns every agent must follow. No code examples here — those go in `patterns.md`.
+> Files every agent should know about. Keep under 10.
 
-- **[Pattern 1]:** [Description]
-- **[Pattern 2]:** [Description]
-- **[Pattern 3]:** [Description]
+| File | Purpose |
+|------|---------|
+| `.pi/architecture/modules/` | Canonical architecture modules |
+| `.pi/agent/AGENTS.md` | This file — project context + runtime config |
+| `.pi/scripts/` | Validation scripts |
+| `.pi/extensions/` | Pi extensions (tools, commands, hooks) |
 
 ## Quality Gates
 
 ### Before Commit
 
 ```bash
+bash .pi/scripts/ci/run_preflight.sh
 [build command]
-[format command]
 ```
 
 ### Before Push
@@ -127,23 +128,6 @@ delegation:
 [lint command]
 ```
 
-### Before Merge
-
-```bash
-[full test suite]
-[lint check]
-[security audit]
-```
-
-## Scope Classification
-
-| Scope | Files | Lines | Required Validators |
-|-------|-------|-------|---------------------|
-| Simple | 1 | < 50 | ci-mr-validator |
-| Moderate | 2-5 | 50-200 | architecture-validator, ci-mr-validator |
-| Complex | 5-15 | 200-500 | All validators |
-| Critical | 15+ or core | 500+ | All validators + human approval |
-
 ## Subagent Delegation
 
 | Task | Subagent | Tools |
@@ -151,30 +135,8 @@ delegation:
 | Explore codebase | `explore` | read-only (read, grep, glob) |
 | Code review | `code-review` | read-only (read, grep, glob) |
 | Security audit | `security-review` | read-only (read, grep, glob) |
-| Multi-file research | `general-research` | read-only (read, grep, glob) |
 
-Subagents have **restricted tool access** and **fresh context**. Include all relevant context in the spawn prompt. They cannot spawn other subagents (no recursion).
-
-## Key Files
-
-> Files every agent should know about. Keep under 10.
-
-| File | Purpose |
-|------|---------|
-| [docs/ARCHITECTURE.md] | [Complete specification] |
-| [src/orchestrator.rs] | [Main coordinator] |
-| [src/error.rs] | [Error types] |
-
-## Commands
-
-> Essential commands agents need to run.
-
-| Command | Purpose |
-|---------|---------|
-| `[build]` | [Build project] |
-| `[test]` | [Run tests] |
-| `[lint]` | [Lint check] |
-| `[audit]` | [Security audit] |
+Subagents have **restricted tool access** and **fresh context**. Include all relevant context in the spawn prompt.
 
 ## Snippets
 
@@ -186,24 +148,19 @@ Available `#handle` tokens for quick instruction injection:
 | `#no-comments` | Suppress comments unless WHY is non-obvious |
 | `#test-first` | TDD workflow instructions |
 
-See `.pi/skills/agents/snippets.md` for full snippet management.
-
 ## Environment
 
-> Variables agents may reference. Use `$VAR_NAME` in scripts — do NOT embed secrets in templates.
+> Variables agents may reference. Use `$VAR_NAME` in scripts.
 
 | Variable | Purpose |
 |----------|---------|
 | `$GITHUB_TOKEN` | GitHub API authentication |
 | `$CI` | CI environment indicator |
-| `$BUILD_NUMBER` | Build identifier |
 
 ## Security Guards
 
-Path safety guards are enforced at the extension level (`.pi/extensions/bash-guard.ts`):
+Path safety guards are enforced by extensions (`.pi/extensions/bash-guard.ts`):
 
 - **Read blocklist:** `.env*`, `*.pem`, `*.key`, `.ssh/*`, `.aws/*`, `.git/*`
 - **Write blocklist:** Inherits read restrictions + `/etc/`, `/System/`, `/private/`
 - **Command deny-list:** `rm -rf /`, `mkfs`, `dd of=/dev/*`, `terraform destroy`, `kubectl delete`
-
-See `.pi/skills/validators/security-guards.md` for the full policy.

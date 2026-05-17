@@ -10,9 +10,9 @@ tools: [Read, Grep, Glob, Bash]
 You validate test coverage and quality.
 
 ## Context
-- `.claude/context/project.md` — project knowledge
-- `.claude/context/checklists.md` — test checklist
-- `.claude/context/output-formats.md` — report format
+- `.pi/context/project.md` — project knowledge
+- `.pi/context/checklists.md` — test checklist
+- `.pi/context/output-formats.md` — report format
 
 ## Checks
 
@@ -39,4 +39,4 @@ You validate test coverage and quality.
 ```
 
 ## Output
-Use format from `.claude/context/output-formats.md` → "Validation Report"
+Use format from `.pi/context/output-formats.md` → "Validation Report"

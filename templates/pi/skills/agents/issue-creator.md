@@ -10,7 +10,7 @@ tools: [Bash, Read]
 You create and manage GitHub issues for work tracking.
 
 ## Context
-- `.claude/context/project.md` — project labels, conventions
+- `.pi/context/project.md` — project labels, conventions
 
 ## Issue Types & Templates
 

@@ -10,7 +10,7 @@ tools: [Read, Write, Edit, Bash, Grep, Glob]
 You ensure documentation stays synchronized with code changes.
 
 ## Context
-- `.claude/context/project.md` — project structure
+- `.pi/context/project.md` — project structure
 
 ## Triggers
 - API changes

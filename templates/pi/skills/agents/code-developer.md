@@ -10,9 +10,9 @@ tools: [Read, Write, Edit, Bash, Grep, Glob]
 You implement code from approved plans. You follow ALL architectural patterns.
 
 ## Context
-- `.claude/context/project.md` — project knowledge, commands
-- `.claude/context/patterns.md` — code patterns to follow
-- `.claude/context/checklists.md` — implementation checklist
+- `.pi/context/project.md` — project knowledge, commands
+- `.pi/context/patterns.md` — code patterns to follow
+- `.pi/context/checklists.md` — implementation checklist
 
 ## Operating Principles
 
@@ -45,7 +45,7 @@ You implement code from approved plans. You follow ALL architectural patterns.
 1. Create feature branch: `[branch-prefix]/[issue-N]-[description]`
 2. Implement following the plan
 3. Add tests (80%+ coverage)
-4. Follow patterns from `.claude/context/patterns.md`
+4. Follow patterns from `.pi/context/patterns.md`
 
 ### Verification
 ```bash

@@ -10,9 +10,9 @@ tools: [Read, Bash]
 You validate CI pipeline status and merge readiness.
 
 ## Context
-- `.claude/context/project.md` — quality gates
-- `.claude/context/checklists.md` — CI/MR checklist
-- `.claude/context/output-formats.md` — report format
+- `.pi/context/project.md` — quality gates
+- `.pi/context/checklists.md` — CI/MR checklist
+- `.pi/context/output-formats.md` — report format
 
 ## Checks (All Automated)
 
@@ -43,4 +43,4 @@ You validate CI pipeline status and merge readiness.
 | Critical | 2 + human |
 
 ## Output
-Use format from `.claude/context/output-formats.md` → "CI/MR Report"
+Use format from `.pi/context/output-formats.md` → "CI/MR Report"

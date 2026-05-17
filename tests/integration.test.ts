@@ -414,3 +414,32 @@ test("WORKFLOW.md renders placeholders correctly", () => {
 	expect(content).not.toContain("[FrameworkVersion]");
 	expect(content).not.toContain("[Date]");
 });
+
+// No duplicate docs — only INDEX.md should exist, not README.md
+test("No duplicate INDEX.md + README.md in templates/pi/", () => {
+	const templateDir = findTemplateDir();
+	const hasIndex = fs.existsSync(path.join(templateDir, "pi", "INDEX.md"));
+	const hasReadme = fs.existsSync(path.join(templateDir, "pi", "README.md"));
+	expect(hasIndex).toBe(true);
+	expect(hasReadme).toBe(false); // README.md was removed to avoid duplication
+});
+
+// Skills reference .pi/context/, not .claude/context/
+test("Agent skills reference .pi/context/ not .claude/context/", () => {
+	const templateDir = findTemplateDir();
+	const skillsDir = path.join(templateDir, "pi", "skills");
+	const skillFiles = [];
+	function walk(dir: string) {
+		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+			const full = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(full);
+			else if (entry.name.endsWith(".md")) skillFiles.push(full);
+		}
+	}
+	if (fs.existsSync(skillsDir)) walk(skillsDir);
+
+	for (const file of skillFiles) {
+		const content = fs.readFileSync(file, "utf-8");
+		expect(content).not.toMatch(/\.claude\/context\//);
+	}
+});
