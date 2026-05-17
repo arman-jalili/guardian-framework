@@ -108,6 +108,22 @@ function runScript(cwd: string, script: string): { exitCode: number; stdout: str
 	}
 }
 
+
+// Read repoTool from guardian-manifest.json (defaults to "gh")
+function readRepoTool(cwd: string): string {
+	try {
+		const manifestPath = join(cwd, 'guardian-manifest.json');
+		if (existsSync(manifestPath)) {
+			const raw = readFileSync(manifestPath, 'utf-8');
+			const manifest = JSON.parse(raw) as { repoTool?: string };
+			if (manifest.repoTool === 'glab') return 'glab';
+		}
+	} catch {
+		// fall through to default
+	}
+	return 'gh';
+}
+
 // ── Architecture Discovery ──
 
 function discoverModules(cwd: string): string[] {
@@ -637,59 +653,133 @@ export default function (pi: ExtensionAPI) {
 						runScript(ctx.cwd, "git init");
 						runScript(ctx.cwd, "git add .");
 						runScript(ctx.cwd, 'git commit -m "Initial Guardian scaffold"');
-						gitInitMessage = "\n✓ Git repository initialized";
+						gitInitMessage = "\n\u2713 Git repository initialized";
 					}
 				} catch {
-					gitInitMessage = "\n⚠ Git init skipped";
+					gitInitMessage = "\n\u26a0 Git init skipped";
 				}
 
-				// Step 2: Create GitLab repo if glab is available
+				// Step 2: Create remote repository if not already present
+				const tool = readRepoTool(ctx.cwd);
 				let repoMessage = "";
-				let repoUrl = "";
+				let remoteUrl = "";
 				try {
-					const createResult = runScript(
-						ctx.cwd,
-						`glab repo create --private --description "Epic: ${epicName}" --name "${slice.module}" 2>&1`,
-					);
-					if (createResult.exitCode === 0) {
-						repoMessage = "\n✓ GitLab repository created";
-						const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
-						if (urlMatch) repoUrl = urlMatch[0];
+					const remoteCheck = runScript(ctx.cwd, "git remote get-url origin 2>/dev/null");
+					if (remoteCheck.exitCode !== 0) {
+						if (tool === "gh") {
+							const createResult = runScript(
+								ctx.cwd,
+								`gh repo create --private --description "Epic: ${epicName}" 2>&1`,
+							);
+							if (createResult.exitCode === 0) {
+								repoMessage = "\n\u2713 GitHub repository created";
+								const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
+								if (urlMatch) remoteUrl = urlMatch[0];
+							}
+						} else {
+							const createResult = runScript(
+								ctx.cwd,
+								`glab repo create --private --description "Epic: ${epicName}" 2>&1`,
+							);
+							if (createResult.exitCode === 0) {
+								repoMessage = "\n\u2713 GitLab repository created";
+								const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
+								if (urlMatch) remoteUrl = urlMatch[0];
+							}
+						}
+					} else {
+						remoteUrl = remoteCheck.stdout.trim();
+						repoMessage = "\n\u2713 Remote already configured";
 					}
 				} catch {
-					repoMessage = "\n⚠ GitLab repo creation skipped (glab not configured)";
+					repoMessage = "\n\u26a0 Remote repo creation skipped (" + tool + " not configured)";
 				}
 
-				// Step 3: Create GitLab epic and issues if repo was created
+				// Step 3: Create epic/issues in GitHub or GitLab
 				let issueMessage = "";
-				if (repoUrl) {
+				if (remoteUrl) {
 					try {
-						const epicResult = runScript(
-							ctx.cwd,
-							`glab issue create --title "Epic: ${epicName}" --description "Epic for ${slice.module}" --label epic 2>&1`,
-						);
-						if (epicResult.exitCode === 0) {
-							issueMessage = "\n✓ Epic created in GitLab";
-						}
-
-						for (const issue of state.issues || []) {
-							const comp = components.find((c) =>
-								issue.id.toLowerCase().includes(c.name.toLowerCase().replace(/\s+/g, "-")),
-							);
-							const desc = comp?.description || "";
-							runScript(
+						if (tool === "gh") {
+							// Create milestone to serve as epic
+							const milestoneResult = runScript(
 								ctx.cwd,
-								`glab issue create --title "${issue.title}" --description "${desc}" --label implementation 2>&1`,
+								`gh api repos/$(gh repo view --json owner -q .owner.login)/$(gh repo view --json name -q .name)/milestones -f title="${epicName}" -f description="Epic for ${slice.module}" -f state="open" 2>&1`,
 							);
+							if (milestoneResult.exitCode === 0) {
+								issueMessage = "\n\u2713 Epic milestone created in GitHub";
+							}
+
+							// Create individual issues
+							const issuesCreated: string[] = [];
+							for (const issue of state.issues || []) {
+								const comp = components.find((c) =>
+									issue.id.toLowerCase().includes(c.name.toLowerCase().replace(/\s+/g, "-")),
+								);
+								const desc = comp?.description || issue.title;
+								// Read the full issue markdown file for body
+								const issueFilename = `${issue.id}.md`.replace(/\//g, "-");
+								const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+								let issueBody = desc;
+								try {
+									if (existsSync(issuePath)) {
+										issueBody = readFileSync(issuePath, "utf-8");
+									}
+								} catch { /* use desc as fallback */ }
+
+								const createResult = runScript(
+									ctx.cwd,
+									`gh issue create --title "${issue.title}" --body '${issueBody.replace(/'/g, "'\"'\"'")}' --label implementation --milestone "${epicName}" 2>&1`,
+								);
+								if (createResult.exitCode === 0) {
+									const issueUrl = createResult.stdout.trim();
+									issuesCreated.push(issueUrl);
+								}
+							}
+							if (issuesCreated.length > 0) {
+								issueMessage += `\n\u2713 ${issuesCreated.length} issues created in GitHub`;
+							}
+						} else {
+							// GitLab
+							const epicResult = runScript(
+								ctx.cwd,
+								`glab issue create --title "Epic: ${epicName}" --description "Epic for ${slice.module}" --label epic 2>&1`,
+							);
+							if (epicResult.exitCode === 0) {
+								issueMessage = "\n\u2713 Epic created in GitLab";
+							}
+
+							const issuesCreated: string[] = [];
+							for (const issue of state.issues || []) {
+								const comp = components.find((c) =>
+									issue.id.toLowerCase().includes(c.name.toLowerCase().replace(/\s+/g, "-")),
+								);
+								const desc = comp?.description || issue.title;
+								const issueFilename = `${issue.id}.md`.replace(/\//g, "-");
+								const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+								let issueBody = desc;
+								try {
+									if (existsSync(issuePath)) {
+										issueBody = readFileSync(issuePath, "utf-8");
+									}
+								} catch { /* use desc as fallback */ }
+
+								runScript(
+									ctx.cwd,
+									`glab issue create --title "${issue.title}" --description '${issueBody.replace(/'/g, "'\"'\"'")}' --label implementation 2>&1`,
+								);
+								issuesCreated.push(issue.id);
+							}
+							if (issuesCreated.length > 0) {
+								issueMessage += `\n\u2713 ${issuesCreated.length} issues created in GitLab`;
+							}
 						}
-						issueMessage += `\n✓ ${(state.issues || []).length} issues created in GitLab`;
 					} catch {
-						issueMessage = "\n⚠ GitLab issue creation skipped";
+						issueMessage = "\n\u26a0 Issue creation skipped";
 					}
 				}
 
 				// Build status message
-				let message = `▶ Epic "${epicName}" started\n`;
+				let message = `\u25b6 Epic "${epicName}" started\n`;
 				message += `Module: ${slice.module}\n`;
 				message += gitInitMessage;
 				message += repoMessage;
@@ -702,12 +792,11 @@ export default function (pi: ExtensionAPI) {
 				}
 				message += `\nIssues generated: ${(state.issues || []).length}\n`;
 				message += "\nIssue files created in .pi/issues/\n";
-				message += "\nStarting pipeline now...\n";
 
 				ctx.ui.notify(message, "success");
 				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
 
-				// Create pipeline state
+				// Step 4: Start the pipeline and instruct the agent to begin implementing
 				const steps = [
 					{ name: "implement", acceptance: { type: "validator", validators: ["ci"] } },
 					{
@@ -717,51 +806,78 @@ export default function (pi: ExtensionAPI) {
 					{ name: "create-mr", acceptance: { type: "none" } },
 					{ name: "merge", acceptance: { type: "validator", validators: ["ci", "canonical"] } },
 				];
-				const pipelineState = {
-					id: `PL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
-					name: epicName,
-					items,
-					steps,
-					currentItemIndex: 0,
-					currentStepIndex: 0,
-					status: "running",
-					retryCount: 0,
-					results: [],
-					mergeOnValid: true,
-					createdAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-				};
 
 				try {
+					// Start pipeline via pipeline_start tool
+					const pipelineResult = await ctx.tools.execute("pipeline_start", {
+						name: epicName,
+						items: items.join(","),
+						steps: steps.map((s) => s.name).join(","),
+						mergeOnValid: true,
+					});
+
+					const firstItem = items[0];
+					const firstDesc = components[0]?.description || "Implementation";
+
+					// Fetch the full next task prompt (includes issue context + step instructions)
+					const nextTaskResult = await ctx.tools.execute("pipeline_next_task", {
+						issueId: firstItem,
+					});
+
+					const taskText = typeof nextTaskResult === "string"
+						? nextTaskResult
+						: JSON.stringify(nextTaskResult);
+
+					ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
+
+					// Notify agent with the full task context so it starts implementing immediately
+					ctx.ui.notify(
+						`\n\ud83d\ude80 Pipeline started — begin implementing now.\n\n${taskText}`,
+						"success",
+					);
+				} catch (e) {
+					// Fallback: write pipeline state directly and notify
+					const pipelineId = `PL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
+					const pipelineState = {
+						id: pipelineId,
+						name: epicName,
+						items,
+						steps,
+						currentItemIndex: 0,
+						currentStepIndex: 0,
+						status: "running",
+						retryCount: 0,
+						results: [],
+						mergeOnValid: true,
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					};
 					const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
 					writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
 
 					const firstItem = items[0];
 					const firstDesc = components[0]?.description || "Implementation";
+					const issueFilename = `${firstItem}.md`.replace(/\//g, "-");
+					const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+					let issueContent = "";
+					try {
+						if (existsSync(issuePath)) {
+							issueContent = readFileSync(issuePath, "utf-8");
+						}
+					} catch { /* fallback */ }
 
+					ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
 					ctx.ui.notify(
-						`\n🚀 Pipeline ${pipelineState.id} started\n\n**Current task:** Item "${firstItem}" → Step: implement\n**Description:** ${firstDesc.slice(0, 100)}...`,
+						`\n\ud83d\ude80 Pipeline ${pipelineId} started\n\n**Current task:** Item "${firstItem}" \u2192 Step: implement\n**Description:** ${firstDesc}\n\n**Instructions:**\n1. Read the issue file: .pi/issues/${issueFilename}\n2. Implement the component according to the issue spec\n3. Run \`pipeline_run_acceptance\` to validate\n4. Call \`pipeline_advance\` when done\n\n---\n\n## Issue Context\n\n${issueContent || "Issue file not found."}`,
 						"success",
 					);
-					ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
-
-					// Return continuation prompt to agent
-					return {
-						content: [
-							{
-								type: "text",
-								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nIssue file: .pi/issues/${firstItem}.md\nPlease read the issue file and start working.`,
-							},
-						],
-					};
-				} catch (e) {
-					ctx.ui.notify(`Pipeline start failed: ${e}`, "warn");
 				}
 			} catch (e) {
 				ctx.ui.notify(`Architect error: ${e}`, "error");
 			}
 		},
 	});
+
 
 	// ── architect_status tool ──
 	pi.registerTool({
