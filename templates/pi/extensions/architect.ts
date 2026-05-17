@@ -108,20 +108,19 @@ function runScript(cwd: string, script: string): { exitCode: number; stdout: str
 	}
 }
 
-
 // Read repoTool from guardian-manifest.json (defaults to "gh")
 function readRepoTool(cwd: string): string {
 	try {
-		const manifestPath = join(cwd, 'guardian-manifest.json');
+		const manifestPath = join(cwd, "guardian-manifest.json");
 		if (existsSync(manifestPath)) {
-			const raw = readFileSync(manifestPath, 'utf-8');
+			const raw = readFileSync(manifestPath, "utf-8");
 			const manifest = JSON.parse(raw) as { repoTool?: string };
-			if (manifest.repoTool === 'glab') return 'glab';
+			if (manifest.repoTool === "glab") return "glab";
 		}
 	} catch {
 		// fall through to default
 	}
-	return 'gh';
+	return "gh";
 }
 
 // ── Architecture Discovery ──
@@ -669,7 +668,7 @@ export default function (pi: ExtensionAPI) {
 						if (tool === "gh") {
 							const createResult = runScript(
 								ctx.cwd,
-								`gh repo create --private --description "Epic: ${epicName}" 2>&1`,
+								`gh repo create "${slice.module}" --private --description "Epic: ${epicName}" 2>&1`,
 							);
 							if (createResult.exitCode === 0) {
 								repoMessage = "\n\u2713 GitHub repository created";
@@ -679,7 +678,7 @@ export default function (pi: ExtensionAPI) {
 						} else {
 							const createResult = runScript(
 								ctx.cwd,
-								`glab repo create --private --description "Epic: ${epicName}" 2>&1`,
+								`glab repo create "${slice.module}" --private --description "Epic: ${epicName}" 2>&1`,
 							);
 							if (createResult.exitCode === 0) {
 								repoMessage = "\n\u2713 GitLab repository created";
@@ -692,7 +691,7 @@ export default function (pi: ExtensionAPI) {
 						repoMessage = "\n\u2713 Remote already configured";
 					}
 				} catch {
-					repoMessage = "\n\u26a0 Remote repo creation skipped (" + tool + " not configured)";
+					repoMessage = `\n\u26a0 Remote repo creation skipped (${tool} not configured)`;
 				}
 
 				// Step 3: Create epic/issues in GitHub or GitLab
@@ -724,7 +723,9 @@ export default function (pi: ExtensionAPI) {
 									if (existsSync(issuePath)) {
 										issueBody = readFileSync(issuePath, "utf-8");
 									}
-								} catch { /* use desc as fallback */ }
+								} catch {
+									/* use desc as fallback */
+								}
 
 								const createResult = runScript(
 									ctx.cwd,
@@ -761,7 +762,9 @@ export default function (pi: ExtensionAPI) {
 									if (existsSync(issuePath)) {
 										issueBody = readFileSync(issuePath, "utf-8");
 									}
-								} catch { /* use desc as fallback */ }
+								} catch {
+									/* use desc as fallback */
+								}
 
 								runScript(
 									ctx.cwd,
@@ -807,77 +810,68 @@ export default function (pi: ExtensionAPI) {
 					{ name: "merge", acceptance: { type: "validator", validators: ["ci", "canonical"] } },
 				];
 
+				// Write pipeline state directly (cross-extension tool calls don't work in pi)
+				const pipelineId = `PL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
+				const pipelineState = {
+					id: pipelineId,
+					name: epicName,
+					items,
+					steps,
+					currentItemIndex: 0,
+					currentStepIndex: 0,
+					status: "running",
+					retryCount: 0,
+					results: [],
+					mergeOnValid: true,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+				const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
+				writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
+
+				const firstItem = items[0];
+				const firstDesc = components[0]?.description || "Implementation";
+				const issueFilename = `${firstItem}.md`.replace(/\//g, "-");
+				const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+				let issueContent = "";
 				try {
-					// Start pipeline via pipeline_start tool
-					const pipelineResult = await ctx.tools.execute("pipeline_start", {
-						name: epicName,
-						items: items.join(","),
-						steps: steps.map((s) => s.name).join(","),
-						mergeOnValid: true,
-					});
-
-					const firstItem = items[0];
-					const firstDesc = components[0]?.description || "Implementation";
-
-					// Fetch the full next task prompt (includes issue context + step instructions)
-					const nextTaskResult = await ctx.tools.execute("pipeline_next_task", {
-						issueId: firstItem,
-					});
-
-					const taskText = typeof nextTaskResult === "string"
-						? nextTaskResult
-						: JSON.stringify(nextTaskResult);
-
-					ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
-
-					// Notify agent with the full task context so it starts implementing immediately
-					ctx.ui.notify(
-						`\n\ud83d\ude80 Pipeline started — begin implementing now.\n\n${taskText}`,
-						"success",
-					);
-				} catch (e) {
-					// Fallback: write pipeline state directly and notify
-					const pipelineId = `PL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
-					const pipelineState = {
-						id: pipelineId,
-						name: epicName,
-						items,
-						steps,
-						currentItemIndex: 0,
-						currentStepIndex: 0,
-						status: "running",
-						retryCount: 0,
-						results: [],
-						mergeOnValid: true,
-						createdAt: new Date().toISOString(),
-						updatedAt: new Date().toISOString(),
-					};
-					const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
-					writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
-
-					const firstItem = items[0];
-					const firstDesc = components[0]?.description || "Implementation";
-					const issueFilename = `${firstItem}.md`.replace(/\//g, "-");
-					const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
-					let issueContent = "";
-					try {
-						if (existsSync(issuePath)) {
-							issueContent = readFileSync(issuePath, "utf-8");
-						}
-					} catch { /* fallback */ }
-
-					ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
-					ctx.ui.notify(
-						`\n\ud83d\ude80 Pipeline ${pipelineId} started\n\n**Current task:** Item "${firstItem}" \u2192 Step: implement\n**Description:** ${firstDesc}\n\n**Instructions:**\n1. Read the issue file: .pi/issues/${issueFilename}\n2. Implement the component according to the issue spec\n3. Run \`pipeline_run_acceptance\` to validate\n4. Call \`pipeline_advance\` when done\n\n---\n\n## Issue Context\n\n${issueContent || "Issue file not found."}`,
-						"success",
-					);
+					if (existsSync(issuePath)) {
+						issueContent = readFileSync(issuePath, "utf-8");
+					}
+				} catch {
+					/* fallback */
 				}
+
+				ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
+
+				// Return the continuation prompt to the agent — this is what actually
+				// instructs the agent to start working. ctx.ui.notify() is UI-only and
+				// doesn't inject instructions into the agent's conversation context.
+				const instructions = [
+					`\ud83d\ude80 Pipeline ${pipelineId} started`,
+					"",
+					`**Current task:** Item "${firstItem}" \u2192 Step: implement`,
+					`**Description:** ${firstDesc.slice(0, 100)}...`,
+					"",
+					"**Instructions:**",
+					`1. Read the issue file: .pi/issues/${issueFilename}`,
+					"2. Implement the component according to the issue spec",
+					"3. Run `pipeline_run_acceptance` to validate",
+					"4. Call `pipeline_advance` when done",
+					"",
+					"---",
+					"",
+					"## Issue Context",
+					"",
+					issueContent || "Issue file not found.",
+				].join("\n");
+
+				return { content: [{ type: "text", text: instructions }] };
 			} catch (e) {
 				ctx.ui.notify(`Architect error: ${e}`, "error");
 			}
 		},
 	});
-
 
 	// ── architect_status tool ──
 	pi.registerTool({
