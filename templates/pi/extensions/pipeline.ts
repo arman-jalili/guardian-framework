@@ -654,7 +654,8 @@ export default function (pi: ExtensionAPI) {
 			const step = state.steps[state.currentStepIndex];
 			if (!step) return { content: [{ type: "text" as const, text: "No more steps." }] };
 
-			const issuePath = join(ctx.cwd, ".pi/issues", `${issueId}.md`);
+			const issueFilename = `${issueId}.md`.replace(/\//g, "-");
+			const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
 			let issueContent = "";
 			try {
 				issueContent = readFileSync(issuePath, "utf-8");

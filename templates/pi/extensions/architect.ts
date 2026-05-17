@@ -435,7 +435,7 @@ class EpicManager {
 
 		for (let i = 0; i < slice.nextLogicalSlice.length; i++) {
 			const component = slice.nextLogicalSlice[i];
-			const issueId = `issue-${component.name.toLowerCase().replace(/\s+/g, "-")}`;
+			const issueId = `issue-${component.name.toLowerCase().replace(/\s+/g, "-").replace(/\//g, "-")}`;
 			issues.push({
 				id: issueId,
 				title: `Implement: ${component.name}`,
@@ -449,7 +449,8 @@ class EpicManager {
 				i,
 				slice.nextLogicalSlice.length,
 			);
-			const issueFilePath = join(issuesDir, `${issueId}.md`);
+			const issueFilename = `${issueId}.md`.replace(/\//g, "-");
+			const issueFilePath = join(issuesDir, issueFilename);
 			writeFileSync(issueFilePath, issueMarkdown);
 		}
 
@@ -484,7 +485,7 @@ Ensure the ${slice.module} module is production-ready with runbook, DR plan, doc
 - Canonical references synced
 - Observability patterns in place
 `;
-		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
+		writeFileSync(join(issuesDir, `${readinessId}.md`.replace(/\//g, "-")), readinessMarkdown);
 
 		this.state = {
 			name,
