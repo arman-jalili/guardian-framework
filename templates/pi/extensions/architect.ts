@@ -432,7 +432,14 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			if (!manager) manager = new ArchitectManager(ctx.cwd);
 			const raw = typeof args === "string" ? args : "";
-			const tokens = raw.split(/\s+/).filter(Boolean);
+			const tokens = raw ? raw.split(/\s+/).filter(Boolean) : [];
+			if (tokens.length === 0) {
+				ctx.ui.notify(
+					"Usage: /architect [--epic Name] [--tracking-issue N] | status | next-epic | abort",
+					"info",
+				);
+				return;
+			}
 			const action = tokens[0];
 
 			if (!action || action === "status") {
@@ -474,9 +481,37 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			try {
+				// Validate epic name
+				if (!epicName || epicName.trim() === "") {
+					ctx.ui.notify('Usage: /architect --epic "Epic Name"', "error");
+					return;
+				}
+
 				const state = manager.startEpic(ctx, epicName, trackingIssueId);
+
+				// Defensive: verify state was created properly
+				if (!state || !state.slices || state.slices.length === 0) {
+					ctx.ui.notify(
+						"Failed to discover architecture components. Check .pi/architecture/modules/.",
+						"error",
+					);
+					return;
+				}
+
 				const slice = state.slices[0];
-				const issues = state.issues;
+				const components = slice.nextLogicalSlice || [];
+
+				if (components.length === 0) {
+					ctx.ui.notify("No planned components found in architecture module.", "error");
+					return;
+				}
+
+				// Build items list with defensive checks
+				const items = (state.issues || []).map((i) => i.id);
+				if (items.length === 0) {
+					ctx.ui.notify("Failed to generate issues.", "error");
+					return;
+				}
 
 				// Step 1: Initialize git if not already done
 				let gitInitMessage = "";
@@ -489,7 +524,7 @@ export default function (pi: ExtensionAPI) {
 						gitInitMessage = "\n✓ Git repository initialized";
 					}
 				} catch (e) {
-					gitInitMessage = `\n⚠ Git init skipped: ${e}`;
+					gitInitMessage = "\n⚠ Git init skipped";
 				}
 
 				// Step 2: Create GitLab repo if glab is available
@@ -502,7 +537,6 @@ export default function (pi: ExtensionAPI) {
 					);
 					if (createResult.exitCode === 0) {
 						repoMessage = "\n✓ GitLab repository created";
-						// Extract repo URL from output
 						const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
 						if (urlMatch) repoUrl = urlMatch[0];
 					}
@@ -510,26 +544,21 @@ export default function (pi: ExtensionAPI) {
 					repoMessage = "\n⚠ GitLab repo creation skipped (glab not configured)";
 				}
 
-				// Step 3: Create GitLab epic and issues if glab is available
+				// Step 3: Create GitLab epic and issues if repo was created
 				let issueMessage = "";
-				let epicId = "";
 				if (repoUrl) {
 					try {
-						// Create epic
 						const epicResult = runScript(
 							ctx.cwd,
 							`glab issue create --title "Epic: ${epicName}" --description "Epic for ${slice.module}" --label epic 2>&1`,
 						);
 						if (epicResult.exitCode === 0) {
-							const epicUrlMatch = epicResult.stdout.match(/https?:\/\/[^\s]+/);
-							if (epicUrlMatch) epicId = epicUrlMatch[0];
 							issueMessage = "\n✓ Epic created in GitLab";
 						}
 
-						// Create issues for each component
-						for (const issue of issues) {
-							const comp = slice.nextLogicalSlice.find((c) =>
-								issue.id.includes(c.name.toLowerCase().replace(/\s+/g, "-")),
+						for (const issue of state.issues || []) {
+							const comp = components.find((c) =>
+								issue.id.toLowerCase().includes(c.name.toLowerCase().replace(/\s+/g, "-")),
 							);
 							const desc = comp?.description || "";
 							runScript(
@@ -537,31 +566,30 @@ export default function (pi: ExtensionAPI) {
 								`glab issue create --title "${issue.title}" --description "${desc}" --label implementation 2>&1`,
 							);
 						}
-						issueMessage += `\n✓ ${issues.length} issues created in GitLab`;
+						issueMessage += `\n✓ ${(state.issues || []).length} issues created in GitLab`;
 					} catch {
 						issueMessage = "\n⚠ GitLab issue creation skipped";
 					}
 				}
 
+				// Build status message
 				let message = `▶ Epic "${epicName}" started\n`;
 				message += `Module: ${slice.module}\n`;
 				message += gitInitMessage;
 				message += repoMessage;
 				message += issueMessage;
 				message += "\n\nComponents to implement:\n";
-				for (const c of slice.nextLogicalSlice) {
+				for (const c of components) {
 					const desc =
 						c.description.length > 100 ? `${c.description.slice(0, 100)}...` : c.description;
 					message += `  - ${c.name}${desc ? `: ${desc}` : ""}\n`;
 				}
-				message += `\nIssues generated: ${state.issues.length} (${state.issues.length - 1} implementation + 1 architecture readiness)\n`;
-				message += "\nStarting pipeline now...\n";
+				message += `\nIssues generated: ${(state.issues || []).length}\n`;
 
 				ctx.ui.notify(message, "success");
 				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
 
-				// Create pipeline state file directly (shared filesystem with pipeline extension)
-				const items = state.issues.map((i) => i.id);
+				// Create pipeline state
 				const steps = [
 					{ name: "implement", acceptance: { type: "validator", validators: ["ci"] } },
 					{
@@ -578,46 +606,33 @@ export default function (pi: ExtensionAPI) {
 					steps,
 					currentItemIndex: 0,
 					currentStepIndex: 0,
-					status: "running" as const,
+					status: "running",
 					retryCount: 0,
 					results: [],
 					mergeOnValid: true,
 					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
 				};
-				const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
+
 				try {
+					const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
 					writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
+
+					const firstItem = items[0];
+					const firstDesc = components[0]?.description || "Implementation";
+
 					ctx.ui.notify(
-						`\n🚀 Pipeline started: ${pipelineState.id}\nItems: ${items.length} × ${steps.length} steps = ${items.length * steps.length} total steps\nCurrent: ${items[0]} → implement`,
+						`\n🚀 Pipeline ${pipelineState.id} started\n\n**Current task:** Item "${firstItem}" → Step: implement\n**Description:** ${firstDesc.slice(0, 100)}...`,
 						"success",
 					);
 					ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
 
-					// Add a session entry to prompt the agent to continue
-					const firstItem = items[0];
-					const firstDesc = slice.nextLogicalSlice[0]?.description || "Implementation";
-					pi.appendEntry({
-						type: "custom",
-						key: "pipeline_continuation",
-						data: {
-							pipelineId: pipelineState.id,
-							currentItem: firstItem,
-							currentStep: "implement",
-							description: firstDesc,
-						},
-						timestamp: Date.now(),
-					});
-
-					ctx.ui.notify(
-						`\n🚀 Pipeline ${pipelineState.id} started\n\n**Current task:** Item "${firstItem}" → Step: implement\n**Description:** ${firstDesc.slice(0, 100)}...\n\nThe agent should now begin implementation.`,
-						"success",
-					);
+					// Return continuation prompt to agent
 					return {
 						content: [
 							{
 								type: "text",
-								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nPlease start working on the first issue.`,
+								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nPlease start working on this issue.`,
 							},
 						],
 					};
@@ -625,7 +640,7 @@ export default function (pi: ExtensionAPI) {
 					ctx.ui.notify(`Pipeline start failed: ${e}`, "warn");
 				}
 			} catch (e) {
-				ctx.ui.notify(`Error: ${e}`, "error");
+				ctx.ui.notify(`Architect error: ${e}`, "error");
 			}
 		},
 	});
