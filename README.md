@@ -446,6 +446,7 @@ MIT
 ## Links
 
 - **Source:** https://github.com/arman-jalili/guardian-framework
+- **Complete Usage Guide:** [docs/guardian-complete-usage.md](docs/guardian-complete-usage.md)
 - **Design Spec:** [docs/guardian-framework-design.md](docs/guardian-framework-design.md)
 - **Architecture:** [docs/architecture.md](docs/architecture.md)
 - **Pi Framework:** https://github.com/badlogic/pi-mono
