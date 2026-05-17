@@ -496,30 +496,41 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify(message, "success");
 				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
 
-				// Automatically start the pipeline by calling the pipeline_start tool
-				const items = state.issues.map((i) => i.id).join(",");
-				const steps = "implement,validate,create-mr,merge";
-
-				ctx.ui.notify("\n🚀 Starting pipeline...", "info");
-
+				// Create pipeline state file directly (shared filesystem with pipeline extension)
+				const items = state.issues.map((i) => i.id);
+				const steps = [
+					{ name: "implement", acceptance: { type: "validator", validators: ["ci"] } },
+					{
+						name: "validate",
+						acceptance: { type: "validator", validators: ["ci", "tests", "security"] },
+					},
+					{ name: "create-mr", acceptance: { type: "none" } },
+					{ name: "merge", acceptance: { type: "validator", validators: ["ci", "canonical"] } },
+				];
+				const pipelineState = {
+					id: `PL-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+					name: epicName,
+					items,
+					steps,
+					currentItemIndex: 0,
+					currentStepIndex: 0,
+					status: "running" as const,
+					retryCount: 0,
+					results: [],
+					mergeOnValid: true,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				};
+				const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
 				try {
-					const result = await ctx.tools.execute("pipeline_start", {
-						name: epicName,
-						items: items,
-						steps: steps,
-						mergeOnValid: true,
-					});
-					const pipelineMsg =
-						(result as { content?: Array<{ text?: string }> })?.content?.[0]?.text ??
-						"Pipeline started.";
-					ctx.ui.notify(pipelineMsg, "success");
+					writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
+					ctx.ui.notify(
+						`\n🚀 Pipeline started: ${pipelineState.id}\nItems: ${items.length} × ${steps.length} steps = ${items.length * steps.length} total steps\nCurrent: ${items[0]} → implement`,
+						"success",
+					);
 					ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
 				} catch (e) {
 					ctx.ui.notify(`Pipeline start failed: ${e}`, "warn");
-					ctx.ui.notify(
-						`Manual start: /pipeline "${epicName}" --items "${items}" --steps "${steps}" --merge-on-valid`,
-						"info",
-					);
 				}
 			} catch (e) {
 				ctx.ui.notify(`Error: ${e}`, "error");
