@@ -1,16 +1,19 @@
 /**
  * Architect Extension for pi
  *
- * THE ARCHITECTURE TOOL — single entry point that chains the full process:
+ * THE ARCHITECTURE TOOL — entry point for architecture-first development.
  *
+ * What it does:
  * 1. DISCOVER: Read .pi/architecture/modules/*.md, find next logical slice
- * 2. PLAN: Generate epic draft + issue drafts from slice
+ * 2. PLAN: Generate epic draft + issue stubs from slice
  * 3. VALIDATE: Run deterministic validators on epic draft
- * 4. GENERATE: Create epic + issue markdown files
- * 5. PUBLISH: Create issues/epics on GitLab/GitHub
- * 6. EXECUTE: Run /pipeline for each issue in the epic
- * 7. ARCHITECTURE READINESS: Final issue validates runbook, DR, docs
- * 8. CLOSE: Close epic + tracking issue, start next epic
+ *
+ * What it delegates (agent-driven execution):
+ * 4. GENERATE: Agent creates epic + issue markdown files from templates
+ * 5. PUBLISH: Agent invokes .pi/scripts/git/*.sh to create issues/epics
+ * 6. EXECUTE: Agent starts /pipeline for each issue
+ * 7. ARCHITECTURE READINESS: Agent runs validate-architecture-readiness.sh
+ * 8. CLOSE: Agent invokes .pi/scripts/git/close-epic.sh
  *
  * Commands:
  *   /architect --epic "Auth Module v2" --tracking-issue 100

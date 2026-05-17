@@ -277,10 +277,22 @@ class PipelineManager {
 		if (this.state.currentStepIndex >= this.state.steps.length) {
 			// All steps done for this item
 			const item = this.state.items[this.state.currentItemIndex];
-			const result = this.state.results.find((r) => r.item === item);
-			if (result && !result.stepResults.some((s) => s.status === "failed")) {
-				result.status = "done";
-			} else if (result) {
+			let result = this.state.results.find((r) => r.item === item);
+
+			// If no result entry exists (e.g. advanceStep called before any steps ran),
+			// create one so the item is tracked.
+			if (!result) {
+				result = { item, status: "skipped", stepResults: [] };
+				this.state.results.push(result);
+			}
+
+			if (!result.stepResults.some((s) => s.status === "failed")) {
+				if (result.stepResults.length === 0) {
+					result.status = "skipped";
+				} else {
+					result.status = "done";
+				}
+			} else {
 				result.status = "failed";
 			}
 

@@ -1562,6 +1562,62 @@ hooks:
 		expect(hooks.pre_tool_call).toBeDefined();
 		expect(hooks.post_tool_call).toBeDefined();
 	});
+
+	test("EventHookConfig parses all event types with correct shape", () => {
+		scaffoldAgentsMd(
+			dir,
+			`
+hooks:
+  pre_tool_call:
+    - command: ".pi/hooks/block.sh"
+      matcher: "bash"
+      timeout: 5
+  post_tool_call:
+    - command: ".pi/hooks/format.sh"
+  pre_llm_call:
+    - command: ".pi/hooks/inject-context.sh"
+  post_llm_call:
+    - command: ".pi/hooks/log.sh"
+  on_session_start:
+    - command: ".pi/hooks/init.sh"
+  on_session_end:
+    - command: ".pi/hooks/cleanup.sh"
+  subagent_stop:
+    - command: ".pi/hooks/subagent-log.sh"
+`,
+		);
+		const config = loadWorkflowConfig(path.join(dir, ".pi"));
+		const hooks = (config as Record<string, unknown>).hooks as Record<string, unknown>;
+
+		// All 7 event types should be present
+		expect(hooks.pre_tool_call).toBeDefined();
+		expect(hooks.post_tool_call).toBeDefined();
+		expect(hooks.pre_llm_call).toBeDefined();
+		expect(hooks.post_llm_call).toBeDefined();
+		expect(hooks.on_session_start).toBeDefined();
+		expect(hooks.on_session_end).toBeDefined();
+		expect(hooks.subagent_stop).toBeDefined();
+
+		// pre_tool_call entry should have command, matcher, timeout
+		const preTool = (hooks.pre_tool_call as Array<Record<string, unknown>>)[0];
+		expect(preTool.command).toBe(".pi/hooks/block.sh");
+		expect(preTool.matcher).toBe("bash");
+		expect(preTool.timeout).toBe(5);
+
+		// post_tool_call entry should have only command (no optional fields)
+		const postTool = (hooks.post_tool_call as Array<Record<string, unknown>>)[0];
+		expect(postTool.command).toBe(".pi/hooks/format.sh");
+		expect(postTool.matcher).toBeUndefined();
+		expect(postTool.timeout).toBeUndefined();
+	});
+
+	test("EventHookConfig defaults to empty object when not specified", () => {
+		scaffoldAgentsMd(dir, "");
+		const config = loadWorkflowConfig(path.join(dir, ".pi"));
+		const hooks = (config as Record<string, unknown>).hooks as Record<string, unknown>;
+		expect(typeof hooks).toBe("object");
+		expect(Object.keys(hooks).length).toBe(0);
+	});
 });
 
 // ── 6. Delegation Roles ──

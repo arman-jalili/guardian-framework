@@ -367,46 +367,6 @@ class GoalManager {
 		return CONTINUATION_PROMPT(this.state.goal, this.state.subgoals);
 	}
 
-	async evaluateAfterTurn(lastResponse: string): Promise<{
-		shouldContinue: boolean;
-		verdict: string;
-		reason: string;
-		message: string;
-		continuationPrompt: string | null;
-	}> {
-		const state = this.state;
-		if (!state || state.status !== "active") {
-			return {
-				shouldContinue: false,
-				verdict: "inactive",
-				reason: "no active goal",
-				message: "",
-				continuationPrompt: null,
-			};
-		}
-
-		state.turnsUsed++;
-		state.lastTurnAt = new Date().toISOString();
-
-		// Step 1: Run deterministic validators
-		const valResult = await runValidatorsForGoal({
-			cwd: this.cwd,
-			ui: { notify: () => {}, setStatus: () => {}, confirm: async () => false },
-			shell: { execute: async () => ({ exitCode: 1, stdout: "" }) },
-			tools: { execute: async () => ({}) },
-		} as unknown as ExtensionContext);
-
-		// In the real extension, we use ctx.shell and ctx.tools. Here we need ctx.
-		// We'll do the actual evaluation in evaluateAfterTurnWithCtx.
-		return {
-			shouldContinue: false,
-			verdict: "error",
-			reason: "use evaluateAfterTurnWithCtx",
-			message: "",
-			continuationPrompt: null,
-		};
-	}
-
 	async evaluateAfterTurnWithCtx(
 		ctx: ExtensionContext,
 		lastResponse: string,

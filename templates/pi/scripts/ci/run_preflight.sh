@@ -534,7 +534,7 @@ run_stage_release_readiness() {
 
 CHANGED_FILES=$(detect_changed_files)
 
-if [[ -n "$CHANGED_FILES" ]]; then
+if [[ -n "$CHANGED_FILES" && "$JSON" == "false" ]]; then
     log_info "Changed files:"
     echo "$CHANGED_FILES" | while IFS= read -r f; do
         [[ -n "$f" ]] && echo "  - $f"
@@ -567,8 +567,16 @@ fi
 # Output
 if [[ "$JSON" == "true" ]]; then
     # JSON output
-    STAGES_JSON=$(printf '%s\n' "${STAGES_RUN[@]}" | jq -R . | jq -s .)
-    RESULTS_JSON=$(printf '%s\n' "${RESULTS[@]}" | jq -s .)
+    if [[ ${#STAGES_RUN[@]} -gt 0 ]]; then
+        STAGES_JSON=$(printf '%s\n' "${STAGES_RUN[@]}" | jq -R . | jq -s .)
+    else
+        STAGES_JSON="[]"
+    fi
+    if [[ ${#RESULTS[@]} -gt 0 ]]; then
+        RESULTS_JSON=$(printf '%s\n' "${RESULTS[@]}" | jq -s .)
+    else
+        RESULTS_JSON="[]"
+    fi
 
     cat << EOF
 {
@@ -610,8 +618,16 @@ fi
 
 # Save report
 if [[ "$JSON" == "true" ]]; then
-    STAGES_JSON=$(printf '%s\n' "${STAGES_RUN[@]}" | jq -R . | jq -s .)
-    RESULTS_JSON=$(printf '%s\n' "${RESULTS[@]}" | jq -s .)
+    if [[ ${#STAGES_RUN[@]} -gt 0 ]]; then
+        STAGES_JSON=$(printf '%s\n' "${STAGES_RUN[@]}" | jq -R . | jq -s .)
+    else
+        STAGES_JSON="[]"
+    fi
+    if [[ ${#RESULTS[@]} -gt 0 ]]; then
+        RESULTS_JSON=$(printf '%s\n' "${RESULTS[@]}" | jq -s .)
+    else
+        RESULTS_JSON="[]"
+    fi
     cat << EOF > "$REPORT_FILE"
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
