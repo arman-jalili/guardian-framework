@@ -496,14 +496,31 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify(message, "success");
 				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
 
-				// Automatically start the pipeline
+				// Automatically start the pipeline by calling the pipeline_start tool
 				const items = state.issues.map((i) => i.id).join(",");
-				const pipelineCmd = `/pipeline "${epicName}" --items "${items}" --steps "implement,validate,create-mr,merge" --merge-on-valid`;
+				const steps = "implement,validate,create-mr,merge";
 
-				ctx.ui.notify(`\n🚀 Starting pipeline:\n${pipelineCmd}`, "info");
+				ctx.ui.notify("\n🚀 Starting pipeline...", "info");
 
-				// The agent will execute the pipeline command as its next action
-				ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
+				try {
+					const result = await ctx.tools.execute("pipeline_start", {
+						name: epicName,
+						items: items,
+						steps: steps,
+						mergeOnValid: true,
+					});
+					const pipelineMsg =
+						(result as { content?: Array<{ text?: string }> })?.content?.[0]?.text ??
+						"Pipeline started.";
+					ctx.ui.notify(pipelineMsg, "success");
+					ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
+				} catch (e) {
+					ctx.ui.notify(`Pipeline start failed: ${e}`, "warn");
+					ctx.ui.notify(
+						`Manual start: /pipeline "${epicName}" --items "${items}" --steps "${steps}" --merge-on-valid`,
+						"info",
+					);
+				}
 			} catch (e) {
 				ctx.ui.notify(`Error: ${e}`, "error");
 			}

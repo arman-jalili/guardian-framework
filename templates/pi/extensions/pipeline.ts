@@ -569,6 +569,58 @@ export default function (pi: ExtensionAPI) {
 	});
 }
 
+// ── pipeline_start tool (called by architect extension) ──
+pi.registerTool({
+	name: "pipeline_start",
+	label: "Pipeline Start",
+	description:
+		"Start a new pipeline with the given name, items, and steps. Called by the architect extension to begin epic execution.",
+	parameters: {
+		type: "object",
+		properties: {
+			name: { type: "string", description: "Pipeline name (usually the epic name)" },
+			items: { type: "string", description: "Comma-separated list of issue IDs" },
+			steps: { type: "string", description: "Comma-separated list of step names" },
+			mergeOnValid: { type: "boolean", description: "Auto-merge if all validators pass" },
+		},
+		required: ["name", "items", "steps"],
+	},
+	async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+		if (!manager) manager = new PipelineManager(ctx.cwd);
+
+		const name = (params.name as string) || "pipeline";
+		const items = ((params.items as string) || "")
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const steps = ((params.steps as string) || "")
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean);
+
+		if (items.length === 0) {
+			return { content: [{ type: "text" as const, text: "No items specified." }] };
+		}
+		if (steps.length === 0) {
+			return { content: [{ type: "text" as const, text: "No steps specified." }] };
+		}
+
+		const state = manager.create(name, items, steps, { mergeOnValid: !!params.mergeOnValid });
+		ctx.ui.setStatus(
+			"pipeline",
+			`▶ ${name} (${state.items.length} items × ${state.steps.length} steps)`,
+		);
+
+		let message = `▶ Pipeline "${name}" started\n`;
+		message += `Items: ${items.join(", ")}\n`;
+		message += `Steps: ${steps.join(" → ")}\n`;
+		message += `Total steps: ${items.length * steps.length}\n\n`;
+		message += `Current: Item 1/${items.length} → Step 1: ${steps[0]}`;
+
+		return { content: [{ type: "text" as const, text: message }] };
+	},
+});
+
 // ── Step Builder ──
 
 function buildSteps(stepNames: string[]): StepConfig[] {
