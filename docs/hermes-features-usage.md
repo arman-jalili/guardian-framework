@@ -111,7 +111,71 @@ goal:
 
 ---
 
-## 2. Kanban Task Board
+## 2. Pipeline Engine
+
+A multi-step workflow that iterates over items (issues, tasks, etc.) with per-step prompts and acceptance conditions.
+
+### When to use it
+
+| `/goal` (Phase 1) | `/pipeline` (Phase 2) |
+|-------------------|-----------------------|
+| Single objective, auto-iterate | Step-by-step state machine |
+| One acceptance condition | Per-step acceptance gates |
+| Best for: one task | Best for: repeatable workflows across multiple items |
+
+### Starting a pipeline
+
+```
+/pipeline "Close P1 bugs" --items "1234,1235,1236" --steps "implement,validate,create-mr,merge" --merge-on-valid
+```
+
+### Pipeline flow
+
+```
+For each item in [1234, 1235, 1236]:
+  Step 1: implement    → load issue-implementation-series.md → must pass CI
+  Step 2: validate     → run ci+tests+security validators → must all pass
+  Step 3: create-mr    → load issue-closeout.md → no gate
+  Step 4: merge        → run ci+canonical validators → merge if valid (merge-on-valid)
+  → If step fails: skip remaining steps for this item, move to next
+```
+
+### Commands
+
+| Command | Effect |
+|---------|--------|
+| `/pipeline <name> --items "id1,id2" --steps "implement,validate"` | Start pipeline |
+| `/pipeline <name> --items "id1,id2" --steps "implement,validate" --merge-on-valid` | With auto-merge |
+| `/pipeline` or `/pipeline status` | Show progress |
+| `/pipeline pause` | Pause at current step |
+| `/pipeline resume` | Resume from where paused |
+| `/pipeline skip-step` | Skip current step |
+| `/pipeline retry-step` | Retry current step |
+| `/pipeline abort` | Kill pipeline |
+
+### Built-in steps
+
+| Step | Prompt | Acceptance Gate |
+|------|--------|-----------------|
+| `implement` | `.pi/prompts/issue-implementation-series.md` | CI validator |
+| `validate` | — | CI + tests + security |
+| `create-mr` | `.pi/prompts/issue-closeout.md` | None |
+| `merge` | — | CI + canonical |
+| `document` | `.pi/prompts/blueprint-update.md` | Canonical |
+| `test` | — | Tests |
+| `security-review` | — | Security |
+
+### Custom steps
+
+Unknown step names work with no prompt and no gate:
+
+```
+/pipeline "Custom flow" --items "task1" --steps "implement,custom-review,validate"
+```
+
+---
+
+## 3. Kanban Task Board
 
 A JSON-backed task board with state machine, dependency links, and comments. Use it for multi-session, multi-agent work that `delegate_task` can't handle (needs human input, crash resilience, or durable audit trail).
 
