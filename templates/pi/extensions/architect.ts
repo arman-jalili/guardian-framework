@@ -487,7 +487,7 @@ export default function (pi: ExtensionAPI) {
 					return;
 				}
 
-				const state = manager.startEpic(ctx, epicName, trackingIssueId);
+				const state = await manager.startEpic(ctx, epicName, trackingIssueId);
 
 				// Defensive: verify state was created properly
 				if (!state || !state.slices || state.slices.length === 0) {
