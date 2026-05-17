@@ -90,6 +90,7 @@ type EpicState = {
 
 const EPIC_STATE_KEY = ".pi/.guardian-epic-state.json";
 const ARCH_MODULES_DIR = ".pi/architecture/modules";
+const ISSUES_DIR = ".pi/issues";
 
 // ── Helpers ──
 
@@ -124,11 +125,6 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 	const content = readFileSync(filePath, "utf-8");
 	const components: ModuleComponent[] = [];
 
-	// The module format uses ## Component Details (or ## Components)
-	// followed by ### ComponentName headers with status: and depends: fields.
-	// We only capture ### headers that appear under a "Component" ## section
-	// AND have a status: field defined.
-
 	const lines = content.split("\n");
 	let inComponentSection = false;
 	let currentName = "";
@@ -150,12 +146,10 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 	for (const line of lines) {
 		const trimmed = line.trim();
 
-		// Detect component section: ## Component Details, ## Components, etc.
 		if (trimmed.match(/^##\s+Component/i)) {
 			inComponentSection = true;
 			continue;
 		}
-		// Next top-level section ends the component section
 		if (inComponentSection && trimmed.match(/^##\s+/)) {
 			saveCurrent();
 			currentName = "";
@@ -165,8 +159,6 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 			inComponentSection = false;
 			continue;
 		}
-
-		// Only process ### headers inside the component section
 		if (inComponentSection && trimmed.match(/^###\s+/)) {
 			saveCurrent();
 			currentName = trimmed.replace(/^###\s+/, "");
@@ -191,9 +183,7 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 		}
 	}
 
-	// Save last component
 	saveCurrent();
-
 	return components;
 }
 
@@ -210,6 +200,156 @@ function findNextLogicalSlice(cwd: string, moduleFiles: string[]): ArchitectureS
 		}
 	}
 	return null;
+}
+
+// ── Issue Generation ──
+
+function generateIssueMarkdown(
+	component: ModuleComponent,
+	slice: ArchitectureSlice,
+	issueIndex: number,
+	totalIssues: number,
+): string {
+	const moduleId = slice.module.replace(/^module-/, "");
+	const componentName = component.name.toLowerCase().replace(/\s+/g, "-");
+	const issueId = `ISSUE-${moduleId.toUpperCase()}-${issueIndex + 1}`;
+
+	return `---
+guardian_issue:
+  id: "${issueId}"
+  epic: "TBD"
+  component: "${component.name}"
+  module: "${slice.module}"
+  status: planned
+  priority: high
+  dependencies:
+${component.dependencies.map((d) => `    - "${d}"`).join("\n")}
+
+  in_scope:
+    - Implement ${component.name} for the ${slice.module} module
+    - Write unit tests for all public interfaces
+    - Add integration tests with upstream/downstream components
+    - Create API documentation
+
+  out_of_scope:
+    - Changes to upstream components (${component.dependencies.join(", ")})
+    - UI/frontend changes
+    - Deployment pipeline configuration
+
+  affected_layers:
+    domain:
+      - New domain models for ${componentName}
+    application:
+      - New service/handler for ${componentName}
+    infrastructure:
+      - New database tables or external service connections
+    api:
+      - New endpoints or event handlers
+
+  canonical_references:
+    - module: ".pi/architecture/modules/${slice.module}.md#${componentName}"
+
+  acceptance_criteria:
+    - "CI pipeline passes (validate-ci.sh)"
+    - "All unit tests pass with ≥ 90% coverage"
+    - "Integration tests pass with upstream/downstream components"
+    - "validate-security.sh passes"
+    - "validate-architecture.sh passes"
+    - "validate-canonical.sh passes"
+
+  validators:
+    - ci
+    - tests
+    - security
+    - architecture
+    - canonical
+
+  implementation_notes: |
+    ${component.description || "Implement this component according to the architecture module."}
+
+  file_changes:
+    - "create: src/${moduleId}/${componentName}/"
+    - "create: tests/unit/${moduleId}/${componentName}/"
+    - "create: tests/integration/${moduleId}/${componentName}/"
+---
+
+# ${issueId}: ${component.name}
+
+## Intent
+
+${component.description || `Implement ${component.name} for the ${slice.module} module.`}
+
+## Architecture Context
+
+- **Module:** ${slice.module}
+- **Component:** ${component.name}
+- **Status:** ${component.status}
+- **Dependencies:** ${component.dependencies.length > 0 ? component.dependencies.join(", ") : "none"}
+
+## Dependencies
+
+\`\`\`
+${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └── (root component — no dependencies)"}
+\`\`\`
+
+## In Scope
+
+- Implement ${component.name} for the ${slice.module} module
+- Write unit tests for all public interfaces
+- Add integration tests with upstream/downstream components
+- Create API documentation
+
+## Out of Scope
+
+- Changes to upstream components
+- UI/frontend changes
+- Deployment pipeline configuration
+
+## Affected Layers
+
+### Domain
+- New domain models for ${componentName}
+
+### Application
+- New service/handler for ${componentName}
+
+### Infrastructure
+- New database tables or external service connections
+
+### API
+- New endpoints or event handlers
+
+## Canonical References
+
+- **Module:** \`.pi/architecture/modules/${slice.module}.md#${componentName}\`
+
+## Acceptance Criteria
+
+| # | Criterion | Validator |
+|---|-----------|-----------|
+| 1 | CI pipeline passes | \`validate-ci.sh\` |
+| 2 | All unit tests pass with ≥ 90% coverage | \`validate-tests.sh\` |
+| 3 | Integration tests pass | \`validate-integration.sh\` |
+| 4 | Security checks pass | \`validate-security.sh\` |
+| 5 | Architecture compliance | \`validate-architecture.sh\` |
+| 6 | Canonical references valid | \`validate-canonical.sh\` |
+
+## Implementation
+
+> **Agent:** This is your complete session context. All information you need is above.
+> Start by reading the canonical reference files, then implement following the layer structure.
+
+### Steps
+
+1. Read canonical architecture references
+2. Create domain entities and interfaces
+3. Implement application service/handler
+4. Add infrastructure connections
+5. Write unit tests (≥ 90% coverage)
+6. Write integration tests
+7. Run all validators
+8. Create MR
+`;
 }
 
 // ── Epic State Persistence ──
@@ -256,9 +396,9 @@ function formatEpicStatus(state: EpicState | null): string {
 	return lines.join("\n");
 }
 
-// ── Epic Orchestration ──
+// ── Epic Manager ──
 
-class ArchitectManager {
+class EpicManager {
 	private state: EpicState | null;
 
 	constructor(private cwd: string) {
@@ -274,7 +414,6 @@ class ArchitectManager {
 		name: string,
 		trackingIssueId?: string,
 	): Promise<EpicState> {
-		// Step 1: Discover architecture slices
 		const moduleFiles = discoverModules(this.cwd);
 		if (moduleFiles.length === 0) {
 			throw new Error(
@@ -289,24 +428,63 @@ class ArchitectManager {
 
 		ctx.ui.setStatus("architect", `Planning epic: ${name}`);
 
-		// Step 2: Generate issues from slice
+		// Generate issues and issue markdown files
 		const issues = [];
-		const piDir = `${this.cwd}/.pi`;
+		const issuesDir = join(this.cwd, ISSUES_DIR);
+		if (!existsSync(issuesDir)) mkdirSync(issuesDir, { recursive: true });
 
-		for (const component of slice.nextLogicalSlice) {
+		for (let i = 0; i < slice.nextLogicalSlice.length; i++) {
+			const component = slice.nextLogicalSlice[i];
+			const issueId = `issue-${component.name.toLowerCase().replace(/\s+/g, "-")}`;
 			issues.push({
-				id: `issue-${component.name.toLowerCase().replace(/\s+/g, "-")}`,
+				id: issueId,
 				title: `Implement: ${component.name}`,
 				status: "planned",
 			});
+
+			// Generate issue markdown file
+			const issueMarkdown = generateIssueMarkdown(
+				component,
+				slice,
+				i,
+				slice.nextLogicalSlice.length,
+			);
+			const issueFilePath = join(issuesDir, `${issueId}.md`);
+			writeFileSync(issueFilePath, issueMarkdown);
 		}
 
 		// Add architecture readiness issue
+		const readinessId = "issue-architecture-readiness";
 		issues.push({
-			id: "issue-architecture-readiness",
+			id: readinessId,
 			title: "Architecture Readiness: Runbook, DR, Docs, Observability",
 			status: "planned",
 		});
+
+		const readinessMarkdown = `---
+guardian_issue:
+  id: "ISSUE-READINESS"
+  epic: "${name}"
+  component: "Architecture Readiness"
+  module: "${slice.module}"
+  status: planned
+  priority: critical
+---
+
+# Architecture Readiness
+
+## Intent
+
+Ensure the ${slice.module} module is production-ready with runbook, DR plan, documentation, and observability.
+
+## Acceptance Criteria
+- Runbook created (docs/runbook.md)
+- DR plan created (docs/dr-plan.md)
+- Architecture docs updated
+- Canonical references synced
+- Observability patterns in place
+`;
+		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
 
 		this.state = {
 			name,
@@ -319,75 +497,7 @@ class ArchitectManager {
 			createdAt: new Date().toISOString(),
 		};
 		saveEpicState(this.cwd, this.state);
-
 		return this.state;
-	}
-
-	async validateEpicDraft(ctx: ExtensionContext): Promise<{ pass: boolean; results: string[] }> {
-		if (!this.state) throw new Error("No active epic");
-		this.state.status = "validating";
-		saveEpicState(this.cwd, this.state);
-
-		const results: string[] = [];
-		const scripts = [
-			{ name: "architecture", path: ".pi/scripts/validate-architecture.sh" },
-			{ name: "security", path: ".pi/scripts/validate-security.sh" },
-			{ name: "operations", path: ".pi/scripts/validate-operations.sh" },
-		];
-
-		let allPassed = true;
-		for (const script of scripts) {
-			const fullPath = join(this.cwd, script.path);
-			if (!existsSync(fullPath)) {
-				results.push(`SKIP: ${script.name} (script not found)`);
-				continue;
-			}
-			try {
-				const result = await runScript(ctx, script.path);
-				if (result.exitCode === 0) {
-					results.push(`PASS: ${script.name}`);
-				} else {
-					results.push(`FAIL: ${script.name} — ${result.stdout.slice(0, 200)}`);
-					allPassed = false;
-				}
-			} catch {
-				results.push(`FAIL: ${script.name} (timeout or error)`);
-				allPassed = false;
-			}
-		}
-
-		if (!allPassed) {
-			this.state.status = "aborted";
-			saveEpicState(this.cwd, this.state);
-		}
-
-		return { pass: allPassed, results };
-	}
-
-	async publishEpic(ctx: ExtensionContext): Promise<void> {
-		if (!this.state) throw new Error("No active epic");
-		this.state.status = "publishing";
-		saveEpicState(this.cwd, this.state);
-
-		// Create tracking issue
-		const createScript = join(this.cwd, ".pi/scripts/git/create-tracking-issue.sh");
-		if (existsSync(createScript)) {
-			try {
-				const result = await runScript(
-					ctx,
-					`.pi/scripts/git/create-tracking-issue.sh --title "${this.state.name}" --body "Tracking epic progress"`,
-				);
-				if (result.exitCode === 0) {
-					const idMatch = result.stdout.match(/TRACKING_ID=(.+)/);
-					if (idMatch) {
-						this.state.trackingIssueId = idMatch[1].trim();
-						saveEpicState(this.cwd, this.state);
-					}
-				}
-			} catch {
-				// Git not available — continue locally
-			}
-		}
 	}
 
 	async abortEpic(): Promise<void> {
@@ -400,9 +510,9 @@ class ArchitectManager {
 // ── Extension ──
 
 export default function (pi: ExtensionAPI) {
-	let manager: ArchitectManager | null = null;
+	let manager: EpicManager | null = null;
 
-	// Helper: parse --flag=value or --flag value patterns
+	// Helper: parse --flag=value or --flag value patterns (handles quoted strings)
 	function findFlag(tokens: string[], prefix: string): string | undefined {
 		// Try --flag=value first
 		const eqMatch = tokens.find((a) => a.startsWith(`${prefix}=`));
@@ -412,14 +522,21 @@ export default function (pi: ExtensionAPI) {
 				.slice(1)
 				.join("=")
 				.replace(/^["']|["']$/g, "");
-		// Try --flag value
+		// Try --flag "multi word value" — collect all tokens until next --flag
 		const idx = tokens.indexOf(prefix);
-		if (idx !== -1 && idx + 1 < tokens.length) return tokens[idx + 1].replace(/^["']|["']$/g, "");
+		if (idx !== -1) {
+			const parts: string[] = [];
+			for (let i = idx + 1; i < tokens.length; i++) {
+				if (tokens[i].startsWith("--")) break;
+				parts.push(tokens[i].replace(/^["']|["']$/g, ""));
+			}
+			if (parts.length > 0) return parts.join(" ");
+		}
 		return undefined;
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
-		manager = new ArchitectManager(ctx.cwd);
+		manager = new EpicManager(ctx.cwd);
 		const state = manager.getState();
 		if (state && state.status !== "done" && state.status !== "aborted") {
 			ctx.ui.setStatus("architect", `Epic: ${state.name} (${state.status})`);
@@ -430,7 +547,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("architect", {
 		description: "Orchestrate the full architecture-to-implementation process",
 		handler: async (args, ctx) => {
-			if (!manager) manager = new ArchitectManager(ctx.cwd);
+			if (!manager) manager = new EpicManager(ctx.cwd);
 			const raw = typeof args === "string" ? args : "";
 			const tokens = raw ? raw.split(/\s+/).filter(Boolean) : [];
 			if (tokens.length === 0) {
@@ -442,7 +559,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			const action = tokens[0];
 
-			if (!action || action === "status") {
+			if (action === "status" || action === "") {
 				const state = manager.getState();
 				ctx.ui.notify(formatEpicStatus(state), "info");
 				return;
@@ -456,16 +573,14 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "next-epic") {
-				// Auto-discover next epic name from module
 				const moduleFiles = discoverModules(ctx.cwd);
 				const slice = findNextLogicalSlice(ctx.cwd, moduleFiles);
 				if (!slice) {
 					ctx.ui.notify("No more architecture slices to implement.", "info");
 					return;
 				}
-				const epicName = `Implement: ${slice.module}`;
 				ctx.ui.notify(
-					`Next epic: ${epicName} (${slice.nextLogicalSlice.length} components planned)`,
+					`Next epic: ${slice.module} (${slice.nextLogicalSlice.length} components planned)`,
 					"info",
 				);
 				return;
@@ -523,7 +638,7 @@ export default function (pi: ExtensionAPI) {
 						runScript(ctx.cwd, 'git commit -m "Initial Guardian scaffold"');
 						gitInitMessage = "\n✓ Git repository initialized";
 					}
-				} catch (e) {
+				} catch {
 					gitInitMessage = "\n⚠ Git init skipped";
 				}
 
@@ -585,6 +700,8 @@ export default function (pi: ExtensionAPI) {
 					message += `  - ${c.name}${desc ? `: ${desc}` : ""}\n`;
 				}
 				message += `\nIssues generated: ${(state.issues || []).length}\n`;
+				message += "\nIssue files created in .pi/issues/\n";
+				message += "\nStarting pipeline now...\n";
 
 				ctx.ui.notify(message, "success");
 				ctx.ui.setStatus("architect", `Epic: ${epicName} (executing)`);
@@ -632,7 +749,7 @@ export default function (pi: ExtensionAPI) {
 						content: [
 							{
 								type: "text",
-								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nPlease start working on this issue.`,
+								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nIssue file: .pi/issues/${firstItem}.md\nPlease read the issue file and start working.`,
 							},
 						],
 					};
@@ -652,7 +769,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Show the current epic status and progress.",
 		parameters: { type: "object", properties: {} },
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-			if (!manager) manager = new ArchitectManager(ctx.cwd);
+			if (!manager) manager = new EpicManager(ctx.cwd);
 			const state = manager.getState();
 			return { content: [{ type: "text", text: formatEpicStatus(state) }] };
 		},

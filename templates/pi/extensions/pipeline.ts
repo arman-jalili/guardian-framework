@@ -17,8 +17,21 @@
  *   /pipeline abort               Kill pipeline
  */
 
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+
+// ── Validator Scripts ──
+
+const VALIDATOR_SCRIPTS: Record<string, string> = {
+	ci: ".pi/scripts/validate-ci.sh",
+	tests: ".pi/scripts/validate-tests.sh",
+	security: ".pi/scripts/validate-security.sh",
+	operations: ".pi/scripts/validate-operations.sh",
+	architecture: ".pi/scripts/validate-architecture.sh",
+	canonical: ".pi/scripts/validate-canonical.sh",
+	integration: ".pi/scripts/validate-integration.sh",
+};
 
 // ── Types ──
 
@@ -617,6 +630,142 @@ export default function (pi: ExtensionAPI) {
 			message += `Current: Item 1/${items.length} → Step 1: ${steps[0]}`;
 
 			return { content: [{ type: "text" as const, text: message }] };
+		},
+	});
+
+	// ── pipeline_next_task tool ──
+	pi.registerTool({
+		name: "pipeline_next_task",
+		label: "Pipeline Next Task",
+		description: "Get the next task prompt with full issue context and step instructions.",
+		parameters: {
+			type: "object",
+			properties: {
+				issueId: { type: "string", description: "Issue ID (optional, defaults to current)" },
+			},
+		},
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			if (!manager) manager = new PipelineManager(ctx.cwd);
+			const state = manager.getState();
+			if (!state || state.status !== "running") {
+				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
+			}
+			const issueId = (params.issueId as string) || state.items[state.currentItemIndex];
+			const step = state.steps[state.currentStepIndex];
+			if (!step) return { content: [{ type: "text" as const, text: "No more steps." }] };
+
+			const issuePath = join(ctx.cwd, ".pi/issues", `${issueId}.md`);
+			let issueContent = "";
+			try {
+				issueContent = readFileSync(issuePath, "utf-8");
+			} catch {
+				issueContent = `No issue file at .pi/issues/${issueId}.md`;
+			}
+
+			const stepConfig = buildSteps([step.name])[0];
+			let stepPrompt = "";
+			if (stepConfig?.prompt) {
+				try {
+					stepPrompt = readFileSync(join(ctx.cwd, stepConfig.prompt), "utf-8");
+				} catch {
+					stepPrompt = "// Step prompt not found";
+				}
+			}
+
+			const text = [
+				"## Pipeline Task",
+				"",
+				`**Pipeline:** ${state.name} (${state.id})`,
+				`**Item:** ${issueId} (${state.currentItemIndex + 1}/${state.items.length})`,
+				`**Step:** ${step.name} (${state.currentStepIndex + 1}/${state.steps.length})`,
+				"",
+				"---",
+				"",
+				stepPrompt || "",
+				"",
+				"---",
+				"",
+				"## Issue Context",
+				"",
+				issueContent,
+				"",
+				"---",
+				"",
+				"**Instructions:**",
+				"1. Review the issue context above",
+				"2. Follow the step prompt instructions",
+				"3. When complete, call `pipeline_run_acceptance` to validate your work",
+				"4. Then call `pipeline_advance` to move to the next step",
+			].join("\n");
+
+			return { content: [{ type: "text" as const, text }] };
+		},
+	});
+
+	// ── pipeline_run_acceptance tool ──
+	pi.registerTool({
+		name: "pipeline_run_acceptance",
+		label: "Pipeline Run Acceptance",
+		description: "Run the acceptance gate validators for the current step.",
+		parameters: { type: "object", properties: {} },
+		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
+			if (!manager) manager = new PipelineManager(ctx.cwd);
+			const state = manager.getState();
+			if (!state || state.status !== "running") {
+				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
+			}
+			const step = state.steps[state.currentStepIndex];
+			if (!step) return { content: [{ type: "text" as const, text: "No current step." }] };
+
+			const acceptance = step.acceptance;
+			if (acceptance.type === "none") {
+				manager.markStepPassed(step.name);
+				return {
+					content: [{ type: "text" as const, text: `Step "${step.name}" passed (no gate).` }],
+				};
+			}
+
+			const lines: string[] = [`## Acceptance Gate: ${step.name}\n`];
+			let allPassed = true;
+
+			for (const validator of acceptance.validators) {
+				const scriptPath = VALIDATOR_SCRIPTS[validator];
+				if (!scriptPath) {
+					lines.push(`### ${validator}: UNKNOWN`);
+					lines.push(`  Validator not found: ${validator}`);
+					allPassed = false;
+					continue;
+				}
+				const fullPath = join(ctx.cwd, scriptPath);
+				if (!existsSync(fullPath)) {
+					lines.push(`### ${validator}: SKIPPED`);
+					lines.push("  Script not found");
+					continue;
+				}
+				try {
+					execSync(`bash -c "${scriptPath}"`, {
+						cwd: ctx.cwd,
+						timeout: 120_000,
+						encoding: "utf-8",
+					});
+					lines.push(`### ${validator}: PASS`);
+				} catch (e: unknown) {
+					const err = e as { stdout?: string };
+					lines.push(`### ${validator}: FAIL`);
+					lines.push(`\`\`\`${(err.stdout || "").split("\n").slice(-10).join("\n")}\`\`\``);
+					allPassed = false;
+				}
+			}
+
+			if (allPassed) {
+				manager.markStepPassed(step.name);
+				lines.push("\n**Result: ALL VALIDATORS PASSED**");
+				lines.push("Call pipeline_advance to move to the next step.");
+			} else {
+				lines.push("\n**Result: SOME VALIDATORS FAILED**");
+				lines.push("Fix the issues and run pipeline_run_acceptance again.");
+			}
+			return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 		},
 	});
 }
