@@ -389,6 +389,22 @@ class ArchitectManager {
 export default function (pi: ExtensionAPI) {
 	let manager: ArchitectManager | null = null;
 
+	// Helper: parse --flag=value or --flag value patterns
+	function findFlag(tokens: string[], prefix: string): string | undefined {
+		// Try --flag=value first
+		const eqMatch = tokens.find((a) => a.startsWith(`${prefix}=`));
+		if (eqMatch)
+			return eqMatch
+				.split("=")
+				.slice(1)
+				.join("=")
+				.replace(/^["']|["']$/g, "");
+		// Try --flag value
+		const idx = tokens.indexOf(prefix);
+		if (idx !== -1 && idx + 1 < tokens.length) return tokens[idx + 1].replace(/^["']|["']$/g, "");
+		return undefined;
+	}
+
 	pi.on("session_start", async (_event, ctx) => {
 		manager = new ArchitectManager(ctx.cwd);
 		const state = manager.getState();
@@ -436,20 +452,13 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// Start new epic: /architect --epic "Name" [--tracking-issue 100]
-			const epicFlag = tokens.find((a) => a.startsWith("--epic="));
-			const trackingFlag = tokens.find((a) => a.startsWith("--tracking-issue="));
+			const epicName = findFlag(tokens, "--epic");
+			const trackingIssueId = findFlag(tokens, "--tracking-issue");
 
-			if (!epicFlag) {
+			if (!epicName) {
 				ctx.ui.notify('Usage: /architect --epic "Epic Name" [--tracking-issue N]', "error");
 				return;
 			}
-
-			const epicName = epicFlag
-				.split("=")
-				.slice(1)
-				.join("=")
-				.replace(/^["']|["']$/g, "");
-			const trackingIssueId = trackingFlag ? trackingFlag.split("=")[1] : undefined;
 
 			try {
 				const state = await manager.startEpic(ctx, epicName, trackingIssueId);
