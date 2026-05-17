@@ -529,6 +529,34 @@ export default function (pi: ExtensionAPI) {
 						"success",
 					);
 					ctx.ui.setStatus("architect", `Epic: ${epicName} → pipeline running`);
+
+					// Add a session entry to prompt the agent to continue
+					const firstItem = items[0];
+					const firstDesc = slice.nextLogicalSlice[0]?.description || "Implementation";
+					pi.appendEntry({
+						type: "custom",
+						key: "pipeline_continuation",
+						data: {
+							pipelineId: pipelineState.id,
+							currentItem: firstItem,
+							currentStep: "implement",
+							description: firstDesc,
+						},
+						timestamp: Date.now(),
+					});
+
+					ctx.ui.notify(
+						`\n🚀 Pipeline ${pipelineState.id} started\n\n**Current task:** Item "${firstItem}" → Step: implement\n**Description:** ${firstDesc.slice(0, 100)}...\n\nThe agent should now begin implementation.`,
+						"success",
+					);
+					return {
+						content: [
+							{
+								type: "text",
+								text: `🚀 Pipeline ${pipelineState.id} started.\n\n**Next task:** Implement "${firstItem}"\n\nPlease start working on the first issue.`,
+							},
+						],
+					};
 				} catch (e) {
 					ctx.ui.notify(`Pipeline start failed: ${e}`, "warn");
 				}
