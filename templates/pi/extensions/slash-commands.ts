@@ -125,7 +125,8 @@ export default function (pi: ExtensionAPI) {
 
 	// Intercept user input for slash commands and snippet expansion
 	pi.on("input", async (event, ctx) => {
-		const input = event.input;
+		const input = (event as { input?: string }).input;
+		if (!input) return;
 		const trimmed = input.trim();
 
 		// Handle #handle snippet expansion

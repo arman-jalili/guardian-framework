@@ -95,7 +95,8 @@ export default function (pi: ExtensionAPI) {
 
 	// Intercept input for #handle expansion
 	pi.on("input", async (event, _ctx) => {
-		const input = event.input;
+		const input = (event as { input?: string }).input;
+		if (!input) return;
 		const trimmed = input.trim();
 
 		// Only expand #handle tokens (not slash commands)

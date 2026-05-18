@@ -94,8 +94,10 @@ export default function (pi: ExtensionAPI) {
 
 	// Redact from user input (in case they paste a key)
 	pi.on("input", async (event) => {
-		const redacted = redactSensitive(event.input);
-		if (redacted !== event.input) {
+		const input = (event as { input?: string }).input;
+		if (!input) return;
+		const redacted = redactSensitive(input);
+		if (redacted !== input) {
 			const count = countRedactions(event.input) - countRedactions(redacted);
 			if (count > 0) {
 				event.input = redacted;

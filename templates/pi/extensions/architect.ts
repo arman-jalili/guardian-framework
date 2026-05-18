@@ -22,7 +22,7 @@
  *   /architect abort
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -81,7 +81,7 @@ type EpicState = {
 	epicId: string | null;
 	status: "planning" | "validating" | "publishing" | "executing" | "done" | "aborted";
 	slices: ArchitectureSlice[];
-	issues: { id: string; title: string; status: string }[];
+	issues: { id: string; title: string; status: string; remoteIssueId?: string | null }[];
 	currentIssueIndex: number;
 	createdAt: string;
 };
@@ -121,6 +121,131 @@ function readRepoTool(cwd: string): string {
 		// fall through to default
 	}
 	return "gh";
+}
+
+// Read the repository slug (owner/repo) from guardian-manifest.json
+function readRepository(cwd: string): string | null {
+	try {
+		const manifestPath = join(cwd, "guardian-manifest.json");
+		if (existsSync(manifestPath)) {
+			const raw = readFileSync(manifestPath, "utf-8");
+			const manifest = JSON.parse(raw) as {
+				repository?: string;
+				templateContext?: { repository?: string };
+			};
+			if (manifest.repository) return manifest.repository;
+			if (manifest.templateContext?.repository)
+				return manifest.templateContext.repository;
+		}
+	} catch {
+		// ignore
+	}
+	return null;
+}
+
+function commandExists(cmd: string): boolean {
+	try {
+		execSync(`command -v ${cmd}`, { stdio: "ignore" });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+// Try to create a remote GitHub/GitLab issue via the shell script wrapper.
+// Uses execSync with carefully constructed arguments; returns issue number on success.
+function createRemoteIssue(
+	cwd: string,
+	title: string,
+	bodyFilePath: string,
+	labels: string,
+	repository?: string,
+): { success: boolean; issueNumber: string | null; error?: string } {
+	const createScript = join(cwd, ".pi/scripts/git/create-tracking-issue.sh");
+	if (!existsSync(createScript)) {
+		return { success: false, issueNumber: null, error: "create-tracking-issue.sh not found" };
+	}
+
+	const safeTitle = title.replace(/[^a-zA-Z0-9 _\-.]/g, "");
+	const safeBodyFile = bodyFilePath.replace(/[^a-zA-Z0-9 _\-.\/]/g, "");
+	const safeLabels = labels.replace(/[^a-zA-Z0-9 _,]/g, "");
+	const safeRepo = repository ? repository.replace(/[^a-zA-Z0-9 _\-.\/]/g, "") : "";
+
+	const cmd = `bash "${createScript}" --title "${safeTitle}" --body-file "${safeBodyFile}" --labels "${safeLabels}"${safeRepo ? ` --repo "${safeRepo}"` : ""}`;
+	const result = runScript(cwd, cmd);
+	if (result.exitCode !== 0) {
+		return { success: false, issueNumber: null, error: result.stdout };
+	}
+
+	const numberMatch = result.stdout.match(/TRACKING_ID=(\d+)/);
+	if (numberMatch) {
+		return { success: true, issueNumber: numberMatch[1] };
+	}
+	const urlMatch = result.stdout.match(/#(\d+)/);
+	if (urlMatch) {
+		return { success: true, issueNumber: urlMatch[1] };
+	}
+	return { success: false, issueNumber: null, error: "Could not parse issue number" };
+}
+
+// Ensure the GitHub/GitLab repository exists and local git remote is configured.
+// Returns the repository slug if remote is ready, empty string if not available.
+function ensureRemoteRepo(
+	cwd: string,
+	repository: string,
+	epicName: string,
+	repoTool: string,
+): string {
+	// Check if remote already exists via git remote
+	const remoteCheck = runScript(cwd, "git remote get-url origin 2>/dev/null");
+	if (remoteCheck.exitCode === 0) {
+		return repository;
+	}
+
+	// Remote not configured locally — ensure the remote repo exists on GitHub/GitLab
+	if (repoTool === "gh") {
+		runScript(
+			cwd,
+			`gh repo create "${repository}" --private --description "Epic: ${epicName}" 2>&1`,
+		);
+		// Remove stale origin if it exists but points nowhere useful
+		runScript(cwd, "git remote remove origin 2>/dev/null");
+		const httpsUrl = `https://github.com/${repository}.git`;
+		runScript(cwd, `git remote add origin "${httpsUrl}"`);
+		return repository;
+	}
+
+	// GitLab path
+	runScript(
+		cwd,
+		`glab repo create "${repository}" --private --description "Epic: ${epicName}" 2>&1`,
+	);
+	runScript(cwd, "git remote remove origin 2>/dev/null");
+	const httpsUrl = `https://gitlab.com/${repository}.git`;
+	runScript(cwd, `git remote add origin "${httpsUrl}"`);
+	return repository;
+}
+
+// Link a remote issue to the epic tracking issue
+function linkRemoteIssue(
+	cwd: string,
+	issueId: string,
+	epicId: string,
+): { success: boolean; error?: string } {
+	const linkScript = join(cwd, ".pi/scripts/git/link-issue-to-epic.sh");
+	if (!existsSync(linkScript)) {
+		return { success: false, error: "link-issue-to-epic.sh not found" };
+	}
+
+	const safeIssue = issueId.replace(/[^a-zA-Z0-9 _\-.]/g, "");
+	const safeEpic = epicId.replace(/[^a-zA-Z0-9 _\-.]/g, "");
+
+	const cmd = `bash "${linkScript}" --issue-id "${safeIssue}" --epic-id "${safeEpic}"`;
+	const result = runScript(cwd, cmd);
+	if (result.exitCode !== 0) {
+		return { success: false, error: result.stdout };
+	}
+	return { success: true };
 }
 
 // ── Architecture Discovery ──
@@ -443,19 +568,38 @@ class EpicManager {
 
 		ctx.ui.setStatus("architect", `Planning epic: ${name}`);
 
+		// Step 0: Ensure remote repository exists and git remote is configured
+		const repoTool = readRepoTool(this.cwd);
+		const repository = readRepository(this.cwd);
+		const targetRepo = repository || slice.module;
+		let hasRemote = false;
+		let remoteRepo = "";
+
+		if (repoTool === "glab" ? commandExists("glab") : commandExists("gh")) {
+			const authCheck = runScript(
+				this.cwd,
+				repoTool === "glab" ? "glab auth status 2>/dev/null" : "gh auth status 2>/dev/null",
+			);
+			if (authCheck.exitCode === 0) {
+				remoteRepo = ensureRemoteRepo(this.cwd, targetRepo, name, repoTool);
+				hasRemote = remoteRepo.length > 0;
+			}
+		}
+
 		// Generate issues and issue markdown files
-		const issues = [];
+		const issues: { id: string; title: string; status: string; remoteIssueId?: string | null }[] = [];
 		const issuesDir = join(this.cwd, ISSUES_DIR);
 		if (!existsSync(issuesDir)) mkdirSync(issuesDir, { recursive: true });
 
 		for (let i = 0; i < slice.nextLogicalSlice.length; i++) {
 			const component = slice.nextLogicalSlice[i];
 			const issueId = `issue-${component.name.toLowerCase().replace(/\s+/g, "-").replace(/\//g, "-")}`;
-			issues.push({
+			const issueEntry = {
 				id: issueId,
 				title: `Implement: ${component.name}`,
 				status: "planned",
-			});
+				remoteIssueId: null as string | null,
+			};
 
 			// Generate issue markdown file
 			const issueMarkdown = generateIssueMarkdown(
@@ -467,15 +611,36 @@ class EpicManager {
 			const issueFilename = `${issueId}.md`.replace(/\//g, "-");
 			const issueFilePath = join(issuesDir, issueFilename);
 			writeFileSync(issueFilePath, issueMarkdown);
+
+			// Create remote issue on GitHub/GitLab if available
+			if (hasRemote && remoteRepo) {
+				const result = createRemoteIssue(
+					this.cwd,
+					issueEntry.title,
+					issueFilePath,
+					"epic,planned",
+					remoteRepo,
+				);
+				if (result.success && result.issueNumber) {
+					issueEntry.remoteIssueId = result.issueNumber;
+					// Link to epic tracking issue if one exists
+					if (trackingIssueId) {
+						linkRemoteIssue(this.cwd, result.issueNumber, trackingIssueId);
+					}
+				}
+			}
+
+			issues.push(issueEntry);
 		}
 
 		// Add architecture readiness issue
 		const readinessId = "issue-architecture-readiness";
-		issues.push({
+		const readinessEntry = {
 			id: readinessId,
 			title: "Architecture Readiness: Runbook, DR, Docs, Observability",
 			status: "planned",
-		});
+			remoteIssueId: null as string | null,
+		};
 
 		const readinessMarkdown = `---
 guardian_issue:
@@ -501,6 +666,26 @@ Ensure the ${slice.module} module is production-ready with runbook, DR plan, doc
 - Observability patterns in place
 `;
 		writeFileSync(join(issuesDir, `${readinessId}.md`.replace(/\//g, "-")), readinessMarkdown);
+
+		// Create remote readiness issue if available
+		if (hasRemote && remoteRepo) {
+			const readinessFilePath = join(issuesDir, `${readinessId}.md`.replace(/\//g, "-"));
+			const result = createRemoteIssue(
+				this.cwd,
+				readinessEntry.title,
+				readinessFilePath,
+				"epic,readiness",
+				remoteRepo,
+			);
+			if (result.success && result.issueNumber) {
+				readinessEntry.remoteIssueId = result.issueNumber;
+				if (trackingIssueId) {
+					linkRemoteIssue(this.cwd, result.issueNumber, trackingIssueId);
+				}
+			}
+		}
+
+		issues.push(readinessEntry);
 
 		this.state = {
 			name,
@@ -553,9 +738,94 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		manager = new EpicManager(ctx.cwd);
-		const state = manager.getState();
-		if (state && state.status !== "done" && state.status !== "aborted") {
-			ctx.ui.setStatus("architect", `Epic: ${state.name} (${state.status})`);
+		const epicState = manager.getState();
+		if (epicState && epicState.status !== "done" && epicState.status !== "aborted") {
+			ctx.ui.setStatus("architect", `Epic: ${epicState.name} (${epicState.status})`);
+		}
+
+		// Check for a running/paused pipeline and write resume instructions
+		const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
+		if (existsSync(pipelineStatePath)) {
+			try {
+				const pipelineState = JSON.parse(
+					readFileSync(pipelineStatePath, "utf-8"),
+				) as {
+					id: string;
+					name: string;
+					items: string[];
+					steps: { name: string }[];
+					currentItemIndex: number;
+					currentStepIndex: number;
+					status: string;
+					updatedAt?: string;
+				};
+
+				if (
+					pipelineState.status === "running" ||
+					pipelineState.status === "paused"
+				) {
+					const currentItem = pipelineState.items[pipelineState.currentItemIndex];
+					const currentStep = pipelineState.steps[pipelineState.currentStepIndex];
+					const issueFilename = `${currentItem}.md`.replace(/\//g, "-");
+
+					if (currentItem && currentStep) {
+						const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+						let issueContent = "";
+						try {
+							if (existsSync(issuePath)) {
+								issueContent = readFileSync(issuePath, "utf-8");
+							}
+						} catch {
+							// ignore
+						}
+
+						const resumePrompt = [
+							`## Pipeline Resumed: ${pipelineState.name} (${pipelineState.id})`,
+							"",
+							`A pipeline was left in "${pipelineState.status}" state. Resuming from where it stopped.`,
+							"",
+							`**Current task:** Item "${currentItem}" \u2192 Step: ${currentStep.name}`,
+							`**Progress:** Item ${pipelineState.currentItemIndex + 1}/${pipelineState.items.length} \u2192 Step ${pipelineState.currentStepIndex + 1}/${pipelineState.steps.length}`,
+							"",
+							"**Instructions:**",
+							issueContent
+								? `1. Review the issue context: .pi/issues/${issueFilename}`
+								: "1. Review the current issue context from the pipeline state",
+							`2. Continue the ${currentStep.name} step`,
+							"3. Run `pipeline_run_acceptance` to validate",
+							"4. Call `pipeline_advance` when done",
+							"",
+							"---",
+							"",
+							"## Issue Context",
+							"",
+							issueContent || "Issue file not found. Refer to pipeline state for context.",
+						].join("\n");
+
+						// Write resume prompt to a file the agent can pick up
+						const resumePath = join(ctx.cwd, ".pi/.guardian-pipeline-resume.md");
+						writeFileSync(resumePath, resumePrompt);
+
+						// Auto-resume paused pipeline
+						if (pipelineState.status === "paused") {
+							pipelineState.status = "running";
+							pipelineState.updatedAt = new Date().toISOString();
+							writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
+						}
+
+						ctx.ui.setStatus(
+							"architect",
+							`Epic: ${pipelineState.name} \u2192 ${currentItem} (${currentStep.name})`,
+						);
+						ctx.ui.notify(
+							`\u25b6 Resumed pipeline "${pipelineState.name}" (${pipelineState.id})\nItem: ${currentItem} \u2192 Step: ${currentStep.name}\nRead .pi/.guardian-pipeline-resume.md for instructions.`,
+							"info",
+						);
+					}
+				}
+			} catch {
+				// Invalid pipeline state file \u2014 ignore
+			}
 		}
 	});
 
@@ -658,44 +928,26 @@ export default function (pi: ExtensionAPI) {
 					gitInitMessage = "\n\u26a0 Git init skipped";
 				}
 
-				// Step 2: Create remote repository if not already present
-				const tool = readRepoTool(ctx.cwd);
+				// Step 2: Report remote repository status (already handled by startEpic)
+				const hasRemoteConfigured =
+					runScript(ctx.cwd, "git remote get-url origin 2>/dev/null").exitCode === 0;
 				let repoMessage = "";
 				let remoteUrl = "";
-				try {
-					const remoteCheck = runScript(ctx.cwd, "git remote get-url origin 2>/dev/null");
-					if (remoteCheck.exitCode !== 0) {
-						if (tool === "gh") {
-							const createResult = runScript(
-								ctx.cwd,
-								`gh repo create "${slice.module}" --private --description "Epic: ${epicName}" 2>&1`,
-							);
-							if (createResult.exitCode === 0) {
-								repoMessage = "\n\u2713 GitHub repository created";
-								const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
-								if (urlMatch) remoteUrl = urlMatch[0];
-							}
-						} else {
-							const createResult = runScript(
-								ctx.cwd,
-								`glab repo create "${slice.module}" --private --description "Epic: ${epicName}" 2>&1`,
-							);
-							if (createResult.exitCode === 0) {
-								repoMessage = "\n\u2713 GitLab repository created";
-								const urlMatch = createResult.stdout.match(/https?:\/\/[^\s]+/);
-								if (urlMatch) remoteUrl = urlMatch[0];
-							}
-						}
-					} else {
-						remoteUrl = remoteCheck.stdout.trim();
-						repoMessage = "\n\u2713 Remote already configured";
-					}
-				} catch {
-					repoMessage = `\n\u26a0 Remote repo creation skipped (${tool} not configured)`;
+				if (hasRemoteConfigured) {
+					remoteUrl = runScript(ctx.cwd, "git remote get-url origin 2>/dev/null").stdout.trim();
+					repoMessage = "\n\u2713 Remote repository configured";
+				} else {
+					repoMessage = "\n\u26a0 Remote repository not configured (run with gh/glab authenticated)";
 				}
 
-				// Step 3: Remote issue creation is optional — local .pi/issues/*.md files are the source of truth
-				const issueMessage = "\n\u2713 Issue files created in .pi/issues/";
+				// Step 3: Remote issue creation (automatic if gh/glab is authenticated)
+				const createdRemoteCount = (state.issues || []).filter(
+					(i) => i.remoteIssueId,
+				).length;
+				const issueMessage =
+					createdRemoteCount > 0
+						? `\n\u2713 Issue files created in .pi/issues/ (${createdRemoteCount} pushed to GitHub)`
+						: "\n\u2713 Issue files created in .pi/issues/";
 
 				// Build status message
 				let message = `\u25b6 Epic "${epicName}" started\n`;
@@ -722,8 +974,14 @@ export default function (pi: ExtensionAPI) {
 						name: "validate",
 						acceptance: { type: "validator", validators: ["ci", "tests", "security"] },
 					},
-					{ name: "create-mr", acceptance: { type: "none" } },
-					{ name: "merge", acceptance: { type: "validator", validators: ["ci", "canonical"] } },
+					{
+						name: "create-mr",
+						acceptance: { type: "shell", command: ".pi/scripts/create-mr.sh" },
+					},
+					{
+						name: "merge",
+						acceptance: { type: "shell", command: ".pi/scripts/merge-mr.sh" },
+					},
 				];
 
 				// Write pipeline state directly (cross-extension tool calls don't work in pi)

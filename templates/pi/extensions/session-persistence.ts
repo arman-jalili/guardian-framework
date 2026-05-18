@@ -119,7 +119,9 @@ export default function (pi: ExtensionAPI) {
 		if (!currentSession) return;
 		if (currentSession.title !== "New session") return;
 
-		const title = deriveTitle(event.input);
+		const input = (event as { input?: string }).input;
+		if (!input) return;
+		const title = deriveTitle(input);
 		currentSession.title = title;
 		currentSession.updatedAt = Date.now();
 

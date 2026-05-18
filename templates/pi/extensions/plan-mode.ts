@@ -75,7 +75,9 @@ export default function (pi: ExtensionAPI) {
 
 	// Intercept user input for slash commands
 	pi.on("input", async (event) => {
-		const result = handleSlashCommand(event.input);
+		const input = (event as { input?: string }).input;
+		if (!input) return;
+		const result = handleSlashCommand(input);
 		if (result) {
 			// Inject the status message as a system note
 			event.input = result;

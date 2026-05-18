@@ -726,7 +726,34 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			const lines: string[] = [`## Acceptance Gate: ${step.name}\n`];
+			if (acceptance.type === "shell") {
+				const lines: string[] = [`## Acceptance Gate: ${step.name}\n`];
+				const scriptPath = acceptance.command;
+				const fullPath = join(ctx.cwd, scriptPath);
+				if (!existsSync(fullPath)) {
+					lines.push("Shell script not found: " + scriptPath);
+					lines.push("Call pipeline_advance to skip.");
+					return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+				}
+				try {
+					const output = execSync("bash " + scriptPath, {
+						cwd: ctx.cwd,
+						timeout: 300_000,
+						encoding: "utf-8",
+					});
+					lines.push("Script PASS: " + scriptPath);
+					lines.push("```\n" + output + "\n```");
+					manager.markStepPassed(step.name);
+					lines.push("\n**Result: PASSED**");
+				} catch (e: unknown) {
+					const err = e as { stdout?: string };
+					lines.push("Script FAIL: " + scriptPath);
+					lines.push("```\n" + ((err.stdout || "").split("\n").slice(-10).join("\n")) + "\n```");
+				}
+				return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+			}
+
+			const lines: string[] = ["## Acceptance Gate: " + step.name + "\n"];
 			let allPassed = true;
 
 			for (const validator of acceptance.validators) {
