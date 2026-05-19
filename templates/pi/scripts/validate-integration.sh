@@ -23,7 +23,7 @@ echo "============================================"
 echo ""
 
 echo "--- Integration Tests ---"
-if [test command] 2>/dev/null; then
+if pytest 2>/dev/null; then
     pass "Integration-compatible test command passed"
 else
     fail "Integration test command failed"

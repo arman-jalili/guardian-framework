@@ -153,7 +153,7 @@ function commandExists(cmd: string): boolean {
 }
 
 // Try to create a remote GitHub/GitLab issue via the shell script wrapper.
-// Uses execSync with carefully constructed arguments; returns issue number on success.
+// Uses execFileSync to avoid shell quoting issues with nested commands.
 function createRemoteIssue(
 	cwd: string,
 	title: string,
@@ -166,22 +166,40 @@ function createRemoteIssue(
 		return { success: false, issueNumber: null, error: "create-tracking-issue.sh not found" };
 	}
 
-	const safeTitle = title.replace(/[^a-zA-Z0-9 _\-.]/g, "");
-	const safeBodyFile = bodyFilePath.replace(/[^a-zA-Z0-9 _\-.\/]/g, "");
-	const safeLabels = labels.replace(/[^a-zA-Z0-9 _,]/g, "");
-	const safeRepo = repository ? repository.replace(/[^a-zA-Z0-9 _\-.\/]/g, "") : "";
+	const args: string[] = [
+		createScript,
+		"--title",
+		title,
+		"--body-file",
+		bodyFilePath,
+		"--labels",
+		labels,
+	];
+	if (repository) args.push("--repo", repository);
 
-	const cmd = `bash "${createScript}" --title "${safeTitle}" --body-file "${safeBodyFile}" --labels "${safeLabels}"${safeRepo ? ` --repo "${safeRepo}"` : ""}`;
-	const result = runScript(cwd, cmd);
-	if (result.exitCode !== 0) {
-		return { success: false, issueNumber: null, error: result.stdout };
+	let stdout = "";
+	let exitCode = 0;
+	try {
+		stdout = execFileSync("bash", args, {
+			cwd,
+			timeout: 120_000,
+			encoding: "utf-8",
+		});
+	} catch (e: unknown) {
+		const err = e as { status?: number; stdout?: string; message?: string };
+		exitCode = err.status ?? 1;
+		stdout = err.stdout ?? err.message ?? "";
 	}
 
-	const numberMatch = result.stdout.match(/TRACKING_ID=(\d+)/);
+	if (exitCode !== 0) {
+		return { success: false, issueNumber: null, error: stdout };
+	}
+
+	const numberMatch = stdout.match(/TRACKING_ID=(\d+)/);
 	if (numberMatch) {
 		return { success: true, issueNumber: numberMatch[1] };
 	}
-	const urlMatch = result.stdout.match(/#(\d+)/);
+	const urlMatch = stdout.match(/#(\d+)/);
 	if (urlMatch) {
 		return { success: true, issueNumber: urlMatch[1] };
 	}
@@ -267,18 +285,22 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 
 	const lines = content.split("\n");
 	let inComponentSection = false;
+	let inDetailsSection = false;
 	let currentName = "";
 	let currentStatus = "";
 	let currentDesc = "";
 	let currentDeps: string[] = [];
 
 	function saveCurrent() {
-		if (currentName && currentStatus) {
+		if (currentName) {
+			// Default to planned if no explicit status found
+			const status = currentStatus || "planned";
+			const desc = currentDesc || `${currentName} component`;
 			components.push({
 				name: currentName,
-				status: currentStatus as ModuleComponent["status"],
-				description: currentDesc.trim(),
-				dependencies: currentDeps,
+				status: status as ModuleComponent["status"],
+				description: desc.trim(),
+				dependencies: currentDeps.length > 0 ? currentDeps : ["none"],
 			});
 		}
 	}
@@ -286,22 +308,33 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 	for (const line of lines) {
 		const trimmed = line.trim();
 
-		if (trimmed.match(/^##\s+Component/i)) {
+		// Enter component section (supports "## Components", "## Component Details", "## Component")
+		if (trimmed.match(/^##\s+Components?/i) || trimmed.match(/^##\s+Component\s+Details/i)) {
 			inComponentSection = true;
 			continue;
 		}
-		if (inComponentSection && trimmed.match(/^##\s+/)) {
+
+		// Leave component section on next top-level section
+		if (inComponentSection && trimmed.match(/^##\s+/) && !trimmed.match(/^##\s+Components?/i)) {
 			saveCurrent();
 			currentName = "";
 			currentStatus = "";
 			currentDesc = "";
 			currentDeps = [];
 			inComponentSection = false;
+			inDetailsSection = false;
 			continue;
 		}
+
+		// Component heading (###) — start a new component entry
 		if (inComponentSection && trimmed.match(/^###\s+/)) {
+			// Skip non-component ### headings like "### Depends On" or "### Security"
+			const name = trimmed.replace(/^###\s+/, "");
+			if (name.match(/^(depends|security|testing|performance|error|change|data flow|responsibilities|overview|interfaces|inputs|outputs)/i)) {
+				continue;
+			}
 			saveCurrent();
-			currentName = trimmed.replace(/^###\s+/, "");
+			currentName = name;
 			currentStatus = "";
 			currentDesc = "";
 			currentDeps = [];
@@ -313,13 +346,15 @@ function parseModuleFile(filePath: string): ModuleComponent[] {
 		if (trimmed.startsWith("status:")) {
 			currentStatus = trimmed.replace("status:", "").trim().toLowerCase();
 		} else if (trimmed.startsWith("depends:")) {
-			currentDeps = trimmed
-				.replace("depends:", "")
-				.split(",")
-				.map((d) => d.trim())
-				.filter(Boolean);
+			const depsStr = trimmed.replace("depends:", "").trim();
+			if (depsStr && depsStr !== "none" && depsStr !== "[TODO") {
+				currentDeps = depsStr.split(",").map((d) => d.trim()).filter(Boolean);
+			}
 		} else if (trimmed.startsWith("**Purpose:**")) {
 			currentDesc = trimmed.replace(/\*\*Purpose:\*\*\s*/, "").trim();
+		} else if (!currentDesc && trimmed.length > 10 && !trimmed.startsWith("#") && !trimmed.startsWith("-") && !trimmed.startsWith("|") && !trimmed.startsWith(">") && !trimmed.startsWith("```")) {
+			// Use first substantial sentence as description
+			currentDesc = trimmed.slice(0, 200);
 		}
 	}
 

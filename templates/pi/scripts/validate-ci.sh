@@ -29,7 +29,7 @@ echo ""
 # Build
 # ---------------------------------------------------------------------------
 echo "--- Build ---"
-if [build command] 2>/dev/null; then
+if python -m build 2>/dev/null; then
     pass "Build succeeded"
 else
     fail "Build failed"
@@ -40,7 +40,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Tests ---"
-if [test command] 2>/dev/null; then
+if pytest 2>/dev/null; then
     pass "All tests passed"
 else
     fail "Tests failed"
@@ -51,7 +51,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Lint ---"
-if [lint command] 2>/dev/null; then
+if ruff check . 2>/dev/null; then
     pass "Lint passed"
 else
     fail "Lint failed"
@@ -62,7 +62,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Format ---"
-if [format check command] 2>/dev/null; then
+if ruff format --check . 2>/dev/null; then
     pass "Format check passed"
 else
     fail "Format check failed"
@@ -73,7 +73,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Security Audit ---"
-if [audit command] 2>/dev/null; then
+if pip-audit 2>/dev/null; then
     pass "Security audit passed"
 else
     fail "Security audit failed"

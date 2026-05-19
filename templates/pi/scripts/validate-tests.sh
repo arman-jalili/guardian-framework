@@ -29,7 +29,7 @@ echo ""
 # Unit Tests
 # ---------------------------------------------------------------------------
 echo "--- Unit Tests ---"
-if [test command] 2>/dev/null; then
+if pytest 2>/dev/null; then
     pass "All unit tests passed"
 else
     fail "Unit tests failed"
