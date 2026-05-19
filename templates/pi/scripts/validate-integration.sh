@@ -1,49 +1,22 @@
 #!/usr/bin/env bash
-# ============================================================================
-# validate-integration.sh — Automated Integration Validator
-#
-# Run as: bash .pi/scripts/validate-integration.sh
-# Exit codes: 0 = PASS, 1 = FAIL
-# ============================================================================
+# validate-integration.sh — Dispatcher
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-ERRORS=()
-PASS_COUNT=0
+detect_language() {
+    if [ -f "poetry.lock" ] || [ -f "pyproject.toml" ]; then echo "python"
+    elif [ -f "Cargo.lock" ] || [ -f "Cargo.toml" ]; then echo "rust"
+    elif [ -f "go.mod" ]; then echo "go"
+    elif [ -f "package.json" ]; then echo "typescript"
+    else echo "unknown"; fi
+}
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+LANG=$(detect_language)
+LANG_SCRIPT="${SCRIPT_DIR}/languages/${LANG}/validate-integration.sh"
 
-pass() { echo -e "${GREEN}PASS${NC} $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
-fail() { echo -e "${RED}FAIL${NC} $1"; ERRORS+=("$1"); }
-
-echo "============================================"
-echo "  Integration Validation"
-echo "============================================"
-echo ""
-
-echo "--- Integration Tests ---"
-if pytest 2>/dev/null; then
-    pass "Integration-compatible test command passed"
+if [ -f "$LANG_SCRIPT" ]; then
+    exec bash "$LANG_SCRIPT" "$@"
 else
-    fail "Integration test command failed"
+    echo "No integration validator for language: $LANG"
+    exit 0
 fi
-
-echo ""
-echo "============================================"
-echo "  Summary"
-echo "============================================"
-echo -e "  Passed: ${GREEN}${PASS_COUNT}${NC}"
-echo -e "  Failed: ${RED}${#ERRORS[@]}${NC}"
-echo ""
-
-if [ ${#ERRORS[@]} -gt 0 ]; then
-    echo "FAILURES:"
-    for err in "${ERRORS[@]}"; do
-        echo "  - $err"
-    done
-    exit 1
-fi
-
-echo -e "${GREEN}Integration validation passed.${NC}"
-exit 0

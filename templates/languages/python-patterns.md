@@ -231,29 +231,35 @@ class Config:
 ## Build Commands
 
 ```bash
-# Build
-python -m build
+# Install dependencies
+poetry install
 
-# Install
-pip install -e .
+# Activate shell with project venv
+poetry shell
+
+# Run with poetry venv
+poetry run archguard
 
 # Test
-pytest
+poetry run pytest
 
 # Test with coverage
-pytest --cov=.
+poetry run pytest --cov=.
 
 # Lint
-ruff check .
+poetry run ruff check .
 
 # Format
-ruff format .
+poetry run ruff format .
 
 # Type check
-mypy .
+poetry run mypy .
 
 # Security audit
-pip-audit
+poetry run pip-audit
+
+# Build
+poetry build
 ```
 
 ---
@@ -261,18 +267,46 @@ pip-audit
 ## Dependencies
 
 ```toml
-# pyproject.toml
-[project]
-dependencies = [
-    "structlog>=23.0.0",
-    "pydantic>=2.0.0",
-]
+# pyproject.toml — Poetry-based project
+[tool.poetry]
+name = "archguard"
+version = "0.1.0"
+description = "Engineering Change Intelligence Platform"
+authors = ["Arman <arman@example.com>"]
+readme = "README.md"
+package-mode = true
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-]
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.0"
+uvicorn = "^0.32.0"
+pydantic = "^2.0.0"
+structlog = "^24.0.0"
+asyncpg = "^0.30.0"
+httpx = "^0.27.0"
+redis = "^5.0.0"
+celery = "^5.4.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
+ruff = "^0.8.0"
+mypy = "^1.0.0"
+pip-audit = "^2.0.0"
+
+[tool.poetry.scripts]
+archguard = "archguard.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
 ```

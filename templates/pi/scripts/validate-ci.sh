@@ -1,103 +1,37 @@
 #!/usr/bin/env bash
 # ============================================================================
-# validate-ci.sh — Automated CI/MR Validator
+# validate-ci.sh — Dispatcher
 #
-# Run as: bash .pi/scripts/validate-ci.sh
-# Exit codes: 0 = PASS, 1 = FAIL
+# Detects the project language and delegates to the language-specific script.
+# Language-specific scripts live in: .pi/scripts/languages/<lang>/validate-ci.sh
 # ============================================================================
 set -euo pipefail
 
-ERRORS=()
-WARNINGS=()
-PASS_COUNT=0
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+detect_language() {
+    if [ -f "poetry.lock" ]; then
+        echo "python"
+    elif [ -f "pyproject.toml" ]; then
+        echo "python"
+    elif [ -f "Cargo.lock" ] || [ -f "Cargo.toml" ]; then
+        echo "rust"
+    elif [ -f "go.mod" ]; then
+        echo "go"
+    elif [ -f "package.json" ]; then
+        echo "typescript"
+    else
+        echo "unknown"
+    fi
+}
 
-pass() { echo -e "${GREEN}✅ PASS${NC} $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
-fail() { echo -e "${RED}❌ FAIL${NC} $1"; ERRORS+=("$1"); }
-warn() { echo -e "${YELLOW}⚠️  WARN${NC} $1"; WARNINGS+=("$1"); }
+LANG=$(detect_language)
+LANG_SCRIPT="${SCRIPT_DIR}/languages/${LANG}/validate-ci.sh"
 
-echo "============================================"
-echo "  CI/MR Validation (Automated)"
-echo "============================================"
-echo ""
-
-# ---------------------------------------------------------------------------
-# Build
-# ---------------------------------------------------------------------------
-echo "--- Build ---"
-if python -m build 2>/dev/null; then
-    pass "Build succeeded"
+if [ -f "$LANG_SCRIPT" ]; then
+    exec bash "$LANG_SCRIPT" "$@"
 else
-    fail "Build failed"
+    echo "No CI validator for language: $LANG"
+    echo "Create: $LANG_SCRIPT"
+    exit 0
 fi
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Tests ---"
-if pytest 2>/dev/null; then
-    pass "All tests passed"
-else
-    fail "Tests failed"
-fi
-
-# ---------------------------------------------------------------------------
-# Lint
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Lint ---"
-if ruff check . 2>/dev/null; then
-    pass "Lint passed"
-else
-    fail "Lint failed"
-fi
-
-# ---------------------------------------------------------------------------
-# Format
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Format ---"
-if ruff format --check . 2>/dev/null; then
-    pass "Format check passed"
-else
-    fail "Format check failed"
-fi
-
-# ---------------------------------------------------------------------------
-# Security Audit
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Security Audit ---"
-if pip-audit 2>/dev/null; then
-    pass "Security audit passed"
-else
-    fail "Security audit failed"
-fi
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
-echo ""
-echo "============================================"
-echo "  Summary"
-echo "============================================"
-echo -e "  Passed:   ${GREEN}${PASS_COUNT}${NC}"
-echo -e "  Failed:   ${RED}${#ERRORS[@]}${NC}"
-echo ""
-
-if [ ${#ERRORS[@]} -gt 0 ]; then
-    echo "FAILURES:"
-    for err in "${ERRORS[@]}"; do
-        echo "  - $err"
-    done
-    echo ""
-    exit 1
-fi
-
-echo -e "${GREEN}All CI checks passed. Ready for merge review.${NC}"
-exit 0
