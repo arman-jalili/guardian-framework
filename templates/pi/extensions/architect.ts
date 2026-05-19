@@ -1039,17 +1039,49 @@ export default function (pi: ExtensionAPI) {
 				writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
 
 				const firstItem = items[0];
+				const firstIssue = state.issues?.find((i) => i.id === firstItem);
 				const firstDesc = components[0]?.description || "Implementation";
 				const issueFilename = `${firstItem}.md`.replace(/\//g, "-");
 				const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
+
+				// Try to fetch issue content from GitHub if a remote issue exists
 				let issueContent = "";
-				try {
-					if (existsSync(issuePath)) {
-						issueContent = readFileSync(issuePath, "utf-8");
+				let issueSource = "";
+				const remoteId = firstIssue?.remoteIssueId;
+				const repository = readRepository(ctx.cwd) || "";
+				if (remoteId && repository) {
+					try {
+						const ghOutput = runScript(
+							ctx.cwd,
+							`gh issue view ${remoteId} --repo ${repository} --json title,body`,
+						);
+						if (ghOutput.exitCode === 0 && ghOutput.stdout) {
+							const parsed = JSON.parse(ghOutput.stdout) as {
+								title?: string;
+								body?: string;
+							};
+							issueContent = parsed.body || "";
+						}
+					} catch {
+						// fallback to local file
 					}
-				} catch {
-					/* fallback */
 				}
+
+				// Fallback to local file if remote fetch failed
+				if (!issueContent) {
+					try {
+						if (existsSync(issuePath)) {
+							issueContent = readFileSync(issuePath, "utf-8");
+						}
+					} catch {
+						/* ignore */
+					}
+				}
+
+				issueSource =
+					remoteId && repository
+						? `GitHub: https://github.com/${repository}/issues/${remoteId}`
+						: `Local file: .pi/issues/${issueFilename}`;
 
 				ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
 
@@ -1061,9 +1093,10 @@ export default function (pi: ExtensionAPI) {
 					"",
 					`**Current task:** Item "${firstItem}" \u2192 Step: implement`,
 					`**Description:** ${firstDesc.slice(0, 100)}...`,
+					`**Issue:** ${issueSource}`,
 					"",
 					"**Instructions:**",
-					`1. Read the issue file: .pi/issues/${issueFilename}`,
+					"1. Read the issue content below (fetched from GitHub or local file)",
 					"2. Implement the component according to the issue spec",
 					"3. Run `pipeline_run_acceptance` to validate",
 					"4. Call `pipeline_advance` when done",
@@ -1072,7 +1105,7 @@ export default function (pi: ExtensionAPI) {
 					"",
 					"## Issue Context",
 					"",
-					issueContent || "Issue file not found.",
+					issueContent || "Issue content not available.",
 				].join("\n");
 
 				return { content: [{ type: "text", text: instructions }] };

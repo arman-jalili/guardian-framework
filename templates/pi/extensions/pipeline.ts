@@ -33,6 +33,83 @@ const VALIDATOR_SCRIPTS: Record<string, string> = {
 	integration: ".pi/scripts/validate-integration.sh",
 };
 
+// ── Helpers ──
+
+function runScript(cwd: string, script: string): { exitCode: number; stdout: string } {
+	try {
+		const stdout = execSync(`bash -c "${script}"`, { cwd, timeout: 120_000, encoding: "utf-8" });
+		return { exitCode: 0, stdout };
+	} catch (e: unknown) {
+		const err = e as { status?: number; stdout?: string; message?: string };
+		return { exitCode: err.status ?? 1, stdout: err.stdout ?? err.message ?? "" };
+	}
+}
+
+function readRepository(cwd: string): string | null {
+	try {
+		const manifestPath = join(cwd, "guardian-manifest.json");
+		if (existsSync(manifestPath)) {
+			const raw = readFileSync(manifestPath, "utf-8");
+			const manifest = JSON.parse(raw) as {
+				repository?: string;
+				templateContext?: { repository?: string };
+			};
+			if (manifest.repository) return manifest.repository;
+			if (manifest.templateContext?.repository) return manifest.templateContext.repository;
+		}
+	} catch {
+		// ignore
+	}
+	return null;
+}
+
+// Fetch issue content from GitHub (if remote ID available) or fallback to local file
+function fetchIssueContent(
+	cwd: string,
+	issueId: string,
+	remoteIssueId?: string | null,
+): { content: string; source: string } {
+	const repository = readRepository(cwd);
+	if (remoteIssueId && repository) {
+		try {
+			const result = runScript(
+				cwd,
+				`gh issue view ${remoteIssueId} --repo ${repository} --json title,body`,
+			);
+			if (result.exitCode === 0 && result.stdout) {
+				const parsed = JSON.parse(result.stdout) as { title?: string; body?: string };
+				if (parsed.body) {
+					return {
+						content: parsed.body,
+						source: `GitHub: https://github.com/${repository}/issues/${remoteIssueId}`,
+					};
+				}
+			}
+		} catch {
+			// fallback to local file
+		}
+	}
+
+	// Fallback to local file
+	const issueFilename = `${issueId}.md`.replace(/\//g, "-");
+	const issuePath = join(cwd, ".pi/issues", issueFilename);
+	try {
+		if (existsSync(issuePath)) {
+			return {
+				content: readFileSync(issuePath, "utf-8"),
+				source: `Local file: .pi/issues/${issueFilename}`,
+			};
+		}
+	} catch {
+		// ignore
+	}
+
+	return {
+		content: "Issue content not available.",
+		source: issueId,
+	};
+}
+
 // ── Types ──
 
 type ExtensionContext = {
@@ -528,11 +605,82 @@ export default function (pi: ExtensionAPI) {
 				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
 			}
 
-			const stepName = (params.stepName as string) || state.steps[state.currentStepIndex]?.name;
+			const prevItemIndex = state.currentItemIndex;
+			const prevStepIndex = state.currentStepIndex;
+			const stepName = (params.stepName as string) || state.steps[prevStepIndex]?.name;
 			manager.markStepPassed(stepName);
 			manager.advanceStep();
 
-			const nextInfo = getNextStepInfo(state);
+			// Re-read state after advance
+			const updatedState = manager.getState()!;
+
+			// Pipeline complete
+			if (updatedState.currentItemIndex >= updatedState.items.length) {
+				return {
+					content: [{
+						type: "text" as const,
+						text: `Pipeline complete! All ${updatedState.items.length} items done.`,
+					}],
+				};
+			}
+
+			const currentItem = updatedState.items[updatedState.currentItemIndex];
+			const currentStep = updatedState.steps[updatedState.currentStepIndex];
+			const movedToNextItem = updatedState.currentItemIndex !== prevItemIndex;
+
+			// If we moved to a new item (completed all steps of previous item),
+			// inject the full next-task prompt with issue context
+			if (movedToNextItem && currentStep?.name === "implement") {
+				// Find the remote issue ID from epic state
+				let remoteId: string | null | undefined;
+				try {
+					const epicStatePath = join(ctx.cwd, ".pi/.guardian-epic-state.json");
+					if (existsSync(epicStatePath)) {
+						const epicState = JSON.parse(readFileSync(epicStatePath, "utf-8")) as {
+							issues?: { id: string; remoteIssueId?: string | null }[];
+						};
+						const issue = epicState.issues?.find((i) => i.id === currentItem);
+						remoteId = issue?.remoteIssueId;
+					}
+				} catch {
+					// ignore
+				}
+
+				const { content: issueContent, source: issueSource } = fetchIssueContent(
+					ctx.cwd,
+					currentItem,
+					remoteId,
+				);
+
+				const instructions = [
+					`## Pipeline: Moving to next item`,
+					"",
+					`**Pipeline:** ${updatedState.name} (${updatedState.id})`,
+					`**Progress:** ${updatedState.currentItemIndex + 1}/${updatedState.items.length} items`,
+					`**Issue:** ${issueSource}`,
+					"",
+					`**Next task:** Item "${currentItem}" → Step: implement`,
+					"",
+					"**Instructions:**",
+					"1. Read the issue content below (fetched from GitHub or local file)",
+					"2. Implement the component according to the issue spec",
+					"3. Run `pipeline_run_acceptance` to validate",
+					"4. Call `pipeline_advance` when done",
+					"",
+					"⚠️ **IMPORTANT:** After you complete this item and call `pipeline_advance`, the pipeline will automatically advance to the next step. Continue this loop until all items are done. Do not stop after completing a single item — keep going through implement → validate → create-mr → merge for every item.",
+					"",
+					"---",
+					"",
+					"## Issue Context",
+					"",
+					issueContent || "Issue content not available.",
+				].join("\n");
+
+				return { content: [{ type: "text" as const, text: instructions }] };
+			}
+
+			// Same item, next step — just report
+			const nextInfo = getNextStepInfo(updatedState);
 			return { content: [{ type: "text" as const, text: nextInfo }] };
 		},
 	});
@@ -654,14 +802,26 @@ export default function (pi: ExtensionAPI) {
 			const step = state.steps[state.currentStepIndex];
 			if (!step) return { content: [{ type: "text" as const, text: "No more steps." }] };
 
-			const issueFilename = `${issueId}.md`.replace(/\//g, "-");
-			const issuePath = join(ctx.cwd, ".pi/issues", issueFilename);
-			let issueContent = "";
+			// Find the remote issue ID from epic state
+			let remoteId: string | null | undefined;
 			try {
-				issueContent = readFileSync(issuePath, "utf-8");
+				const epicStatePath = join(ctx.cwd, ".pi/.guardian-epic-state.json");
+				if (existsSync(epicStatePath)) {
+					const epicState = JSON.parse(readFileSync(epicStatePath, "utf-8")) as {
+						issues?: { id: string; remoteIssueId?: string | null }[];
+					};
+					const issue = epicState.issues?.find((i) => i.id === issueId);
+					remoteId = issue?.remoteIssueId;
+				}
 			} catch {
-				issueContent = `No issue file at .pi/issues/${issueId}.md`;
+				// ignore
 			}
+
+			const { content: issueContent, source: issueSource } = fetchIssueContent(
+				ctx.cwd,
+				issueId,
+				remoteId,
+			);
 
 			const stepConfig = buildSteps([step.name])[0];
 			let stepPrompt = "";
@@ -679,6 +839,7 @@ export default function (pi: ExtensionAPI) {
 				`**Pipeline:** ${state.name} (${state.id})`,
 				`**Item:** ${issueId} (${state.currentItemIndex + 1}/${state.items.length})`,
 				`**Step:** ${step.name} (${state.currentStepIndex + 1}/${state.steps.length})`,
+				`**Issue:** ${issueSource}`,
 				"",
 				"---",
 				"",
