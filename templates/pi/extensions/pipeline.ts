@@ -81,7 +81,7 @@ function fetchIssueContent(
 				if (parsed.body) {
 					return {
 						content: parsed.body,
-						source: `GitHub: https://github.com/${repository}/issues/${remoteIssueId}`,
+						source: `Remote issue: https://github.com/${repository}/issues/${remoteIssueId}`,
 					};
 				}
 			}
@@ -662,7 +662,7 @@ export default function (pi: ExtensionAPI) {
 					`**Next task:** Item "${currentItem}" → Step: implement`,
 					"",
 					"**Instructions:**",
-					"1. Read the issue content below (fetched from GitHub or local file)",
+					"1. Review the issue context below",
 					"2. Implement the component according to the issue spec",
 					"3. Run `pipeline_run_acceptance` to validate",
 					"4. Call `pipeline_advance` when done",

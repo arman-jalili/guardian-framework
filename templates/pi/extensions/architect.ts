@@ -1080,7 +1080,7 @@ export default function (pi: ExtensionAPI) {
 
 				issueSource =
 					remoteId && repository
-						? `GitHub: https://github.com/${repository}/issues/${remoteId}`
+						? `Remote issue: https://github.com/${repository}/issues/${remoteId}`
 						: `Local file: .pi/issues/${issueFilename}`;
 
 				ctx.ui.setStatus("architect", `Epic: ${epicName} \u2192 pipeline running`);
@@ -1096,7 +1096,7 @@ export default function (pi: ExtensionAPI) {
 					`**Issue:** ${issueSource}`,
 					"",
 					"**Instructions:**",
-					"1. Read the issue content below (fetched from GitHub or local file)",
+					"1. Review the issue context below",
 					"2. Implement the component according to the issue spec",
 					"3. Run `pipeline_run_acceptance` to validate",
 					"4. Call `pipeline_advance` when done",
