@@ -199,3 +199,11 @@ strip_ansi = true
 head_lines = 1
 truncate_lines_at = 120
 max_lines = 30
+
+# ── Ubiquitous Language Validator ────────────────────────────────────────────
+
+[filters.ubiquitous-language]
+command = "validate-ubiquitous-language"
+description = "Detect code drift from .pi/domain/ubiquitous-language.md glossary"
+strip_ansi = false
+keep_lines_matching = ["FAIL", "WARN", "Drift:", "alias", "canonical"]
