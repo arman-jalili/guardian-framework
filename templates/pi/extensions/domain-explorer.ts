@@ -62,10 +62,6 @@ function toolResult(text: string) {
 	return { content: [{ type: "text" as const, text }] };
 }
 
-function toolResultLegacy(text: string) {
-	return { type: "success" as const, result: { content: [{ type: "text" as const, text }] } };
-}
-
 function toolResultDirect(text: string) {
 	return text;
 }
@@ -160,8 +156,6 @@ export default function (pi: ExtensionAPI) {
 				return toolResultDirect("ERROR: context is required (business description)");
 			}
 
-			onUpdate({ type: "progress", message: "Generating DDD exploration prompt..." });
-
 			const sanitized = sanitizeContext(context);
 			const prompt = buildExplorationPrompt(sanitized);
 			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
@@ -231,7 +225,6 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// 1. Session file exists
-			onUpdate({ type: "progress", message: "Checking session file..." });
 			if (!fs.existsSync(sessionPath)) {
 				addCheck("Session file", false, "Not found");
 			} else {
@@ -240,8 +233,7 @@ export default function (pi: ExtensionAPI) {
 
 			// 2. Parse and validate structure
 			if (fs.existsSync(sessionPath)) {
-				onUpdate({ type: "progress", message: "Validating structure..." });
-				const content = fs.readFileSync(sessionPath, "utf-8");
+					const content = fs.readFileSync(sessionPath, "utf-8");
 				const hasBoundedContexts = content.includes("## Bounded Contexts");
 				const hasEntities = content.includes("## Entities");
 				const hasGlossary = content.includes("## Ubiquitous Language");
@@ -253,8 +245,7 @@ export default function (pi: ExtensionAPI) {
 
 			// 3. Glossary compliance
 			if (fs.existsSync(glossaryPath)) {
-				onUpdate({ type: "progress", message: "Checking glossary compliance..." });
-				const content = fs.readFileSync(glossaryPath, "utf-8");
+					const content = fs.readFileSync(glossaryPath, "utf-8");
 				const terms = content.split("\n").filter(l => l.startsWith("|") && !l.includes("|---") && !l.includes("| Term |")).length;
 				addCheck("Glossary parsed", terms > 0, terms + " canonical terms");
 			} else {
@@ -262,7 +253,6 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// 4. Source code drift
-			onUpdate({ type: "progress", message: "Checking source drift..." });
 			const scriptPath = path.join(ctx.cwd, ".pi", "scripts", "validate-ubiquitous-language.sh");
 			if (fs.existsSync(scriptPath)) {
 				try {
