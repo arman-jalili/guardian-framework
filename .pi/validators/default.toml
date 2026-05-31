@@ -178,6 +178,17 @@ keep_lines_matching = ["FAILED", "error", "timeout", "connection refused", "asse
 max_lines = 80
 on_empty = "✅ All integration tests passed"
 
+# ── Ubiquitous Language Validator ────────────────────────────────────────────
+
+[filters.ubiquitous-language]
+command = "validate-ubiquitous-language"
+description = "Detect code drift from .pi/domain/ubiquitous-language.md glossary"
+# Run: bash .pi/scripts/validate-ubiquitous-language.sh [src_dir]
+strip_ansi = false
+keep_lines_matching = ["❌ FAIL", "⚠️  WARN", "Drift:", "alias", "canonical", "Variation"]
+max_lines = 80
+on_empty = "✅ No drift detected"
+
 # ── Git Status Validator ────────────────────────────────────────────────────
 
 [filters.git-status]

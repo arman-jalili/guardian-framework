@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module docs: CLI entry point, init command, generate command, update command, template system, manifest system, core libraries
 - `.pi/context/project.md` — project-specific knowledge for agents
 - `.pi/domain/` — planned directory for DDD bounded context discovery
+- `.pi/domain/ubiquitous-language.md` — DDD ubiquitous language glossary with 18 canonical terms and alias tracking
+- `.pi/scripts/validate-ubiquitous-language.sh` — drift detection validator that parses glossary and scans src/ for alias usage
+- `.pi/validators/default.toml` — `ubiquitous-language` TOML filter registered for `--validators` discovery
 
 ### Changed
 
