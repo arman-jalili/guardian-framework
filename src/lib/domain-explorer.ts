@@ -362,8 +362,8 @@ export async function exploreDomain(
 	const promptContent = [
 		"# Domain Exploration Prompt",
 		"",
-		"**Session:** " + sessionId,
-		"**Created:** " + new Date().toISOString(),
+		`**Session:** ${sessionId}`,
+		`**Created:** ${new Date().toISOString()}`,
 		"**Status:** awaiting-response",
 		"",
 		"---",
@@ -371,10 +371,10 @@ export async function exploreDomain(
 		prompt,
 	].join("\n");
 
-	const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
+	const promptPath = path.join(explorationDir, `${sessionId}.prompt.md`);
 	if (!dryRun) {
 		fs.writeFileSync(promptPath, promptContent, "utf-8");
-		console.error(`[domain-explore] Prompt written to: \${promptPath}`);
+		console.error("[domain-explore] Prompt written to: ${promptPath}");
 	}
 
 	const warnings: string[] = [];
@@ -414,7 +414,7 @@ export function answerExploration(
 	// 1. Parse the LLM response
 	const parsed = parseExplorationResponse(responseJson, sessionId);
 	if (!parsed.ok) {
-		throw new Error(`Failed to parse LLM response: \${parsed.error}`);
+		throw new Error("Failed to parse LLM response: ${parsed.error}");
 	}
 
 	const result = parsed.value;
@@ -641,7 +641,7 @@ ${bc.description}
 `;
 
 		if (contextEntities.length === 0) {
-			content += `No entities defined yet.\n\n`;
+			content += "No entities defined yet.\n\n";
 		} else {
 			for (const entity of contextEntities) {
 				const typeLabel =
@@ -656,30 +656,30 @@ ${bc.description}
 			}
 		}
 
-		content += `## Domain Events\n\n`;
+		content += "## Domain Events\n\n";
 		if (contextEvents.length === 0) {
-			content += `No domain events defined yet.\n\n`;
+			content += "No domain events defined yet.\n\n";
 		} else {
 			for (const ev of contextEvents) {
 				content += `- **${ev.name}** — ${ev.description} (triggered by: ${ev.triggeredBy})\n`;
 			}
-			content += `\n`;
+			content += "\n";
 		}
 
-		content += `## Ubiquitous Language\n\n`;
+		content += "## Ubiquitous Language\n\n";
 		if (contextTerms.length === 0) {
-			content += `No terms defined yet.\n\n`;
+			content += "No terms defined yet.\n\n";
 		} else {
-			content += `| Term | Definition | Aliases |\n`;
-			content += `|------|-----------|---------|\n`;
+			content += "| Term | Definition | Aliases |\n";
+			content += "|------|-----------|---------|\n";
 			for (const t of contextTerms) {
 				content += `| ${t.term} | ${t.definition} | ${t.aliases.join(", ")} |\n`;
 			}
-			content += `\n`;
+			content += "\n";
 		}
 
-		content += `## Dependencies\n\n`;
-		content += `None identified yet.\n`;
+		content += "## Dependencies\n\n";
+		content += "None identified yet.\n";
 
 		if (!dryRun) {
 			fs.mkdirSync(modulesDir, { recursive: true });
@@ -1011,18 +1011,14 @@ export function updateUbiquitousLanguage(
 
 	// Rebuild full content
 	const glossaryTable = renderGlossaryTable(mergedTerms);
-	let fullContent =
-		preamble.replace(/\n*$/, "\n") +
-		`\n\n## Glossary\n\n${GLOSSARY_TABLE_HEADER}\n` +
-		glossaryTable +
-		"\n";
+	let fullContent = `${preamble.replace(/\n*$/, "\n")}\n\n## Glossary\n\n${GLOSSARY_TABLE_HEADER}\n${glossaryTable}\n`;
 
 	// Append the "Adding New Terms" section from the original file if it existed
 	if (fs.existsSync(glossaryPath)) {
 		const originalForAppend = fs.readFileSync(glossaryPath, "utf-8");
 		const addingSectionIndex = originalForAppend.indexOf("## Adding New Terms");
 		if (addingSectionIndex !== -1) {
-			fullContent += "\n" + originalForAppend.slice(addingSectionIndex);
+			fullContent += `\n${originalForAppend.slice(addingSectionIndex)}`;
 		}
 	}
 

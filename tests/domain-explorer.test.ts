@@ -17,19 +17,19 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
 	type ExplorationResult,
-	type UbiquitousTerm,
 	MAX_BUSINESS_CONTEXT_LENGTH,
+	type UbiquitousTerm,
+	listExplorationSessions,
 	parseExplorationResponse,
 	parseUbiquitousLanguageGlossary,
+	readExplorationSession,
 	renderExplorationTemplate,
 	renderGlossaryTable,
 	sanitizeBusinessContext,
+	scaffoldFromExploration,
 	updateUbiquitousLanguage,
 	validateDomainExploration,
 	writeExplorationSession,
-	readExplorationSession,
-	scaffoldFromExploration,
-	listExplorationSessions,
 } from "../src/lib/domain-explorer.js";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ describe("parseExplorationResponse", () => {
 	});
 
 	it("parses JSON wrapped in markdown code fences", () => {
-		const wrapped = "```json\n" + VALID_LLM_RESPONSE + "\n```";
+		const wrapped = `\`\`\`json\n${VALID_LLM_RESPONSE}\n\`\`\``;
 		const result = parseExplorationResponse(wrapped);
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -183,7 +183,7 @@ describe("parseExplorationResponse", () => {
 	});
 
 	it("parses JSON wrapped in plain code fences", () => {
-		const wrapped = "```\n" + VALID_LLM_RESPONSE + "\n```";
+		const wrapped = `\`\`\`\n${VALID_LLM_RESPONSE}\n\`\`\``;
 		const result = parseExplorationResponse(wrapped);
 		expect(result.ok).toBe(true);
 		if (result.ok) {

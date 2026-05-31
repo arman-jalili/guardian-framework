@@ -54,13 +54,15 @@ export async function runDomain(
 		default:
 			console.error("Unknown domain subcommand:", subcommand);
 			console.log("Usage:");
-			console.log("  guardian-framework domain explore --context <desc> [--session <id>] [--dry-run]");
+			console.log(
+				"  guardian-framework domain explore --context <desc> [--session <id>] [--dry-run]",
+			);
 			console.log("  guardian-framework domain scaffold <session-id> [--dry-run]");
 			console.log("  guardian-framework domain answer <session-id> <response-file> [--dry-run]");
 			console.log("  guardian-framework domain list");
 			console.log("");
 			console.log("  Workflow:");
-			console.log("    1. guardian domain explore --context \"business description\"");
+			console.log('    1. guardian domain explore --context "business description"');
 			console.log("    2. A .prompt.md file is created in .pi/domain/exploration/");
 			console.log("    3. Feed the prompt to your LLM and save the JSON response");
 			console.log("    4. guardian domain answer <session-id> <response-file>");
@@ -78,7 +80,7 @@ async function runExplore(
 
 	if (!context) {
 		outro("--context is required for domain explore");
-		console.log("Usage: guardian-framework domain explore --context \"business description\"");
+		console.log('Usage: guardian-framework domain explore --context "business description"');
 		return;
 	}
 
@@ -97,22 +99,22 @@ async function runExplore(
 		});
 
 		if (options.dryRun) {
-			outro("Dry-run: would create session " + result.sessionId);
+			outro(`Dry-run: would create session ${result.sessionId}`);
 		} else {
-			outro("Prompt file created: " + result.sessionId);
+			outro(`Prompt file created: ${result.sessionId}`);
 			if (result.promptPath) {
-				console.log("  Prompt: " + result.promptPath);
+				console.log(`  Prompt: ${result.promptPath}`);
 			}
 		}
 
 		if (result.warnings.length > 0) {
 			console.log("  Warnings:");
 			for (const w of result.warnings) {
-				console.log("    " + w);
+				console.log(`    ${w}`);
 			}
 		}
 	} catch (err) {
-		outro("Domain exploration failed: " + (err instanceof Error ? err.message : String(err)));
+		outro(`Domain exploration failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 
@@ -135,7 +137,7 @@ async function runAnswer(
 	try {
 		const responsePath = path.resolve(targetDir, responseFile);
 		if (!fs.existsSync(responsePath)) {
-			outro("Response file not found: " + responsePath);
+			outro(`Response file not found: ${responsePath}`);
 			return;
 		}
 
@@ -147,25 +149,27 @@ async function runAnswer(
 		});
 
 		if (options.dryRun) {
-			outro("Dry-run: would process session " + sessionId);
+			outro(`Dry-run: would process session ${sessionId}`);
 		} else {
-			outro("Session processed: " + sessionId);
+			outro(`Session processed: ${sessionId}`);
 			if (result.explorationPath) {
-				console.log("  Session: " + result.explorationPath);
+				console.log(`  Session: ${result.explorationPath}`);
 			}
 			if (result.glossaryResult) {
-				console.log("  Glossary: " + result.glossaryResult.added + " term(s) added, " + result.glossaryResult.skipped + " skipped");
+				console.log(
+					`  Glossary: ${result.glossaryResult.added} term(s) added, ${result.glossaryResult.skipped} skipped`,
+				);
 			}
 		}
 
 		if (result.warnings.length > 0) {
 			console.log("  Warnings:");
 			for (const w of result.warnings) {
-				console.log("    " + w);
+				console.log(`    ${w}`);
 			}
 		}
 	} catch (err) {
-		outro("Domain answer failed: " + (err instanceof Error ? err.message : String(err)));
+		outro(`Domain answer failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 
@@ -191,23 +195,23 @@ async function runScaffold(
 		});
 
 		if (options.dryRun) {
-			outro("Dry-run: would generate " + result.modulesGenerated + " module(s)");
+			outro(`Dry-run: would generate ${result.modulesGenerated} module(s)`);
 		} else {
-			outro("Scaffold complete: " + result.modulesGenerated + " module(s) generated");
+			outro(`Scaffold complete: ${result.modulesGenerated} module(s) generated`);
 		}
 
 		for (const m of result.modules) {
-			console.log("  " + m);
+			console.log(`  ${m}`);
 		}
 
 		if (result.warnings.length > 0) {
 			console.log("  Warnings:");
 			for (const w of result.warnings) {
-				console.log("    " + w);
+				console.log(`    ${w}`);
 			}
 		}
 	} catch (err) {
-		outro("Scaffold failed: " + (err instanceof Error ? err.message : String(err)));
+		outro(`Scaffold failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 
@@ -242,9 +246,9 @@ function runList(targetDir: string): void {
 		const modified = stats.mtime.toISOString().split("T")[0];
 		const size = stats.size;
 		// Show status by checking for prompt files
-		const promptFile = path.join(explorationDir, sessionId + ".prompt.md");
+		const promptFile = path.join(explorationDir, `${sessionId}.prompt.md`);
 		const status = fs.existsSync(promptFile) ? "awaiting-response" : "complete";
-		console.log("  " + sessionId.padEnd(40) + String(size).padStart(6) + "B  " + modified + "  [" + status + "]");
+		console.log(`  ${sessionId.padEnd(40)}${String(size).padStart(6)}B  ${modified}  [${status}]`);
 	}
-	outro("Total: " + files.length + " session(s)");
+	outro(`Total: ${files.length} session(s)`);
 }
