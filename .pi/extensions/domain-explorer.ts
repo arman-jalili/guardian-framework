@@ -62,7 +62,7 @@ function toolResult(text: string) {
 	return { content: [{ type: "text" as const, text }] };
 }
 
-function toolResultDirect(text: string) {
+function toolResult(text: string) {
 	return text;
 }
 
@@ -153,7 +153,7 @@ export default function (pi: ExtensionAPI) {
 			const dryRun = params.dryRun === true;
 
 			if (!context) {
-				return toolResultDirect("ERROR: context is required (business description)");
+				return toolResult("ERROR: context is required (business description)");
 			}
 
 			const sanitized = sanitizeContext(context);
@@ -193,7 +193,7 @@ export default function (pi: ExtensionAPI) {
 				"5. guardian domain scaffold " + sessionId,
 			];
 
-			return toolResultDirect(result.join("\n"));
+			return toolResult(result.join("\n"));
 		},
 	});
 
@@ -210,7 +210,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
 			const sessionId = String(params.sessionId ?? "").trim();
-			if (!sessionId) return toolResultDirect("ERROR: sessionId is required");
+			if (!sessionId) return toolResult("ERROR: sessionId is required");
 
 			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
 			const sessionPath = path.join(explorationDir, sessionId + ".md");
@@ -268,7 +268,7 @@ export default function (pi: ExtensionAPI) {
 			const header = allPassed
 				? "Domain Validation - All Checks Passed"
 				: "Domain Validation - Some Checks Failed";
-			return toolResultDirect(header + "\n" + checks.join("\n"));
+			return toolResult(header + "\n" + checks.join("\n"));
 		},
 	});
 }
