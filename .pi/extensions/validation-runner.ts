@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+
  * Validation Runner Extension for pi
  *
  * Runs validation scripts as pi tools and commands.

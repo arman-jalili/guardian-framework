@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+
  * Shared types for pi extensions.
  *
  * The pi coding agent (`@mariozechner/pi-coding-agent`) does not currently
@@ -55,7 +58,10 @@ export interface SelectItem {
 	description?: string;
 }
 
-/** Minimal retry options used across extensions. */
+/**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+ Minimal retry options used across extensions. */
 export interface RetryOptions {
 	maxAttempts?: number;
 	baseDelayMs?: number;

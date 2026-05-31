@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#result-type
+ * Last Sync: 2026-05-31
+
  * Shared Result type for Guardian.
  *
  * Used by library functions that can fail. Commands should check .ok before proceeding.
@@ -10,6 +13,9 @@
 export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#result-type
+ * Last Sync: 2026-05-31
+
  * Helper to wrap a potentially throwing expression in a Result.
  */
 export function tryCatch<T>(fn: () => T, message?: string): Result<T, Error> {
@@ -24,6 +30,9 @@ export function tryCatch<T>(fn: () => T, message?: string): Result<T, Error> {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#result-type
+ * Last Sync: 2026-05-31
+
  * Helper to wrap an async potentially throwing expression in a Result.
  */
 export async function tryCatchAsync<T>(

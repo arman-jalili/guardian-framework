@@ -1,4 +1,8 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Manifest schema and management for Guardian
  */
 
@@ -21,16 +25,28 @@ export const FRAMEWORK_VERSION = "0.1.0";
 export const SCHEMA_VERSION = "0.1";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * File category in manifest
  */
 export type FileCategory = "framework" | "user" | "generated";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * File status in manifest
  */
 export type FileStatus = "unchanged" | "modified" | "deleted" | "configured";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * File record in manifest
  */
 export interface FileRecord {
@@ -41,6 +57,10 @@ export interface FileRecord {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Export record in manifest
  */
 export interface ExportRecord {
@@ -50,6 +70,10 @@ export interface ExportRecord {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Full manifest schema
  */
 export interface GuardianManifest {
@@ -79,6 +103,10 @@ export interface TokenStats {
 
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Calculate SHA-256 hash of file content
  */
 export function hashFile(filePath: string): string {
@@ -90,6 +118,10 @@ export function hashFile(filePath: string): string {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Calculate hash of directory contents
  * Used for sourceHash in exports
  */
@@ -111,6 +143,10 @@ export function hashDirectory(dirPath: string): string {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Get all files in directory recursively
  */
 function getAllFiles(dirPath: string): string[] {
@@ -133,6 +169,10 @@ function getAllFiles(dirPath: string): string[] {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Check if manifest exists in target directory
  */
 export function manifestExists(targetDir: string): boolean {
@@ -141,6 +181,10 @@ export function manifestExists(targetDir: string): boolean {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Read manifest from target directory
  */
 export function readManifest(targetDir: string): GuardianManifest | null {
@@ -158,6 +202,10 @@ export function readManifest(targetDir: string): GuardianManifest | null {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Write manifest to target directory (atomic write)
  */
 export function writeManifest(targetDir: string, manifest: GuardianManifest): void {
@@ -172,6 +220,10 @@ export function writeManifest(targetDir: string, manifest: GuardianManifest): vo
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Create new manifest for scaffold
  */
 export function createManifest(options: {
@@ -202,6 +254,10 @@ export function createManifest(options: {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Add file record to manifest
  */
 export function addFileRecord(
@@ -220,6 +276,10 @@ export function addFileRecord(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Add export record to manifest
  */
 export function addExportRecord(
@@ -238,6 +298,10 @@ export function addExportRecord(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Update manifest after scaffold
  */
 export function updateManifestAfterScaffold(
@@ -266,6 +330,10 @@ export function updateManifestAfterScaffold(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Check if file has been modified since scaffold
  */
 export function isFileModified(
@@ -293,6 +361,10 @@ function getStoredHash(record: FileRecord): string | null {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Get file category from manifest
  */
 export function getFileCategory(manifest: GuardianManifest, filePath: string): FileCategory | null {
@@ -301,6 +373,10 @@ export function getFileCategory(manifest: GuardianManifest, filePath: string): F
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Determine file category based on path
  */
 export function categorizeFile(relativePath: string): FileCategory {
@@ -339,6 +415,10 @@ export function categorizeFile(relativePath: string): FileCategory {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Validate manifest schema
  */
 export function validateManifest(manifest: unknown): GuardianManifest | null {
@@ -375,6 +455,10 @@ export function validateManifest(manifest: unknown): GuardianManifest | null {
 // ── Token Accounting ──
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Estimate token count for a string.
  * Rough approximation: ~4 chars per token (consistent with pi's estimateTokens).
  * Accuracy is approximately +/-15% for typical English text and code. Precise
@@ -385,6 +469,10 @@ export function estimateTokens(text: string): number {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
+ * Implements: ADR-003, ADR-005
+ * Last Sync: 2026-05-31
+
  * Calculate token stats for all files in the manifest.
  */
 export function calculateTokenStats(targetDir: string, manifest: GuardianManifest): TokenStats {

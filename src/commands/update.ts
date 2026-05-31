@@ -1,4 +1,8 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/update-command.md#change-analysis
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Update command for Guardian
  *
  * Smart merge framework updates preserving user edits.
@@ -61,6 +65,10 @@ interface UpdateResult {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/update-command.md#change-analysis
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Run update command
  */
 export async function runUpdate(

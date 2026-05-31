@@ -82,7 +82,7 @@ function parseTomlValue(raw: string): unknown {
 		// Array of strings: ["a", "b", "c"]
 		const inner = trimmed.slice(1, -1).trim();
 		if (!inner) return [];
-		return inner.split(",").map((s) => parseTomlValue(s.trim()));
+		return splitInlineTable(inner).map((s) => parseTomlValue(s.trim()));
 	}
 	if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
 		// Inline table: { pattern = "x", message = "y" }
@@ -388,7 +388,7 @@ export function runValidatorTests(filters: TomlFilterDef[]): VerifyResults {
 
 	for (const filter of filters) {
 		allNames.push(filter.name);
-		if (filter.tests?.length === 0) continue;
+		if (!filter.tests || filter.tests.length === 0) continue;
 
 		testedNames.add(filter.name);
 		for (const test of filter.tests as ValidatorTestDef[]) {

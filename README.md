@@ -112,7 +112,7 @@ Creates `.claude/`, `.opencode/`, `.agents/`, `.github/` from `.pi/` source.
 └── workpad.md                ← Persistent session progress tracker
 ```
 
-Read the full [Architecture Document](docs/architecture.md) for system design, data flow, component interactions, and the Symphony-inspired orchestration model.
+Read the full [Architecture Document](.pi/architecture/architecture-overview.md) for system design, data flow, component interactions, and the Symphony-inspired orchestration model.
 
 ---
 
@@ -445,7 +445,9 @@ MIT
 ## Links
 
 - **Source:** https://github.com/arman-jalili/guardian-framework
-- **Complete Usage Guide:** [docs/guardian-complete-usage.md](docs/guardian-complete-usage.md)
-- **Design Spec:** [docs/guardian-framework-design.md](docs/guardian-framework-design.md)
-- **Architecture:** [docs/architecture.md](docs/architecture.md)
+- **Complete Usage Guide:** [.pi/context/usage/complete-usage.md](docs/guardian-complete-usage.md)
+- **Design Spec:** [.pi/architecture/design-spec.md](docs/guardian-framework-design.md)
+- **Architecture:** [.pi/architecture/architecture-overview.md](docs/architecture.md)
+ **ADRs:** [.pi/architecture/decisions/](.pi/architecture/decisions/)
+ **Module Docs:** [.pi/architecture/modules/](.pi/architecture/modules/)
 - **Pi Framework:** https://github.com/badlogic/pi-mono

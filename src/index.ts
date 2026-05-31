@@ -1,4 +1,10 @@
 #!/usr/bin/env bun
+/**
+ * Canonical Reference: .pi/architecture/modules/cli-entry-point.md#parseArgs
+ * Implements: ADR-002, ADR-005
+ * Last Sync: 2026-05-31
+ */
+
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
 import { runGenerate } from "./commands/generate.js";

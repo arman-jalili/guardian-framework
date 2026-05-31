@@ -1,78 +1,51 @@
-# Architecture Change Log
+# Architecture Changelog
 
-<!--
-Canonical Reference: .pi/architecture/CHANGELOG.md
-Blueprint Source: Guardian Framework v1.2
-DO NOT EDIT GENERATED FILES - Modify this source only
--->
+All notable changes to Guardian's architecture are documented here.
 
-This document tracks all architecture changes requiring implementation updates.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [Unreleased]
 
-## Change Log Format
+### Added
 
-Each entry follows this structure:
-
-```markdown
-## [YYYY-MM-DD] - [Change Title]
+- ADR-001: Pi-First Architecture — single source of truth, generated exports
+- ADR-002: Bun Runtime — fast startup, native TypeScript, npm-compatible
+- ADR-003: Template-Based Generation — file-based templates with placeholder substitution
+- ADR-004: Multi-Export Model — pi generates claude, opencode, agents, github exports
+- ADR-005: Symphony-Inspired Orchestration — lifecycle hooks, retry with backoff, reconciliation
+- ADR-006: Token Optimization Strategy — DRY context, snippets, compaction, tiered prompts
+- ADR-007: Test Strategy — unit + integration + E2E layers, zero external deps
+- Module docs: CLI entry point, init command, generate command, update command, template system, manifest system, core libraries
+- `.pi/context/project.md` — project-specific knowledge for agents
+- `.pi/domain/` — planned directory for DDD bounded context discovery
 
 ### Changed
-- Module: [module-name]
-  - [Component]: [what changed]
-  - [Component]: [what changed]
 
-### Impact Analysis
-- Files affected:
-  - src/[path1]
-  - src/[path2]
-- Canonical refs to update:
-  - .pi/architecture/modules/[module].md#[section]
-- Validators required:
-  - [validator-name]
+- `.pi/agent/AGENTS.md` — customized with real guardian-framework project context (build commands, architecture structure, key files, quality gates)
+- `.pi/architecture/CHANGELOG.md` — populated with project's actual changelog entries
 
-### Migration Steps
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+## [0.1.0] — 2026-04-25
 
-### Status
-- [ ] Architecture doc updated
-- [ ] CHANGELOG entry added
-- [ ] Implementation updated
-- [ ] Canonical refs updated
-- [ ] Validators run
-```
+### Added
 
----
+- Result type pattern (`src/lib/result.ts`)
+- Upgrade command with schema migration
+- YAML front matter parsing via `yaml` package
+- CI workflow (`.github/workflows/ci.yml`)
+- Release workflow (`guardian-framework-release.yml`)
+- Integration tests for init -> generate -> update lifecycle
+- 97 unit tests across 6 library modules
+- Documentation index (`docs/README.md`)
+- Issue templates, PR template, CONTRIBUTING.md, SECURITY.md
+- Export generation deduplication via `generateExport()` in `init.ts`
 
-## Entries
+### Fixed
 
-<!-- Add new entries above this line -->
+- TOML parser crash on global keys outside filter sections
+- TypeScript regex in code-filter now captures `export` keyword
+- `process.exit(1)` removed from validate command
+- `tracking.ts` header corrected from "SQLite" to "JSON"
+- `runMerge` now delegates to update command instead of TODO placeholder
 
----
-
-## Template Usage
-
-When making architecture changes:
-
-1. **Before change**: Review existing architecture docs
-2. **During change**: Update `.pi/architecture/modules/[module].md`
-3. **After change**: Add entry to this CHANGELOG
-4. **Implementation**: Follow migration steps, update canonical refs
-5. **Validation**: Run `validate-canonical.sh` to verify sync
-
----
-
-## Architecture Sync Status
-
-Track which changes have been synced to implementation:
-
-| Date | Change | Module | Sync Status | Validator Status |
-|------|--------|--------|-------------|------------------|
-| [date] | [title] | [module] | [pending/complete] | [pass/fail] |
-
----
-
-*Last updated: [date]*
-*Framework version: 1.2.0*
+[Unreleased]: https://github.com/arman-jalili/guardian-framework/compare/v0.1.0...HEAD

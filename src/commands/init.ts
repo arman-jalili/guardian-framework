@@ -1,4 +1,8 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Init command for Guardian
  *
  * Scaffolds the agentic framework with interactive prompts
@@ -48,6 +52,10 @@ import {
 import { generateExport } from "./generate.js";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Scaffold directory paths
  */
 const PI_DIR = ".pi";
@@ -56,6 +64,10 @@ const OPENCODE_DIR = ".opencode";
 const AGENTS_DIR = ".agents";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Run init command
  */
 export async function runInit(targetDir: string = process.cwd()): Promise<void> {
@@ -97,6 +109,10 @@ export async function runInit(targetDir: string = process.cwd()): Promise<void> 
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Scaffold the framework based on options
  */
 async function scaffoldFramework(
@@ -209,6 +225,10 @@ Next steps:
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Scaffold .pi/ directory.
  * Returns a list of non-fatal errors encountered during scaffolding.
  */
@@ -309,6 +329,10 @@ function scaffoldPiDirectory(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Check if file should be skipped based on validator/workflow selection
  */
 function shouldSkipFile(
@@ -336,6 +360,10 @@ function shouldSkipFile(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Run smart merge update
  */
 async function runMerge(targetDir: string): Promise<void> {
@@ -352,6 +380,10 @@ async function runMerge(targetDir: string): Promise<void> {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/init-command.md#interactive-prompts
+ * Implements: ADR-001, ADR-003, ADR-004
+ * Last Sync: 2026-05-31
+
  * Confirm overwrite
  */
 async function confirmOverwrite(targetDir: string): Promise<boolean> {

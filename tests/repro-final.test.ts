@@ -1,4 +1,4 @@
-import { runInit } from "./src/commands/init";
+import { runInit } from "../src/commands/init";
 
 // Create a clean test directory
 import fs from "fs";
@@ -12,12 +12,11 @@ fs.mkdirSync(dir, { recursive: true });
 // We need to go through runInit which calls runInitPrompts
 // Let's directly create the .pi and call generate
 
-import { scaffoldFramework } from "./src/commands/init";
 
 // Actually scaffoldFramework is not exported. Let me just test generateExport directly
 // with ALL the user's selected validators
-import { generateExport } from "./src/commands/generate";
-import { createManifest } from "./src/lib/manifest";
+import { generateExport } from "../src/commands/generate";
+import { createManifest } from "../src/lib/manifest";
 
 const piDir = path.join(dir, ".pi");
 

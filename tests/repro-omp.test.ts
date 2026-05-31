@@ -1,7 +1,7 @@
-import { scaffoldFramework } from "../src/commands/init";
+import { runInit } from "../src/commands/init";
 
 // Direct call to scaffoldFramework with omp tool
-scaffoldFramework("/tmp/test-omp-scaffold", {
+runInit("/tmp/test-omp-scaffold", {
   tools: ["pi", "claude", "omp"],
   language: "typescript",
   repoTool: "gh",

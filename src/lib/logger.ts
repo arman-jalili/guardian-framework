@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#logger
+ * Last Sync: 2026-05-31
+
  * Structured logging for Guardian
  *
  * Emits JSON-structured log lines with timestamp, level, message, and context.
@@ -20,6 +23,9 @@ let logLevel: LogLevel = "info";
 let logOutput: NodeJS.WriteStream = process.stderr;
 
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#logger
+ * Last Sync: 2026-05-31
+
  * Configure the logger.
  */
 export function configureLogger(
@@ -37,6 +43,9 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#logger
+ * Last Sync: 2026-05-31
+
  * Emit a structured log entry.
  */
 export function log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
@@ -53,6 +62,9 @@ export function log(level: LogLevel, message: string, context?: Record<string, u
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md#logger
+ * Last Sync: 2026-05-31
+
  * Convenience functions for each level.
  */
 export const logger = {

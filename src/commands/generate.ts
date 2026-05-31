@@ -1,4 +1,8 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/generate-command.md#export-generation
+ * Implements: ADR-001, ADR-004, ADR-005
+ * Last Sync: 2026-05-31
+
  * Generate command for Guardian
  *
  * Regenerates exports from .pi/ source after edits
@@ -29,6 +33,10 @@ import { loadWorkflowConfig, resolveEnvVars } from "../lib/workflow-config.js";
 import { ensureWorkspace, runAfterRunHook, runBeforeRunHook } from "../lib/workspace-hooks.js";
 
 /**
+ * Canonical Reference: .pi/architecture/modules/generate-command.md#export-generation
+ * Implements: ADR-001, ADR-004, ADR-005
+ * Last Sync: 2026-05-31
+
  * Run generate command
  */
 export async function runGenerate(
@@ -185,6 +193,10 @@ Next steps:
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/generate-command.md#export-generation
+ * Implements: ADR-001, ADR-004, ADR-005
+ * Last Sync: 2026-05-31
+
  * Generate export directory from .pi/ source
  */
 export function generateExport(
@@ -279,6 +291,10 @@ function normalizeValidatorName(validator: string): string {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/generate-command.md#export-generation
+ * Implements: ADR-001, ADR-004, ADR-005
+ * Last Sync: 2026-05-31
+
  * Add canonical reference header to generated files
  */
 function addCanonicalHeader(content: string, sourcePath: string): string {
@@ -305,6 +321,10 @@ DO NOT EDIT DIRECTLY - Modify source in .pi/
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/generate-command.md#export-generation
+ * Implements: ADR-001, ADR-004, ADR-005
+ * Last Sync: 2026-05-31
+
  * Reconciliation: detect export files that were modified externally since last generation.
  * Based on Symphony's reconciliation pattern (Section 8.5).
  *

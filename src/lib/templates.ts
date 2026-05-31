@@ -1,4 +1,8 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Template loading utility for Guardian
  *
  * Loads templates from templates/pi/ and templates/languages/
@@ -197,6 +201,10 @@ export const LANGUAGE_DEFAULTS: Record<
 };
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Check if templates directory exists
  */
 export function templatesExist(): boolean {
@@ -204,6 +212,10 @@ export function templatesExist(): boolean {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Get all template files in templates/pi/ recursively
  */
 export function getPiTemplateFiles(): string[] {
@@ -231,6 +243,10 @@ export function getPiTemplateFiles(): string[] {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Read a template file content
  */
 export function readTemplate(relativePath: string): Result<string, Error> {
@@ -242,6 +258,10 @@ export function readTemplate(relativePath: string): Result<string, Error> {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Read language patterns file
  */
 export function readLanguagePatterns(language: Language): Result<string, Error> {
@@ -253,6 +273,10 @@ export function readLanguagePatterns(language: Language): Result<string, Error> 
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Substitute placeholders in template content
  * Supports {{PLACEHOLDER}} format
  */
@@ -306,6 +330,10 @@ export function renderTemplate(content: string, context: Partial<TemplateContext
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Get template context with language defaults
  */
 export function getDefaultContext(
@@ -340,6 +368,10 @@ export function getDefaultContext(
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Filter validators based on selection
  * CI validator is always included
  */
@@ -352,6 +384,10 @@ export function filterValidators(selected: Validator[]): Validator[] {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Filter workflows based on selection
  */
 export function filterWorkflows(selected: Workflow[]): Workflow[] {
@@ -359,6 +395,10 @@ export function filterWorkflows(selected: Workflow[]): Workflow[] {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Get list of available scripts based on selected validators
  */
 export function getValidatorScripts(validators: Validator[]): string[] {
@@ -366,6 +406,10 @@ export function getValidatorScripts(validators: Validator[]): string[] {
 }
 
 /**
+ * Canonical Reference: .pi/architecture/modules/template-system.md#template-loading
+ * Implements: ADR-003
+ * Last Sync: 2026-05-31
+
  * Get list of workflow prompt files based on selected workflows
  */
 export function getWorkflowPrompts(workflows: Workflow[]): string[] {

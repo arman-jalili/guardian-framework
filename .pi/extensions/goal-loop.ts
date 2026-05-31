@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+
  * Goal Loop Extension for pi
  *
  * Persistent standing goals with validator-backed judge.
@@ -151,7 +154,10 @@ const BUILTIN_VALIDATORS: Record<string, string> = {
 	integration: ".pi/scripts/validate-integration.sh",
 };
 
-/** Discover custom validators from `.pi/scripts/validate-*.sh` */
+/**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+ Discover custom validators from `.pi/scripts/validate-*.sh` */
 function discoverCustomValidators(cwd: string): Record<string, string> {
 	const scriptsDir = join(cwd, ".pi/scripts");
 	if (!existsSync(scriptsDir)) return {};

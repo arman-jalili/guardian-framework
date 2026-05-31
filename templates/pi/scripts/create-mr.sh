@@ -35,6 +35,13 @@ done
 
 PLATFORM=$(detect_platform)
 
+# Run pre-validation before creating MR
+if ! bash .pi/scripts/validate-ci.sh 2>/dev/null; then
+    echo "CI validation failed. Aborting MR creation." >&2
+    exit 1
+fi
+
+
 if [[ "$PLATFORM" == "none" ]]; then
     echo "No git platform detected. Cannot create MR without gh/glab CLI."
     echo "MR creation skipped — local only."

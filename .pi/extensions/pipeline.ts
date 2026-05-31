@@ -1,4 +1,7 @@
 /**
+ * Canonical Reference: .pi/architecture/modules/core-libraries.md
+ * Last Sync: 2026-05-31
+
  * Pipeline Extension for pi
  *
  * Multi-step workflow engine that iterates over items (issues, tasks, etc.)

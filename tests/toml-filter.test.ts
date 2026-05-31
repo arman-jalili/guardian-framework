@@ -48,10 +48,7 @@ command = "echo b"`;
 		const toml = `[filters.clean]
 name = "clean"
 command = "echo test"
-replace = [
-  { pattern = "\\[INFO\\]", replacement = "" },
-  { pattern = "\\[WARN\\]", replacement = "⚠ " }
-]`;
+replace = [{ pattern = "\\[INFO\\]", replacement = "" }, { pattern = "\\[WARN\\]", replacement = "⚠ " }]`;
 		const filters = parseTomlValidators(toml);
 		expect(filters[0].replace?.length).toBe(2);
 		expect(filters[0].replace?.[0].pattern).toBe("\\[INFO\\]");
@@ -61,9 +58,7 @@ replace = [
 		const toml = `[filters.check]
 name = "check"
 command = "echo test"
-match_output = [
-  { pattern = "BUILD SUCCESSFUL", message = "✅ Build passed" }
-]`;
+match_output = [{ pattern = "BUILD SUCCESSFUL", message = "✅ Build passed" }]`;
 		const filters = parseTomlValidators(toml);
 		expect(filters[0].match_output?.length).toBe(1);
 		expect(filters[0].match_output?.[0].pattern).toBe("BUILD SUCCESSFUL");
@@ -229,7 +224,7 @@ describe("applyFilter", () => {
 			name: "tail",
 			command: "echo",
 			tail_lines: 2,
-		];
+        }
 		const input = "line1\nline2\nline3\nline4";
 		const result = applyFilter(filter, input);
 		expect(result).toContain("line3");
