@@ -602,88 +602,164 @@ export function scaffoldFromExploration(
 	const modulesDir = path.join(projectDir, ".pi", "architecture", "modules");
 	const modules: string[] = [];
 	const warnings: string[] = [];
-
 	const timestamp = new Date().toISOString().split("T")[0];
 
-	for (const bc of result.boundedContexts) {
-		const moduleName = bc.name
-			.replace(/([a-z])([A-Z])/g, "$1-$2")
-			.replace(/[\s_]+/g, "-")
-			.toLowerCase();
+	// Build lookup maps
+	const entitiesByContext: Record<string, typeof result.entities> = {};
+	for (const entity of result.entities) {
+		if (!entitiesByContext[entity.context]) entitiesByContext[entity.context] = [];
+		entitiesByContext[entity.context].push(entity);
+	}
 
-		const fileName = `${moduleName}.md`;
-		const filePath = path.join(modulesDir, fileName);
+	const allEntityNames = new Set(result.entities.map((e) => e.name));
 
-		// Find entities for this context
-		const contextEntities = result.entities.filter((e) => e.context === bc.name);
-		const contextEvents = result.domainEvents.filter((ev) => ev.context === bc.name);
-		const contextTerms = result.ubiquitousLanguage.filter((t) => t.boundedContext === bc.name);
+	const entityContext: Record<string, string> = {};
+	for (const entity of result.entities) {
+		entityContext[entity.name] = entity.context;
+	}
 
-		// Check for duplicate module name
-		if (!dryRun && fs.existsSync(filePath)) {
-			warnings.push(`Module already exists, will be overwritten: ${fileName}`);
-		}
+	function contextToModule(name: string): string {
+		return name.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase();
+	}
 
-		// Build module doc
-		let content = `# ${bc.name}
+	// Infer cross-context dependencies
+	function inferContextDependencies(contextName: string): string[] {
+		const deps: string[] = [];
+		const entities = entitiesByContext[contextName] || [];
 
-## Status
-**Status:** Planned
-**Last reviewed:** ${timestamp}
-**Source session:** ${sessionId}
-
-## Description
-
-${bc.description}
-
-## Components
-
-`;
-
-		if (contextEntities.length === 0) {
-			content += "No entities defined yet.\n\n";
-		} else {
-			for (const entity of contextEntities) {
-				const typeLabel =
-					entity.type === "aggregate-root"
-						? "Aggregate Root"
-						: entity.type === "value-object"
-							? "Value Object"
-							: "Entity";
-				content += `### ${entity.name}\n\n`;
-				content += `**Type:** ${typeLabel}\n`;
-				content += `**Description:** ${entity.description}\n\n`;
+		for (const entity of entities) {
+			for (const otherName of allEntityNames) {
+				if (otherName === entity.name) continue;
+				if (entity.description.includes(otherName)) {
+					const otherCtx = entityContext[otherName];
+					if (otherCtx && otherCtx !== contextName && !deps.includes(otherCtx)) {
+						deps.push(otherCtx);
+					}
+				}
 			}
 		}
 
+		// Check events for cross-context triggers
+		const events = result.domainEvents.filter((ev) => ev.context === contextName);
+		for (const ev of events) {
+			for (const bc of result.boundedContexts) {
+				if (bc.name === contextName) continue;
+				if (ev.triggeredBy.toLowerCase().includes(bc.name.toLowerCase())) {
+					if (!deps.includes(bc.name)) deps.push(bc.name);
+				}
+			}
+		}
+
+		return deps;
+	}
+
+	const contextDeps: Record<string, string[]> = {};
+	for (const bc of result.boundedContexts) {
+		contextDeps[bc.name] = inferContextDependencies(bc.name);
+	}
+
+	for (const bc of result.boundedContexts) {
+		const moduleName = contextToModule(bc.name);
+		const fileName = moduleName + ".md";
+		const filePath = path.join(modulesDir, fileName);
+
+		const contextEntities = entitiesByContext[bc.name] || [];
+		const contextEvents = result.domainEvents.filter((ev) => ev.context === bc.name);
+		const contextTerms = result.ubiquitousLanguage.filter((t) => t.boundedContext === bc.name);
+
+		if (!dryRun && fs.existsSync(filePath)) {
+			warnings.push("Module already exists, will be overwritten: " + fileName);
+		}
+
+		const aggregateRoots = contextEntities.filter((e) => e.type === "aggregate-root");
+		const regularEntities = contextEntities.filter((e) => e.type === "entity");
+		const valueObjects = contextEntities.filter((e) => e.type === "value-object");
+
+		// Build components
+		let componentsSection = "";
+
+		for (const ar of aggregateRoots) {
+			componentsSection += "## Component: " + ar.name + "\n";
+			componentsSection += "status: planned\n";
+			componentsSection += "description: " + ar.description + "\n";
+			componentsSection += "depends: none\n\n";
+		}
+
+		for (const entity of regularEntities) {
+			const parentRoot = aggregateRoots.find((ar) =>
+				entity.description.includes(ar.name) || ar.description.includes(entity.name)
+			);
+			const dependsOn = parentRoot ? parentRoot.name : "none";
+			componentsSection += "## Component: " + entity.name + "\n";
+			componentsSection += "status: planned\n";
+			componentsSection += "description: " + entity.description + "\n";
+			componentsSection += "depends: " + dependsOn + "\n\n";
+		}
+
+		for (const vo of valueObjects) {
+			const parentEntity = [...aggregateRoots, ...regularEntities].find((e) =>
+				vo.description.includes(e.name) || e.description.includes(vo.name)
+			);
+			const dependsOn = parentEntity ? parentEntity.name : "none";
+			componentsSection += "## Component: " + vo.name + "\n";
+			componentsSection += "status: planned\n";
+			componentsSection += "description: " + vo.description + "\n";
+			componentsSection += "depends: " + dependsOn + "\n\n";
+		}
+
+		if (!componentsSection) {
+			componentsSection = "No components defined yet.\n";
+		}
+
+		// Build dependencies section
+		const deps = contextDeps[bc.name] || [];
+		let depsSection = "";
+		if (deps.length === 0) {
+			depsSection = "None identified yet.\n";
+		} else {
+			for (const dep of deps) {
+				depsSection += "- " + contextToModule(dep) + ".md (" + dep + ")\n";
+			}
+		}
+
+		// Build content
+		let content = "# " + bc.name + "\n\n";
+		content += "## Module Status\n\n";
+		content += "**Status:** Planned\n";
+		content += "**Last reviewed:** " + timestamp + "\n";
+		content += "**Source session:** " + sessionId + "\n\n";
+		content += "## Description\n\n" + bc.description + "\n\n";
+		content += "## Components\n\n" + componentsSection + "\n";
 		content += "## Domain Events\n\n";
+
 		if (contextEvents.length === 0) {
-			content += "No domain events defined yet.\n\n";
+			content += "None defined yet.\n\n";
 		} else {
 			for (const ev of contextEvents) {
-				content += `- **${ev.name}** — ${ev.description} (triggered by: ${ev.triggeredBy})\n`;
+				content += "- **" + ev.name + "** - " + ev.description + " (triggered by: " + ev.triggeredBy + ")\n";
 			}
 			content += "\n";
 		}
 
 		content += "## Ubiquitous Language\n\n";
 		if (contextTerms.length === 0) {
-			content += "No terms defined yet.\n\n";
+			content += "None defined yet.\n\n";
 		} else {
 			content += "| Term | Definition | Aliases |\n";
 			content += "|------|-----------|---------|\n";
 			for (const t of contextTerms) {
-				content += `| ${t.term} | ${t.definition} | ${t.aliases.join(", ")} |\n`;
+				content += "| " + t.term + " | " + t.definition + " | " + t.aliases.join(", ") + " |\n";
 			}
 			content += "\n";
 		}
 
-		content += "## Dependencies\n\n";
-		content += "None identified yet.\n";
+		content += "## Dependencies\n\n" + depsSection + "\n";
+		content += "## Key Files\n\nNone yet\n\n";
+		content += "## ADRs\n\nNone yet\n\n";
 
 		if (!dryRun) {
 			fs.mkdirSync(modulesDir, { recursive: true });
-			const tempPath = `${filePath}.tmp`;
+			const tempPath = filePath + ".tmp";
 			fs.writeFileSync(tempPath, content, "utf-8");
 			fs.renameSync(tempPath, filePath);
 		}
@@ -701,10 +777,6 @@ ${bc.description}
 		warnings,
 	};
 }
-
-/**
- * List exploration sessions available in the project.
- */
 export function listExplorationSessions(projectDir?: string): string[] {
 	const root = projectDir ?? process.cwd();
 	const explorationDir = path.join(root, ".pi", "domain", "exploration");

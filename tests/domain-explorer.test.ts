@@ -550,8 +550,8 @@ describe("scaffoldFromExploration", () => {
 		const content = fs.readFileSync(ordersPath, "utf-8");
 		expect(content).toContain("# Orders");
 		expect(content).toContain("Order processing");
-		expect(content).toContain("Order"); // entity
-		expect(content).toContain("Aggregate Root");
+		expect(content).toContain("## Component: Order"); // aggregate root
+		expect(content).toContain("depends: none"); // root has no deps
 	});
 
 	it("dry-run does not write files", () => {

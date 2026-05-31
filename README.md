@@ -445,7 +445,8 @@ MIT
 ## Links
 
 - **Source:** https://github.com/arman-jalili/guardian-framework
-- **Complete Usage Guide:** [.pi/context/usage/complete-usage.md](docs/guardian-complete-usage.md)
+- **Domain Exploration:** [.pi/context/usage/domain-exploration.md](.pi/context/usage/domain-exploration.md)
+****Complete Usage Guide:** [.pi/context/usage/complete-usage.md](docs/guardian-complete-usage.md)
 - **Design Spec:** [.pi/architecture/design-spec.md](docs/guardian-framework-design.md)
 - **Architecture:** [.pi/architecture/architecture-overview.md](docs/architecture.md)
  **ADRs:** [.pi/architecture/decisions/](.pi/architecture/decisions/)

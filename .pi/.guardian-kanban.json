@@ -1,4 +1,27 @@
 {
-  "tasks": [],
-  "nextId": 1
+  "tasks": [
+    {
+      "id": "TK-0001",
+      "title": "pi extension: domain_explore and domain_validate tools",
+      "body": "Create `.pi/extensions/domain-explorer.ts` with two pi tools:\n\n1. **domain_explore** — Accept a business context description and create a structured DDD extraction prompt in `.pi/domain/exploration/<session>.prompt.md`. Returns session ID & prompt path.\n2. **domain_validate** — Validate exploration session results against:\n   - Ubiquitous language glossary compliance\n   - Structural integrity (orphaned terms, etc.)\n   - Source code drift (via validate-ubiquitous-language.sh)\n   - Canonical reference integrity (via validate-canonical.sh)\n\n**Target Module:** Core Libraries\n**Scope:** Moderate\n**Implements:** DDD domain exploration workflow for pi agents\n**Issue:** (first of this feature)",
+      "assignee": "pi-agent",
+      "status": "todo",
+      "blockReason": null,
+      "priority": "medium",
+      "parents": [],
+      "workspace": "scratch",
+      "createdAt": "2026-05-31T16:40:40.711Z",
+      "updatedAt": "2026-05-31T16:42:28.489Z",
+      "claimedAt": null,
+      "comments": [
+        {
+          "id": "C-1780245748488",
+          "author": "agent",
+          "text": "Implementation complete. File created at `.pi/extensions/domain-explorer.ts` with two tools:\n- `domain_explore` — DDD exploration prompt generation\n- `domain_validate` — session validation + glossary compliance + drift detection\n\nAll post-code automated checks passed (CI, tests, operations, security, canonical).\n\nWiring checks confirmed:\n- Tools registered via `pi.registerTool()` (2 calls on lines 308, 410)\n- Pattern matches coordinator.ts, validation-runner.ts, architect.ts\n- Uses typebox for parameter schemas (pi runtime dependency)\n- Respects ADR-006 (Token Optimization Strategy) — automated validators replace LLM checks\n- Respects existing domain exploration session format (.pi/domain/exploration/)\n- Integrates with validate-ubiquitous-language.sh and validate-canonical.sh",
+          "createdAt": "2026-05-31T16:42:28.488Z"
+        }
+      ]
+    }
+  ],
+  "nextId": 2
 }
