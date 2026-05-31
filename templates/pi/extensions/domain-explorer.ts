@@ -175,25 +175,23 @@ export default function (pi: ExtensionAPI) {
 				existingSessions = 0;
 			}
 
-			const lines = [
-				"## Domain Exploration Created",
+			const result = [
+				"Domain Exploration Created",
+				"Session ID: " + sessionId,
+				"Prompt File: " + (dryRun ? "[dry-run, not written]" : promptPath),
+				"Context Length: " + sanitized.length + " characters",
+				"Status: awaiting-response",
+				"Existing Sessions: " + existingSessions,
 				"",
-				"- **Session ID:** " + sessionId,
-				"- **Prompt File:** " + (dryRun ? "[dry-run, not written]" : promptPath),
-				"- **Context Length:** " + sanitized.length + " characters",
-				"- **Status:** awaiting-response",
-				"- **Existing Sessions:** " + existingSessions,
-				"",
-				"### Next Steps",
-				"",
-				"1. Read the prompt file to get the structured DDD extraction prompt",
-				"2. Send the prompt to your LLM (or use the built-in model)",
-				"3. Save the LLM's JSON response to a file",
-				'4. Run `guardian domain answer ' + sessionId + ' <response-file>` to process',
-				'5. Run `guardian domain scaffold ' + sessionId + '` to generate modules',
+				"Next Steps:",
+				"1. Read the prompt file",
+				"2. Feed it to your LLM",
+				"3. Save the JSON response",
+				"4. guardian domain answer " + sessionId + " <response-file>",
+				"5. guardian domain scaffold " + sessionId,
 			];
 
-			return toolResult(lines.join("\n"));
+			return toolResult(result.join("\n"));
 		},
 	});
 
@@ -270,9 +268,9 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const header = allPassed
-				? "## Domain Validation - All Checks Passed"
-				: "## Domain Validation - Some Checks Failed";
-			return toolResult(header + "\n\n" + checks.join("\n"));
+				? "Domain Validation - All Checks Passed"
+				: "Domain Validation - Some Checks Failed";
+			return toolResult(header + "\n" + checks.join("\n"));
 		},
 	});
 }
