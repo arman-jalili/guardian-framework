@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-31T10:05:07Z",
+  "timestamp": "2026-05-31T16:25:07Z",
   "mode": "all",
   "stages_run": [],
   "summary": {
@@ -56,7 +56,7 @@
     "name": "cargo test --lib",
     "status": "fail",
     "message": "unit test failures",
-    "duration": 0
+    "duration": 1
   },
   {
     "name": "integration",

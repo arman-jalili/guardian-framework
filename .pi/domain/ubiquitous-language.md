@@ -20,7 +20,7 @@
 | LogEntry | Structured log line interface | Core Libraries | LogRecord, LogLine, LogItem | `LogEntry { timestamp, level, message, context }` |
 | LogLevel | Log severity enum: "debug", "info", "warn", "error" | Core Libraries | LogSeverity, LogPriority | `"debug"`, `"info"`, `"warn"`, `"error"` |
 | Manifest | State tracking document with version + hash | Core Libraries | StateFile, Registry, Snapshot | `Manifest { version, files[], hash }` |
-| Template | File-based template with placeholder substitution | Core Libraries | Blueprint, Stencil, Scaffold | `Template { path, content, placeholders }` |
+| Template | File-based template with placeholder substitution | Core Libraries | Blueprint, Stencil | `Template { path, content, placeholders }` |
 | Canonical | Architecture source-of-truth reference | Architecture | Canonic, OfficialRef, SourceTruth | `Canonical Reference: .pi/architecture/modules/...` |
 | Validator | Pluggable validation script or TOML filter | Validation | Checker, Linter, Inspector | `validate-canonical.sh`, `validate-architecture.sh` |
 | Pipeline | Sequential step-based execution pipeline with start/advance/fail | Orchestration | Flow, Chain, Sequence | `Pipeline { name, items[], steps[] }` |

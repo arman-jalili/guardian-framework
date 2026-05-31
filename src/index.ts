@@ -7,6 +7,7 @@
 
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
+import { runDomain } from "./commands/domain.js";
 import { runGenerate } from "./commands/generate.js";
 import { runInfo } from "./commands/info.js";
 import { runInit } from "./commands/init.js";
@@ -34,6 +35,8 @@ async function main() {
 			force: { type: "boolean" },
 			regenerate: { type: "boolean" },
 			verbose: { type: "boolean" },
+			context: { type: "string" },
+			session: { type: "string" },
 		},
 	});
 
@@ -57,6 +60,7 @@ Usage:
   guardian-framework validate      Run TOML-based validators
   guardian-framework verify        File integrity verification
   guardian-framework trust         Trust-gated config management
+  guardian-framework domain        DDD domain exploration CLI
 
 Options:
   -v, --version              Show version
@@ -168,6 +172,13 @@ async function runCommand(
 				list: args.values.list as boolean | undefined,
 				revoke: args.values.revoke as boolean | undefined,
 				file: args.positionals[1],
+			});
+			break;
+		case "domain":
+			await runDomain(targetDir, args.positionals.slice(1), {
+				context: args.values.context as string | undefined,
+				session: args.values.session as string | undefined,
+				dryRun: args.values.dryRun as boolean | undefined,
 			});
 			break;
 		default:
