@@ -81,397 +81,6 @@ export interface ExplorationResult {
 	aggregateRoots: string;
 }
 
-// ── LLM Provider Types ──────────────────────────────────────────────────────
-
-/**
- * Configuration for an LLM completion request.
- */
-export interface LlmOptions {
-	/** Model name (e.g., "gpt-4o", "claude-3-opus") */
-	model?: string;
-	/** Maximum tokens in the response */
-	maxTokens?: number;
-	/** Temperature (0.0 - 2.0) */
-	temperature?: number;
-	/** Request timeout in milliseconds */
-	timeoutMs?: number;
-}
-
-/**
- * Response from an LLM completion.
- */
-export interface LlmResponse {
-	/** Raw generated text */
-	content: string;
-	/** Model used for generation */
-	model: string;
-	/** Token usage statistics */
-	usage?: {
-		promptTokens: number;
-		completionTokens: number;
-		totalTokens: number;
-	};
-	/** Wall-clock duration in milliseconds */
-	durationMs: number;
-}
-
-/**
- * Error from an LLM provider.
- */
-export interface LlmError {
-	message: string;
-	code: "rate-limit" | "auth" | "timeout" | "parse" | "network" | "unknown";
-	statusCode?: number;
-}
-
-/**
- * Abstract interface for LLM providers.
- *
- * Implementations: OpenAiProvider, AnthropicProvider, or a no-op fallback.
- */
-export interface LlmProvider {
-	/** Provider name (e.g., "openai", "anthropic", "fallback") */
-	readonly name: string;
-
-	/**
-	 * Send a completion request.
-	 * Returns Ok(response) on success, Err(error) on failure.
-	 */
-	complete(prompt: string, options?: LlmOptions): Promise<Result<LlmResponse, LlmError>>;
-}
-
-/**
- * Get the configured LLM provider based on environment variables.
- *
- * Resolution order:
- *  1. GUARDIAN_LLM_PROVIDER env var ("openai" | "anthropic" | "fallback")
- *  2. GUARDIAN_OPENAI_API_KEY / OPENAI_API_KEY for OpenAI
- *  3. GUARDIAN_ANTHROPIC_API_KEY / ANTHROPIC_API_KEY for Anthropic
- *  4. Default: FallbackProvider (writes prompt template for manual editing)
- */
-export function getLlmProvider(): LlmProvider {
-	const provider = process.env.GUARDIAN_LLM_PROVIDER?.toLowerCase() ?? "";
-
-	if (provider === "openai" || process.env.GUARDIAN_OPENAI_API_KEY || process.env.OPENAI_API_KEY) {
-		return new OpenAiProvider(
-			process.env.GUARDIAN_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
-			process.env.GUARDIAN_OPENAI_BASE_URL || "https://api.openai.com/v1",
-		);
-	}
-
-	if (
-		provider === "anthropic" ||
-		process.env.GUARDIAN_ANTHROPIC_API_KEY ||
-		process.env.ANTHROPIC_API_KEY
-	) {
-		return new AnthropicProvider(
-			process.env.GUARDIAN_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "",
-		);
-	}
-
-	// If a provider is requested but no key, log and use fallback
-	if (provider && provider !== "fallback") {
-		console.error(
-			`[domain-explorer] Provider "${provider}" requested but no API key found. Using fallback.`,
-		);
-	}
-
-	return new FallbackProvider();
-}
-
-// ── OpenAI Provider ─────────────────────────────────────────────────────────
-
-const OPENAI_DEFAULT_MODEL = "gpt-4o";
-const OPENAI_DEFAULT_MAX_TOKENS = 4096;
-const OPENAI_DEFAULT_TEMPERATURE = 0.3;
-const OPENAI_DEFAULT_TIMEOUT = 30_000;
-
-/**
- * OpenAI-compatible LLM provider.
- * Uses the chat completions API.
- */
-class OpenAiProvider implements LlmProvider {
-	readonly name = "openai";
-
-	constructor(
-		private readonly apiKey: string,
-		private readonly baseUrl: string,
-	) {}
-
-	async complete(prompt: string, options?: LlmOptions): Promise<Result<LlmResponse, LlmError>> {
-		const model = options?.model ?? OPENAI_DEFAULT_MODEL;
-		const startTime = Date.now();
-
-		try {
-			const controller = new AbortController();
-			const timeoutId = setTimeout(
-				() => controller.abort(),
-				options?.timeoutMs ?? OPENAI_DEFAULT_TIMEOUT,
-			);
-
-			const response = await fetch(`${this.baseUrl}/chat/completions`, {
-				method: "POST",
-				signal: controller.signal,
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.apiKey}`,
-				},
-				body: JSON.stringify({
-					model,
-					messages: [
-						{
-							role: "system",
-							content: "You are a DDD domain modeling assistant. Always respond with valid JSON.",
-						},
-						{ role: "user", content: prompt },
-					],
-					max_tokens: options?.maxTokens ?? OPENAI_DEFAULT_MAX_TOKENS,
-					temperature: options?.temperature ?? OPENAI_DEFAULT_TEMPERATURE,
-				}),
-			});
-
-			clearTimeout(timeoutId);
-			const durationMs = Date.now() - startTime;
-
-			if (!response.ok) {
-				const statusCode = response.status;
-				let code: LlmError["code"] = "unknown";
-				if (statusCode === 401) code = "auth";
-				else if (statusCode === 429) code = "rate-limit";
-				else if (statusCode >= 500) code = "network";
-
-				const body = await response.text().catch(() => "");
-				return {
-					ok: false,
-					error: {
-						message: `OpenAI API error ${statusCode}: ${body.slice(0, 200)}`,
-						code,
-						statusCode,
-					},
-				};
-			}
-
-			const data = (await response.json()) as {
-				choices?: Array<{ message?: { content?: string } }>;
-				usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-				model?: string;
-			};
-
-			const content = data.choices?.[0]?.message?.content ?? "";
-			const usage = data.usage
-				? {
-						promptTokens: data.usage.prompt_tokens ?? 0,
-						completionTokens: data.usage.completion_tokens ?? 0,
-						totalTokens: data.usage.total_tokens ?? 0,
-					}
-				: undefined;
-
-			return {
-				ok: true,
-				value: {
-					content,
-					model: data.model ?? model,
-					usage,
-					durationMs,
-				},
-			};
-		} catch (err) {
-			const durationMs = Date.now() - startTime;
-			if (err instanceof DOMException && err.name === "AbortError") {
-				return {
-					ok: false,
-					error: { message: "Request timed out", code: "timeout" },
-				};
-			}
-			return {
-				ok: false,
-				error: {
-					message: err instanceof Error ? err.message : "Unknown fetch error",
-					code: "network",
-				},
-			};
-		}
-	}
-}
-
-// ── Anthropic Provider ───────────────────────────────────────────────────────
-
-const ANTHROPIC_DEFAULT_MODEL = "claude-3-opus-20240229";
-const ANTHROPIC_DEFAULT_MAX_TOKENS = 4096;
-const ANTHROPIC_DEFAULT_TIMEOUT = 30_000;
-
-/**
- * Anthropic LLM provider.
- * Uses the messages API.
- */
-class AnthropicProvider implements LlmProvider {
-	readonly name = "anthropic";
-
-	constructor(private readonly apiKey: string) {}
-
-	async complete(prompt: string, options?: LlmOptions): Promise<Result<LlmResponse, LlmError>> {
-		const model = options?.model ?? ANTHROPIC_DEFAULT_MODEL;
-		const startTime = Date.now();
-
-		try {
-			const controller = new AbortController();
-			const timeoutId = setTimeout(
-				() => controller.abort(),
-				options?.timeoutMs ?? ANTHROPIC_DEFAULT_TIMEOUT,
-			);
-
-			const response = await fetch("https://api.anthropic.com/v1/messages", {
-				method: "POST",
-				signal: controller.signal,
-				headers: {
-					"Content-Type": "application/json",
-					"x-api-key": this.apiKey,
-					"anthropic-version": "2023-06-01",
-				},
-				body: JSON.stringify({
-					model,
-					system: "You are a DDD domain modeling assistant. Always respond with valid JSON.",
-					messages: [{ role: "user", content: prompt }],
-					max_tokens: options?.maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
-					temperature: options?.temperature ?? OPENAI_DEFAULT_TEMPERATURE,
-				}),
-			});
-
-			clearTimeout(timeoutId);
-			const durationMs = Date.now() - startTime;
-
-			if (!response.ok) {
-				const statusCode = response.status;
-				let code: LlmError["code"] = "unknown";
-				if (statusCode === 401) code = "auth";
-				else if (statusCode === 429) code = "rate-limit";
-				else if (statusCode >= 500) code = "network";
-
-				const body = await response.text().catch(() => "");
-				return {
-					ok: false,
-					error: {
-						message: `Anthropic API error ${statusCode}: ${body.slice(0, 200)}`,
-						code,
-						statusCode,
-					},
-				};
-			}
-
-			const data = (await response.json()) as {
-				content?: Array<{ text?: string }>;
-				usage?: { input_tokens?: number; output_tokens?: number };
-				model?: string;
-			};
-
-			const content = data.content?.map((c) => c.text ?? "").join("") ?? "";
-			const usage = data.usage
-				? {
-						promptTokens: data.usage.input_tokens ?? 0,
-						completionTokens: data.usage.output_tokens ?? 0,
-						totalTokens: (data.usage.input_tokens ?? 0) + (data.usage.output_tokens ?? 0),
-					}
-				: undefined;
-
-			return {
-				ok: true,
-				value: {
-					content,
-					model: data.model ?? model,
-					usage,
-					durationMs,
-				},
-			};
-		} catch (err) {
-			const durationMs = Date.now() - startTime;
-			if (err instanceof DOMException && err.name === "AbortError") {
-				return {
-					ok: false,
-					error: { message: "Request timed out", code: "timeout" },
-				};
-			}
-			return {
-				ok: false,
-				error: {
-					message: err instanceof Error ? err.message : "Unknown fetch error",
-					code: "network",
-				},
-			};
-		}
-	}
-}
-
-// ── Fallback Provider ───────────────────────────────────────────────────────
-
-/**
- * No-op fallback provider.
- * Returns a template-like response for manual editing when no API key is configured.
- */
-class FallbackProvider implements LlmProvider {
-	readonly name = "fallback";
-
-	async complete(prompt: string, _options?: LlmOptions): Promise<Result<LlmResponse, LlmError>> {
-		// Return a structured template that the user can fill in manually
-		const lines = prompt.split("\n");
-		const contextLine = lines.find((l) => l.startsWith("Business Context:")) ?? "";
-		const businessContext = contextLine.replace("Business Context:", "").trim();
-		const sessionId = crypto.randomUUID();
-
-		const template = JSON.stringify(
-			{
-				sessionId,
-				businessContext: businessContext || "Describe your domain here...",
-				status: "draft",
-				boundedContexts: [
-					{
-						name: "ContextName",
-						description: "Describe this bounded context",
-						entities: ["Entity1", "Entity2"],
-					},
-				],
-				entities: [
-					{
-						name: "EntityName",
-						context: "ContextName",
-						type: "entity",
-						description: "Describe this entity",
-					},
-				],
-				domainEvents: [
-					{
-						name: "EventName",
-						context: "ContextName",
-						description: "Describe this event",
-						triggeredBy: "Describe trigger",
-					},
-				],
-				ubiquitousLanguage: [
-					{
-						term: "Term",
-						definition: "Define this term",
-						boundedContext: "ContextName",
-						aliases: [],
-						examples: "`code example`",
-					},
-				],
-				openQuestions: "What questions are still open?",
-				aggregateRoots: "Which entities are aggregate roots?",
-			},
-			null,
-			2,
-		);
-
-		return {
-			ok: true,
-			value: {
-				content: template,
-				model: "fallback-template",
-				durationMs: 0,
-			},
-		};
-	}
-}
-
 // ── Input Sanitization ──────────────────────────────────────────────────────
 
 /**
@@ -729,18 +338,19 @@ export async function exploreDomain(
 		projectDir?: string;
 		sessionId?: string;
 		dryRun?: boolean;
-		provider?: LlmProvider;
 	},
 ): Promise<{
 	sessionId: string;
-	explorationPath?: string;
-	glossaryResult?: GlossaryUpdateResult;
+	promptPath?: string;
 	warnings: string[];
 }> {
-	const provider = options?.provider ?? getLlmProvider();
 	const projectDir = options?.projectDir ?? process.cwd();
 	const dryRun = options?.dryRun ?? false;
 	const sessionId = options?.sessionId ?? crypto.randomUUID();
+	const explorationDir = path.join(projectDir, ".pi", "domain", "exploration");
+	if (!fs.existsSync(explorationDir)) {
+		fs.mkdirSync(explorationDir, { recursive: true });
+	}
 
 	// 1. Sanitize
 	const sanitized = sanitizeBusinessContext(context);
@@ -748,53 +358,87 @@ export async function exploreDomain(
 	// 2. Build prompt
 	const prompt = buildExplorationPrompt(sanitized);
 
-	// 3. Call LLM
-	const response = await provider.complete(prompt, {
-		temperature: 0.3,
-		maxTokens: 4096,
-	});
+	// 3. Write prompt file
+	const promptContent = [
+		"# Domain Exploration Prompt",
+		"",
+		"**Session:** " + sessionId,
+		"**Created:** " + new Date().toISOString(),
+		"**Status:** awaiting-response",
+		"",
+		"---",
+		"",
+		prompt,
+	].join("\n");
 
-	if (!response.ok) {
-		throw new Error(`Domain exploration failed: ${response.error.message}`);
+	const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
+	if (!dryRun) {
+		fs.writeFileSync(promptPath, promptContent, "utf-8");
+		console.error(`[domain-explore] Prompt written to: \${promptPath}`);
 	}
 
-	// Log token usage
-	if (response.value.usage) {
-		console.error(
-			`[domain-explore] ${provider.name} | ${response.value.model} | ` +
-				`${response.value.usage.promptTokens} prompt → ${response.value.usage.completionTokens} completion ` +
-				`| ${response.value.durationMs}ms`,
-		);
+	const warnings: string[] = [];
+	return { sessionId, promptPath: dryRun ? undefined : promptPath, warnings };
+}
+
+/**
+ * Process an LLM response to a domain exploration prompt and convert it into
+ * an exploration session with glossary updates.
+ *
+ * Usage:
+ *   1. `guardian domain explore --context "..."` writes a .prompt.md file
+ *   2. Feed that prompt to your LLM (or use pi's domain_explore extension)
+ *   3. `guardian domain answer <session-id> <response.json>` calls this
+ *
+ * @param sessionId    The exploration session ID (from prompt filename)
+ * @param responseJson Raw JSON response from the LLM
+ * @param options      projectDir, dryRun
+ */
+export function answerExploration(
+	sessionId: string,
+	responseJson: string,
+	options?: {
+		projectDir?: string;
+		dryRun?: boolean;
+	},
+): {
+	sessionId: string;
+	explorationPath?: string;
+	glossaryResult?: GlossaryUpdateResult;
+	warnings: string[];
+} {
+	const projectDir = options?.projectDir ?? process.cwd();
+	const dryRun = options?.dryRun ?? false;
+	const warnings: string[] = [];
+
+	// 1. Parse the LLM response
+	const parsed = parseExplorationResponse(responseJson, sessionId);
+	if (!parsed.ok) {
+		throw new Error(`Failed to parse LLM response: \${parsed.error}`);
 	}
 
-	// 4. Parse
-	const parseResult = parseExplorationResponse(response.value.content, sessionId);
-	if (!parseResult.ok) {
-		throw new Error(parseResult.error);
-	}
+	const result = parsed.value;
 
-	const result = parseResult.value;
+	// 2. Validate
+	const validationWarnings = validateDomainExploration(result);
+	warnings.push(...validationWarnings);
 
-	// 5. Validate
-	const warnings = validateDomainExploration(result);
-
-	// 6. Write exploration session
+	// 3. Write exploration session
 	const explorationPath = writeExplorationSession(result, projectDir, dryRun);
 
-	// 7. Update glossary
+	// 4. Update glossary
 	const glossaryResult = updateUbiquitousLanguage(result.ubiquitousLanguage, {
 		projectDir,
 		dryRun,
 	});
 
 	return {
-		sessionId: result.sessionId,
+		sessionId,
 		explorationPath: dryRun ? undefined : explorationPath,
 		glossaryResult,
 		warnings,
 	};
 }
-
 // ── Domain Scaffold ─────────────────────────────────────────────────────────
 
 /**

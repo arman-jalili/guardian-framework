@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-31T16:25:07Z",
+  "timestamp": "2026-05-31T16:31:15Z",
   "mode": "all",
   "stages_run": [],
   "summary": {
@@ -8,7 +8,7 @@
     "failed": 1,
     "skipped": 12
   },
-  "duration_seconds": 1,
+  "duration_seconds": 0,
   "results": [
   {
     "name": "check_mr_traceability.sh",
@@ -56,7 +56,7 @@
     "name": "cargo test --lib",
     "status": "fail",
     "message": "unit test failures",
-    "duration": 1
+    "duration": 0
   },
   {
     "name": "integration",
