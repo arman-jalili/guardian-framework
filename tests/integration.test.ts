@@ -131,14 +131,14 @@ describe("generate lifecycle", () => {
 	});
 
 	test("getExportStructure returns valid dirs for each tool", () => {
-		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
+		for (const tool of ["claude", "opencode", "agents", "github", "pi", "omp"] as const) {
 			const dirs = getExportStructure(tool);
 			expect(dirs.length).toBeGreaterThan(0);
 		}
 	});
 
 	test("getExportMappings returns valid mappings for each tool", () => {
-		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
+		for (const tool of ["claude", "opencode", "agents", "github", "pi", "omp"] as const) {
 			const mappings = getExportMappings(tool);
 			expect(mappings.length).toBeGreaterThan(0);
 			for (const m of mappings) {
@@ -149,7 +149,7 @@ describe("generate lifecycle", () => {
 	});
 
 	test("generateExportReadme returns non-empty string", () => {
-		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
+		for (const tool of ["claude", "opencode", "agents", "github", "pi", "omp"] as const) {
 			const readme = generateExportReadme(tool);
 			expect(readme.length).toBeGreaterThan(50);
 			expect(readme).toContain("Guardian");
@@ -341,7 +341,7 @@ describe("export mappings consistency", () => {
 	});
 
 	test("no duplicate source paths within a tool's mappings", () => {
-		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
+		for (const tool of ["claude", "opencode", "agents", "github", "pi", "omp"] as const) {
 			const mappings = getExportMappings(tool);
 			const sources = mappings.map((m) => m.source);
 			const uniqueSources = new Set(sources);
@@ -350,7 +350,7 @@ describe("export mappings consistency", () => {
 	});
 
 	test("no duplicate destination paths within a tool's mappings", () => {
-		for (const tool of ["claude", "opencode", "agents", "github", "pi"] as const) {
+		for (const tool of ["claude", "opencode", "agents", "github", "pi", "omp"] as const) {
 			const mappings = getExportMappings(tool);
 			const dests = mappings.map((m) => m.dest);
 			const uniqueDests = new Set(dests);

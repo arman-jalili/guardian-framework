@@ -2,7 +2,7 @@
 
 **Token-Optimized Agentic Framework Scaffolder**
 
-A CLI that scaffolds deterministic, validated AI-assisted development workflows. Uses **pi-first architecture** where `.pi/` is the version-controlled source of truth, with generated exports for Claude Code, OpenCode, GitHub Copilot, and Antigravity.
+A CLI that scaffolds deterministic, validated AI-assisted development workflows. Uses **pi-first architecture** where `.pi/` is the version-controlled source of truth, with generated exports for Claude Code, OpenCode, GitHub Copilot, oh-my-pi, and Antigravity.
 
 ---
 

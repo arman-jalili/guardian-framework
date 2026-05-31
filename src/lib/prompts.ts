@@ -138,6 +138,11 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 				hint: "Custom instructions, agents, settings.json",
 			},
 			{
+				value: "omp",
+				label: "oh-my-pi",
+				hint: "Agent definitions, AGENTS.md, extensions",
+			},
+			{
 				value: "opencode",
 				label: "OpenCode",
 				hint: "Static export: .txt prompts, manual scripts",

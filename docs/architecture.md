@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Guardian is a **token-optimized agentic framework scaffolder** that generates deterministic, validated AI-assisted development workflows. It uses a **pi-first architecture** where `.pi/` is the version-controlled source of truth and all other formats (`.claude/`, `.opencode/`, `.agents/`, `.github/`) are generated exports.
+Guardian is a **token-optimized agentic framework scaffolder** that generates deterministic, validated AI-assisted development workflows. It uses a **pi-first architecture** where `.pi/` is the version-controlled source of truth and all other formats (`.claude/`, `.opencode/`, `.agents/`, `.github/`, `.omp/`) are generated exports.
 
 ### Design Goals
 
@@ -196,13 +196,13 @@ Flow:
 
 **Export Mappings (per tool):**
 
-| Source (.pi/) | Claude Export | OpenCode Export | Agents Export | GitHub Export | Pi Export |
-|---------------|---------------|-----------------|---------------|---------------|-----------|
-| `agent/AGENTS.md` | `CLAUDE.md` | `context.md` | `context/project.md` | `copilot-instructions.md` | — |
-| `context/patterns.md` | `context/patterns.md` | `context/patterns.md` | `context/patterns.md` | — | — |
-| `skills/agents/*.md` | `agents/{role}/*.md` | `prompts/*.txt` | `agents/*.md` | `agents/*.agent.md` | `skills/*/SKILL.md` |
-| `prompts/*.md` | `workflows/*.md` | — | — | — | — |
-| `INDEX.md` | `context/INDEX.md` | `INDEX.md` | `INDEX.md` | — | — |
+| Source (.pi/) | Claude Export | OpenCode Export | Agents Export | GitHub Export | Pi Export | OMP Export |
+|---------------|---------------|-----------------|---------------|---------------|-----------|-----------|
+| `agent/AGENTS.md` | `CLAUDE.md` | `context.md` | `context/project.md` | `copilot-instructions.md` | — | `AGENTS.md` |
+| `context/patterns.md` | `context/patterns.md` | `context/patterns.md` | `context/patterns.md` | — | — | — |
+| `skills/agents/*.md` | `agents/{role}/*.md` | `prompts/*.txt` | `agents/*.md` | `agents/*.agent.md` | `skills/*/SKILL.md` | `agents/*.md` |
+| `prompts/*.md` | `workflows/*.md` | — | — | — | — | — |
+| `INDEX.md` | `context/INDEX.md` | `INDEX.md` | `INDEX.md` | — | — | — |
 
 ### 3.4 Update Command (`src/commands/update.ts`)
 

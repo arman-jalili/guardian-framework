@@ -21,7 +21,7 @@ export interface UninstallPlan {
 	manifestPath: string;
 }
 
-const MANAGED_ROOTS = [".pi", ".claude", ".opencode", ".agents", ".github"];
+const MANAGED_ROOTS = [".pi", ".claude", ".opencode", ".agents", ".github", ".omp"];
 
 export async function runUninstall(
 	targetDir: string,

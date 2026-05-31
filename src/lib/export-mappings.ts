@@ -30,6 +30,9 @@ export function getExportStructure(tool: Tool): string[] {
 			return ["agents", "context", "workflows", "scripts"];
 		case "github":
 			return ["instructions", "agents", "copilot"];
+		case "omp":
+			return ["agents", "extensions"];
+
 		case "pi":
 			return ["skills"];
 		default:
@@ -232,6 +235,52 @@ export function getExportMappings(tool: Tool): ExportMapping[] {
 				{
 					source: "skills/agents/documentation-maintainer.md",
 					dest: "skills/documentation-maintainer/SKILL.md",
+				},
+			];
+		case "omp":
+			return [
+				// Main project instructions — oh-my-pi discovers AGENTS.md automatically
+				{ source: "agent/AGENTS.md", dest: "AGENTS.md" },
+				// Agent definitions — oh-my-pi discovers from .omp/agents/*.md
+				{
+					source: "skills/agents/architecture-coordinator.md",
+					dest: "agents/architecture-coordinator.md",
+				},
+				{
+					source: "skills/agents/architecture-validator.md",
+					dest: "agents/architecture-validator.md",
+				},
+				{
+					source: "skills/agents/security-validator.md",
+					dest: "agents/security-validator.md",
+				},
+				{
+					source: "skills/agents/operations-validator.md",
+					dest: "agents/operations-validator.md",
+				},
+				{
+					source: "skills/agents/test-validator.md",
+					dest: "agents/test-validator.md",
+				},
+				{
+					source: "skills/agents/integration-validator.md",
+					dest: "agents/integration-validator.md",
+				},
+				{
+					source: "skills/agents/ci-mr-validator.md",
+					dest: "agents/ci-mr-validator.md",
+				},
+				{
+					source: "skills/agents/code-developer.md",
+					dest: "agents/code-developer.md",
+				},
+				{
+					source: "skills/agents/issue-creator.md",
+					dest: "agents/issue-creator.md",
+				},
+				{
+					source: "skills/agents/documentation-maintainer.md",
+					dest: "agents/documentation-maintainer.md",
 				},
 			];
 		default:

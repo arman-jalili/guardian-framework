@@ -15,10 +15,10 @@ const _dirname = path.dirname(_filename);
 export const MANIFEST_FILE = "guardian-manifest.json";
 
 // Current framework version
-export const FRAMEWORK_VERSION = "1.0.0";
+export const FRAMEWORK_VERSION = "0.1.0";
 
 // Manifest schema version
-export const SCHEMA_VERSION = "1.0";
+export const SCHEMA_VERSION = "0.1";
 
 /**
  * File category in manifest
@@ -77,7 +77,6 @@ export interface TokenStats {
 	lastCalculatedAt: string;
 }
 
-/**
 
 /**
  * Calculate SHA-256 hash of file content

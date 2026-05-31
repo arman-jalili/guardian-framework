@@ -8,7 +8,7 @@
 
 ## Overview
 
-This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.opencode/`, `.agents/`) are generated exports.
+This framework uses `.pi/` as the source of truth. Other formats (`.claude/`, `.opencode/`, `.agents/`, `.omp/`) are generated exports.
 
 ---
 
