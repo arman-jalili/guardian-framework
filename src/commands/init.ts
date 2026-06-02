@@ -265,7 +265,7 @@ function scaffoldPiDirectory(
 		const targetPath = path.join(piDir, relativePath);
 
 		// Skip if it's a template file that should be filtered
-		if (shouldSkipFile(relativePath, validators, workflows)) {
+		if (shouldSkipFile(relativePath, validators, workflows, context.language)) {
 			continue;
 		}
 
@@ -340,6 +340,7 @@ function shouldSkipFile(
 	relativePath: string,
 	validators: Validator[],
 	workflows: Workflow[],
+	language?: Language,
 ): boolean {
 	// Filter scripts based on validators
 	if (relativePath.startsWith("scripts/validate-")) {
@@ -353,6 +354,15 @@ function shouldSkipFile(
 	if (relativePath.startsWith("prompts/")) {
 		const workflowName = relativePath.replace("prompts/", "").replace(".md", "");
 		if (!workflows.includes(workflowName as Workflow)) {
+			return true;
+		}
+	}
+
+	// Filter language-specific validator scripts
+	const langScriptMatch = relativePath.match(/^scripts\/languages\/(\w+)\//);
+	if (langScriptMatch) {
+		const scriptLanguage = langScriptMatch[1];
+		if (scriptLanguage !== language) {
 			return true;
 		}
 	}
