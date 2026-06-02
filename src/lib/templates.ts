@@ -57,7 +57,7 @@ const PI_TEMPLATE_DIR = path.join(TEMPLATE_DIR, "pi");
 const LANGUAGES_DIR = path.join(TEMPLATE_DIR, "languages");
 
 // Supported languages
-export const SUPPORTED_LANGUAGES = ["typescript", "rust", "python", "go"] as const;
+export const SUPPORTED_LANGUAGES = ["typescript", "rust", "python", "go", "java"] as const;
 
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
@@ -197,6 +197,18 @@ export const LANGUAGE_DEFAULTS: Record<
 		tracingPattern: "slog structured logging",
 		cancellationPattern: "context.Context cancellation",
 		atomicWritePattern: "temp file + os.Rename",
+	},
+	java: {
+		buildCommand: "mvn clean compile -q",
+		testCommand: "mvn test -q",
+		lintCommand: "mvn checkstyle:check -q",
+		formatCommand: "mvn spotless:apply",
+		formatCheckCommand: "mvn spotless:check",
+		securityAuditCommand: "mvn dependency-check:check",
+		errorHandlingPattern: "Spring @ControllerAdvice / Result type pattern",
+		tracingPattern: "Micrometer Observation / SLF4j MDC",
+		cancellationPattern: "Reactive Streams cancellation / @Async CompletableFuture",
+		atomicWritePattern: "Spring Data CrudRepository.save()",
 	},
 };
 
