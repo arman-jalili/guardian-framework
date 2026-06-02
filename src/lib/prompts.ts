@@ -169,12 +169,30 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 			{ value: "rust", label: "Rust" },
 			{ value: "python", label: "Python" },
 			{ value: "go", label: "Go" },
+			{ value: "java", label: "Java (Spring Boot)" },
 		],
 	});
 
 	if (isCancel(language)) {
 		cancel("Cancelled");
 		return null;
+	}
+
+	// Step 7b: Build tool selection (only for Java)
+	let buildTool: "maven" | "gradle" | undefined;
+	if (language === "java") {
+		buildTool = await select({
+			message: "Select Java build tool",
+			options: [
+				{ value: "maven", label: "Maven", hint: "mvn (Recommended)" },
+				{ value: "gradle", label: "Gradle", hint: "gradle" },
+			],
+		});
+
+		if (isCancel(buildTool)) {
+			cancel("Cancelled");
+			return null;
+		}
 	}
 
 	// Step 8: Validator selection (CI pre-selected and locked)
