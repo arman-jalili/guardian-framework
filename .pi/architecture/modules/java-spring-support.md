@@ -249,12 +249,18 @@ Agent runs → validators enforce Spring conventions
 
 | Date | Change | Section | Status |
 |------|--------|---------|--------|
-| 2026-06-02 | Initial module creation | all | pending |
+| 2026-06-02 | Initial module creation | all | synced |
+| 2026-06-02 | Language registration | #language-registration | synced |
+| 2026-06-02 | Language patterns | #language-patterns | synced |
+| 2026-06-02 | Build tool selection | #build-tool-selection | synced |
+| 2026-06-02 | Validator scripts | #validator-scripts | synced |
+| 2026-06-02 | Annotation enforcement | #annotation-enforcement | synced |
+| 2026-06-02 | Architecture enforcement | #architecture-enforcement | synced |
 
 See full details in `.pi/architecture/CHANGELOG.md`
 
 ---
 
 *Last updated: 2026-06-02*
-*Module version: 0.1.0*
+*Module version: 1.0.0 — Fully implemented*
 

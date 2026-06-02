@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Java & Spring Boot Language Support — full implementation:
+  - Java registered in SUPPORTED_LANGUAGES with Maven defaults
+  - java-patterns.md with 8 sections (Clean Architecture, annotations, DI, JPA, tests, error handling, config, transactions)
+  - Build tool selection prompt (Maven/Gradle) in init flow
+  - buildTool field in TemplateContext and manifest
+  - 7 language-specific Java validator scripts (ci, tests, architecture, security, canonical, operations, integration)
+  - validate-annotations.sh for Spring annotation enforcement
+  - validate-spring-architecture.sh for package ring enforcement
+  - spring.toml declarative validation rules with inline tests
+  - validation-runner.ts updated for language-specific script discovery
+  - shouldSkipFile updated to filter language scripts by language
+  - 3 test files: unit (java-support.test.ts), integration (java-validators.test.ts), E2E (java-init-e2e.test.ts)
 - ADR-001: Pi-First Architecture — single source of truth, generated exports
 - ADR-002: Bun Runtime — fast startup, native TypeScript, npm-compatible
 - ADR-003: Template-Based Generation — file-based templates with placeholder substitution
