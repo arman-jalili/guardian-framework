@@ -342,7 +342,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
   Project: ${projectName} v${projectVersion}
   Repository: ${repository} (${repoTool})
   Tools: ${tools.join(", ")}
-  Language: ${language}
+  Language: ${language}${buildTool ? `\n  Build Tool: ${buildTool}` : ""}
   Validators: ${validators.join(", ")}
   Workflows: ${workflows.length > 0 ? workflows.join(", ") : "none"}`,
 	});
@@ -355,6 +355,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 	return {
 		tools: tools as Tool[],
 		language: language as Language,
+		buildTool: buildTool as "maven" | "gradle" | undefined,
 		repoTool: repoTool as RepoTool,
 		validators: validators as Validator[],
 		workflows: workflows as Workflow[],

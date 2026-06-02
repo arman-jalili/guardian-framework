@@ -28,6 +28,7 @@ async function main() {
 			dir: { type: "string", short: "d" },
 			tool: { type: "string", short: "t" },
 			lang: { type: "string", short: "l" },
+			buildTool: { type: "string" },
 			validators: { type: "string" },
 			workflows: { type: "string" },
 			nonInteractive: { type: "boolean" },
@@ -69,7 +70,8 @@ Options:
 
 Init options:
   -t, --tool <name>          AI tool (pi, claude, opencode, agents, github)
-  -l, --lang <name>          Language (typescript, rust, python, go)
+  -l, --lang <name>          Language (typescript, rust, python, go, java)
+  --buildTool <name>         Build tool (maven, gradle) — only for Java
   --validators <list>        Validators (comma-separated, ci always included)
   --workflows <list>         Workflows (comma-separated)
   --nonInteractive           Use defaults/flags, skip prompts

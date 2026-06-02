@@ -120,6 +120,7 @@ async function scaffoldFramework(
 	options: {
 		tools: Tool[];
 		language: Language;
+		buildTool?: "maven" | "gradle";
 		repoTool: RepoTool;
 		validators: Validator[];
 		workflows: Workflow[];
