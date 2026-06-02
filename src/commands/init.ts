@@ -135,7 +135,7 @@ async function scaffoldFramework(
 	try {
 		// Get template context with language defaults and repo tool
 		const context: TemplateContext = {
-			...getDefaultContext(options.language, options.projectName, options.repoTool),
+			...getDefaultContext(options.language, options.projectName, options.repoTool, options.buildTool),
 			projectVersion: options.projectVersion,
 			projectType: options.projectType,
 			repository: options.repository,

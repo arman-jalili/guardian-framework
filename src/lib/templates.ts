@@ -115,6 +115,7 @@ export interface TemplateContext {
 	projectName: string;
 	projectVersion: string;
 	language: Language;
+	buildTool?: "maven" | "gradle";
 	projectType: string;
 	repository: string;
 	repoTool: RepoTool;
@@ -348,26 +349,43 @@ export function renderTemplate(content: string, context: Partial<TemplateContext
 
  * Get template context with language defaults
  */
+/**
+ * Gradle command equivalents that override Maven defaults for Java projects.
+ */
+const GRADLE_COMMANDS: Record<string, string> = {
+	buildCommand: "gradle build -q",
+	testCommand: "gradle test -q",
+	lintCommand: "gradle checkstyleMain -q",
+	formatCommand: "gradle spotlessApply",
+	formatCheckCommand: "gradle spotlessCheck",
+	securityAuditCommand: "gradle dependencyCheck",
+};
+
 export function getDefaultContext(
 	language: Language,
 	projectName: string,
 	repoTool: RepoTool = "gh",
+	buildTool?: "maven" | "gradle",
 ): TemplateContext {
 	const defaults = LANGUAGE_DEFAULTS[language];
+
+	// For Java with Gradle, override Maven defaults with Gradle commands
+	const commandOverrides = language === "java" && buildTool === "gradle" ? GRADLE_COMMANDS : {};
 
 	return {
 		projectName,
 		projectVersion: "0.1.0",
 		language,
+		buildTool: buildTool ?? (language === "java" ? "maven" : undefined),
 		projectType: "Library",
 		repository: "owner/repo",
 		repoTool,
-		buildCommand: defaults.buildCommand,
-		testCommand: defaults.testCommand,
-		lintCommand: defaults.lintCommand,
-		formatCommand: defaults.formatCommand,
-		formatCheckCommand: defaults.formatCheckCommand,
-		securityAuditCommand: defaults.securityAuditCommand,
+		buildCommand: commandOverrides.buildCommand ?? defaults.buildCommand,
+		testCommand: commandOverrides.testCommand ?? defaults.testCommand,
+		lintCommand: commandOverrides.lintCommand ?? defaults.lintCommand,
+		formatCommand: commandOverrides.formatCommand ?? defaults.formatCommand,
+		formatCheckCommand: commandOverrides.formatCheckCommand ?? defaults.formatCheckCommand,
+		securityAuditCommand: commandOverrides.securityAuditCommand ?? defaults.securityAuditCommand,
 		errorHandlingPattern: defaults.errorHandlingPattern,
 		tracingPattern: defaults.tracingPattern,
 		cancellationPattern: defaults.cancellationPattern,

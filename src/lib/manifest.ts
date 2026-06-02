@@ -229,6 +229,7 @@ export function writeManifest(targetDir: string, manifest: GuardianManifest): vo
 export function createManifest(options: {
 	tools: string[];
 	language: string;
+	buildTool?: "maven" | "gradle";
 	repoTool: string;
 	validators: string[];
 	workflows: string[];
