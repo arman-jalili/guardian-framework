@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-005: Symphony-Inspired Orchestration — lifecycle hooks, retry with backoff, reconciliation
 - ADR-006: Token Optimization Strategy — DRY context, snippets, compaction, tiered prompts
 - ADR-007: Test Strategy — unit + integration + E2E layers, zero external deps
-- Module docs: CLI entry point, init command, generate command, update command, template system, manifest system, core libraries, java-spring-support
+- Module docs: CLI entry point, init command, generate command, update command, template system, manifest system, core libraries, java-spring-support, project-scaffolding-epic0
 - `.pi/context/project.md` — project-specific knowledge for agents
 - `.pi/domain/` — planned directory for DDD bounded context discovery
 - `.pi/domain/ubiquitous-language.md` — DDD ubiquitous language glossary with 18 canonical terms and alias tracking
