@@ -110,6 +110,43 @@ export const AVAILABLE_WORKFLOWS = [
 
 export type Workflow = (typeof AVAILABLE_WORKFLOWS)[number];
 
+/**
+ * Options for the `guardian project create` command.
+ * The `layers` field contains decomposed interface sub-layer paths
+ * (e.g., "interfaces/http", "interfaces/messaging") driven by ADRs.
+ */
+export interface ProjectCreateOptions {
+	language: Language;
+	buildTool?: "maven" | "gradle";
+	groupId: string;
+	packageName: string;
+	modules: string[];
+	layers: string[];
+	ciStages: string[];
+}
+
+/**
+ * Default options for project scaffolding per language.
+ * Interface sub-layers reflect the project's delivery mechanisms.
+ */
+export const PROJECT_DEFAULTS: Record<Language, Partial<ProjectCreateOptions>> = {
+	typescript: {
+		layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/graphql"],
+	},
+	rust: {
+		layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/cli"],
+	},
+	python: {
+		layers: ["domain", "application", "infrastructure", "interfaces/http"],
+	},
+	go: {
+		layers: ["domain", "application", "infrastructure", "interfaces/http"],
+	},
+	java: {
+		layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/messaging"],
+	},
+};
+
 // Placeholder mappings for template substitution
 export interface TemplateContext {
 	projectName: string;
