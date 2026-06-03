@@ -160,7 +160,7 @@ export function generateProjectStructure(
 
 			// Create a placeholder source file with canonical reference header
 			const ext = language === "java" ? ".java" : ".ts";
-			const placeholderFileName = `${moduleName}${layer.replace(/[/ ]/g, "_")}${ext}`;
+			const placeholderFileName = `${moduleName}_${layer.replace(/[/ ]/g, "_")}${ext}`;
 			const placeholderPath = path.join(dirPath, placeholderFileName);
 
 			const moduleDocName = moduleName.toLowerCase().replace(/\s+/g, "-");
