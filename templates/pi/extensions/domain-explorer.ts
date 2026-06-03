@@ -62,10 +62,6 @@ function toolResult(text: string) {
 	return { content: [{ type: "text" as const, text }] };
 }
 
-function toolResult(text: string) {
-	return text;
-}
-
 function sanitizeContext(context: string): string {
 	return context
 		.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
