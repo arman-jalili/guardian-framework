@@ -8,6 +8,7 @@
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
 import { runDomain } from "./commands/domain.js";
+import type { Language } from "./lib/templates.js";
 import { runGenerate } from "./commands/generate.js";
 import { runInfo } from "./commands/info.js";
 import { runInit } from "./commands/init.js";
@@ -15,6 +16,7 @@ import { runStats } from "./commands/stats.js";
 import { runUninstall } from "./commands/uninstall.js";
 import { runUpdate } from "./commands/update.js";
 import { runUpgrade } from "./commands/upgrade.js";
+import { runProjectCreate } from "./commands/project.js";
 import { runTrust, runValidate, runVerify } from "./commands/validate.js";
 
 const VERSION = "0.1.0";
@@ -33,6 +35,7 @@ async function main() {
 			workflows: { type: "string" },
 			nonInteractive: { type: "boolean" },
 			dryRun: { type: "boolean" },
+			groupId: { type: "string" },
 			force: { type: "boolean" },
 			regenerate: { type: "boolean" },
 			verbose: { type: "boolean" },
@@ -73,6 +76,17 @@ Init options:
   -l, --lang <name>          Language (typescript, rust, python, go, java)
   --buildTool <name>         Build tool (maven, gradle) — only for Java
   --validators <list>        Validators (comma-separated, ci always included)
+
+Project options:
+  Project scaffolding from architecture decisions
+  guardian project create [options]
+
+  -l, --lang <name>          Language (required)
+  --buildTool <name>         Build tool (maven, gradle)
+  --groupId <name>           Maven group / package prefix (default: com.example)
+  --validators <list>        Validators for CI pipeline
+  --dryRun                   Show plan without writing files
+  --force                    Override existing project guard
   --workflows <list>         Workflows (comma-separated)
   --nonInteractive           Use defaults/flags, skip prompts
 
@@ -175,6 +189,21 @@ async function runCommand(
 				revoke: args.values.revoke as boolean | undefined,
 				file: args.positionals[1],
 			});
+			break;
+		case "project":
+			if (args.positionals[1] === "create") {
+				await runProjectCreate(targetDir, {
+					language: args.values.lang as Language,
+					buildTool: args.values.buildTool as "maven" | "gradle" | undefined,
+					groupId: (args.values.groupId as string) || "com.example",
+					repoTool: "gh",
+					validators: (args.values.validators as string)?.split(",") || ["ci", "tests"],
+					dryRun: args.values.dryRun as boolean | undefined,
+					force: args.values.force as boolean | undefined,
+				});
+			} else {
+				console.error("Usage: guardian project create [options]");
+			}
 			break;
 		case "domain":
 			await runDomain(targetDir, args.positionals.slice(1), {
