@@ -1,26 +1,37 @@
 ---
+# Guardian Workflow Configuration
+# YAML front matter = runtime settings. Body = agent prompt.
+# Changes to this file are detected and re-applied without restart.
+
 workspace:
-  root: .pi/workspaces
+  root: ".pi/workspaces"
   hooks:
     timeout_ms: 60000
+
 agent:
   max_turns: 20
   max_retry_backoff_ms: 300000
   stall_timeout_ms: 300000
+
 system_prompt_tier: full
+
 generate:
   on_conflict: warn
   atomic_writes: true
+
 validate:
   fail_fast: false
   timeout_ms: 300000
+
 goal:
   enabled: true
   max_turns: 20
   judge_validator: true
+
 kanban:
   enabled: true
   auto_create_tasks: true
+
 hooks:
   pre_tool_call: []
   post_tool_call: []
@@ -29,18 +40,19 @@ hooks:
   on_session_start: []
   on_session_end: []
   subagent_stop: []
+
 curator:
   enabled: true
   stale_after_days: 30
   archive_after_days: 90
   auto_review: true
+
 delegation:
   max_spawn_depth: 1
   max_concurrent_children: 3
   max_iterations: 50
   child_timeout_ms: 600000
 ---
-
 
 # Project Context
 

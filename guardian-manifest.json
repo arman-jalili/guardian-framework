@@ -68,7 +68,7 @@
     },
     ".pi/agent/AGENTS.md": {
       "category": "user",
-      "originalHash": "sha256:bbbaaf8169a77ee65430f15b9f20b977786254ceaf8ce1f68b0baca04deed086",
+      "originalHash": "sha256:bf130ffcf9c8d2d8de86482c61f57613741d08251ce28155226a347713c54535",
       "status": "unchanged"
     },
     ".pi/extensions/curator.ts": {
@@ -884,96 +884,101 @@
     ".pi/extensions/domain-explorer.ts": {
       "category": "framework",
       "originalHash": "sha256:45d93f928207b83c49412a3fc20a44aa1a3c89f5b82663d0b8629e9834459b51",
-      "status": "configured"
+      "status": "modified"
     },
     ".pi/scripts/validate-ubiquitous-language.sh": {
       "category": "framework",
       "originalHash": "sha256:f22384352ac39ed1cfc89356f125b02ad5d37cb02b30c9e8ee7abea89bf67ec1",
-      "status": "configured"
+      "status": "modified"
     },
     ".pi/scripts/validate-architecture-readiness.sh": {
       "category": "framework",
       "originalHash": "sha256:d460c6ccd94a3382d3fde7fff1e9d9f7c10abba76a3f6a3e41238283e81354d5",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-operations.sh": {
       "category": "framework",
       "originalHash": "sha256:85ba34bd70b8bb363f434ff8135bd88eebfa09860f90fd6e98faa2bcacd99d16",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-architecture.sh": {
       "category": "framework",
       "originalHash": "sha256:f5eb884c635ebc18f98b7698feca200d84b3b2e16a30e6fe48b61bf4f8b38fcf",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-spring-architecture.sh": {
       "category": "framework",
       "originalHash": "sha256:bd5d1e146221aeb0d834e94f50e0a53382bd52291ccdbb28f47a0bdc67df4a12",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-annotations.sh": {
       "category": "framework",
       "originalHash": "sha256:d41f71ecd7bc7bedb32cbc2710b7404d4cdc34d049953a48a2cba293a58fed74",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-security.sh": {
       "category": "framework",
       "originalHash": "sha256:096d0110bb1e6a41270b6a1b6fbab4754d5545ee399b0c0dc2ceda8e36556883",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-canonical.sh": {
       "category": "framework",
       "originalHash": "sha256:b98077c5944ce5335f7b93a474dc23fa2d59408bc3be4315e1725d90d7a0f2a0",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-ci.sh": {
       "category": "framework",
       "originalHash": "sha256:fae27bc8b709c88e3d64b6367f9e4604334770d59b4b9e741e06608d08891b12",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-integration.sh": {
       "category": "framework",
       "originalHash": "sha256:ff677d9afbc2ba1503d5bbf935a5a96d77930b8ea85e463e175d46680e188ba3",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/scripts/languages/java/validate-tests.sh": {
       "category": "framework",
       "originalHash": "sha256:e98017ceb722bd3aa6a283000af07d30ed074051e96dbaa76e1081f69274244b",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/prompts/issue-template.md": {
       "category": "framework",
       "originalHash": "sha256:0171d092bd362617327b5ef14e3b58b06052482ddd338338da3ccfb404ee0e93",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/prompts/epic-template.md": {
       "category": "framework",
       "originalHash": "sha256:cdc5b784ed287871d651ebcedeacddd74091b4c1ac3b7e696890d78353b94afc",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/prompts/ci-blueprint.md": {
       "category": "framework",
       "originalHash": "sha256:b2847a4ec3b26f3a77e6c06d8ebe2595032703ec2d8c1529a8f76204bc03c58f",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/prompts/issue-template-set.md": {
       "category": "framework",
       "originalHash": "sha256:cf6e8b0f1db914475264e6c153cd1945bffc537210501f898c6d01661c9dc027",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/validators/spring.toml": {
       "category": "framework",
       "originalHash": "sha256:afc0f8b49b5228869f296a7683b1d8a5f6ffc72f366f889a4ab7f5a8a4cc2b1e",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/domain/ubiquitous-language.md": {
       "category": "framework",
       "originalHash": "sha256:43c081b91a96492161b54d3df45dae0b5d38d19f3a38fa18f3757987958dd7ca",
-      "status": "configured"
+      "status": "unchanged"
     },
     ".pi/domain/exploration.md": {
       "category": "framework",
       "originalHash": "sha256:8bae5c4cfc3165dbb99426022b0ac069f85381b6a450539aaaecac4be0e87229",
+      "status": "unchanged"
+    },
+    ".pi/extensions/project-scaffolder.ts": {
+      "category": "framework",
+      "originalHash": "sha256:d0dd4ddeb736cb45a785b92b8c912e5dfd54254756f1e67202e56934c8b1a751",
       "status": "configured"
     }
   },
