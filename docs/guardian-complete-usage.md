@@ -1427,6 +1427,8 @@ docker info
 
 ## 20. See Also
 
+- [guardian-domain-usage.md](guardian-domain-usage.md) — Domain exploration (`/domain`)
+- [guardian-architect-usage.md](guardian-architect-usage.md) — Architecture orchestration (`/architect`)
 - [guardian-framework-design.md](guardian-framework-design.md) — Design specification
 - [architecture.md](architecture.md) — Architecture document
 - [hermes-features-usage.md](hermes-features-usage.md) — Hermes-adopted features reference
