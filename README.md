@@ -85,6 +85,7 @@ npm install -g guardian-framework
 
 ### 1. Explore your domain
 
+**CLI:**
 ```bash
 # DDD-driven domain exploration with LLM
 guardian domain explore --context "We build a fintech payment platform..."
@@ -94,6 +95,14 @@ guardian domain list
 
 # Scaffold architecture from exploration
 guardian domain scaffold <session-id>
+```
+
+**Or inside the pi agent (consistent with `/architect`):**
+```
+/domain --explore "We build a fintech payment platform..."
+/domain --answer <session-id> response.json
+/domain --architect-scaffold <session-id>
+/domain --validate <session-id>
 ```
 
 This produces: bounded contexts, entities, value objects, ubiquitous language glossary, and domain event catalog.
@@ -173,6 +182,7 @@ Creates `.claude/`, `.opencode/`, `.agents/`, `.github/` from `.pi/` source.
 
 ### `domain` — DDD Domain Exploration
 
+**CLI:**
 ```bash
 guardian domain explore --context "Describe your business domain..."
 guardian domain explore --context "..." --session my-session   # Resume session
@@ -181,6 +191,16 @@ guardian domain scaffold <session-id>                           # Generate .pi/ 
 guardian domain answer <session-id> <response-file>             # Continue with custom response
 guardian domain list                                            # List all sessions
 ```
+
+**Inside pi agent (slash command):**
+```
+/domain --explore "Describe your business domain..."
+/domain --answer <session-id> <response-file>
+/domain --architect-scaffold <session-id>
+/domain --validate <session-id>
+```
+
+Consistent with `/architect` — discover your domain before architecting it.
 
 Produces:
 - **Bounded contexts** with entities, value objects, domain events
@@ -357,6 +377,7 @@ Guardian ships 19 Pi extensions that enable the full SDLC workflow inside the ag
 | Extension | Purpose |
 |-----------|---------|
 | **`architect.ts`** | **Epic orchestration** — end-to-end from architecture discovery to implementation, validation, MR creation, merge, and close (`/architect`) |
+| **`domain-explorer.ts`** | **DDD Domain exploration** — explore, answer, scaffold architecture, validate (`/domain --explore`, `--answer`, `--architect-scaffold`, `--validate`) |
 | **`pipeline.ts`** | **Multi-step workflow engine** with per-step acceptance gates (`/pipeline`) |
 | **`kanban.ts`** | **Durable task board** with state machine, dependencies, comments, priority |
 | **`goal-loop.ts`** | **Standing goals** with validator-backed judge (`/goal`, `/subgoal`). Auto-iterates until validated |

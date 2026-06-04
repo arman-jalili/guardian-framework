@@ -267,4 +267,240 @@ export default function (pi: ExtensionAPI) {
 			return toolResult(header + "\n" + checks.join("\n"));
 		},
 	});
+
+	// ── /domain command ──
+	pi.registerCommand("domain", {
+		description:
+			"Domain exploration commands. Subcommands: --explore, --answer, --architect-scaffold, --validate",
+		handler(args: string, ctx: ExtensionContext) {
+			const trimmed = args.trim();
+
+			// /domain --explore "context description"
+			if (trimmed.startsWith("--explore")) {
+				const context = trimmed.slice("--explore".length).trim().replace(/^["']|["']$/g, "");
+				if (!context) {
+					ctx.ui.notify(
+						'Usage: /domain --explore "Business domain description"',
+						"error",
+					);
+					return "(domain command handled)";
+				}
+				const sanitized = sanitizeContext(context);
+				const prompt = buildExplorationPrompt(sanitized);
+				const sessionId = crypto.randomUUID();
+				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+				const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
+
+				fs.mkdirSync(explorationDir, { recursive: true });
+				fs.writeFileSync(promptPath, prompt, "utf-8");
+
+				ctx.ui.notify(
+					`Domain exploration prompt created (session: ${sessionId})`,
+					"success",
+				);
+
+				return [
+					"I've prepared a DDD domain exploration for you.",
+					"",
+					"1. Read the prompt file: " + promptPath,
+					"2. Feed the prompt to your LLM to get a structured domain model",
+					"3. Save the JSON response to a file",
+					"4. Use /domain --answer " + sessionId + " <response-file>",
+					"5. Use /domain --architect-scaffold " + sessionId + " to generate architecture",
+					"",
+					"Session ID: " + sessionId,
+				].join("\n");
+			}
+
+			// /domain --answer <session-id> <response-file>
+			if (trimmed.startsWith("--answer")) {
+				const parts = trimmed.slice("--answer".length).trim().split(/\s+/);
+				const sessionId = parts[0];
+				const responseFile = parts.slice(1).join(" ");
+
+				if (!sessionId || !responseFile) {
+					ctx.ui.notify(
+						"Usage: /domain --answer <session-id> <response-file>",
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+				const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
+				const responsePath = path.resolve(ctx.cwd, responseFile);
+				const sessionPath = path.join(explorationDir, sessionId + ".md");
+
+				if (!fs.existsSync(promptPath)) {
+					ctx.ui.notify(
+						"Session not found: " + sessionId + ". Start with /domain --explore first.",
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				if (!fs.existsSync(responsePath)) {
+					ctx.ui.notify(
+						"Response file not found: " + responsePath,
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				const response = fs.readFileSync(responsePath, "utf-8");
+				const prompt = fs.readFileSync(promptPath, "utf-8");
+
+				const content = [
+					"# Domain Exploration",
+					"",
+					"Session ID: " + sessionId,
+					"",
+					"## Prompt",
+					"",
+					prompt,
+					"",
+					"## Response",
+					"",
+					response,
+					"",
+					"## Bounded Contexts",
+					"",
+					"*(Parsed from response)*",
+					"",
+					"## Entities",
+					"",
+					"*(Parsed from response)*",
+					"",
+					"## Ubiquitous Language",
+					"",
+					"*(Parsed from response)*",
+				].join("\n");
+
+				fs.mkdirSync(explorationDir, { recursive: true });
+				fs.writeFileSync(sessionPath, content, "utf-8");
+
+				ctx.ui.notify(
+					"Domain exploration session saved to " + sessionPath,
+					"success",
+				);
+
+				return [
+					"Domain exploration response saved for session: " + sessionId,
+					"",
+					"Next step: Use /domain --architect-scaffold " + sessionId + " to generate architecture modules from this exploration.",
+					"Or: /domain --validate " + sessionId + " to check glossary compliance.",
+				].join("\n");
+			}
+
+			// /domain --architect-scaffold <session-id>
+			if (trimmed.startsWith("--architect-scaffold")) {
+				const sessionId = trimmed.slice("--architect-scaffold".length).trim();
+				if (!sessionId) {
+					ctx.ui.notify(
+						"Usage: /domain --architect-scaffold <session-id>",
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+				const sessionPath = path.join(explorationDir, sessionId + ".md");
+
+				if (!fs.existsSync(sessionPath)) {
+					ctx.ui.notify(
+						"Session not found: " + sessionId + ". Complete exploration with /domain --answer first.",
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				const archDir = path.join(ctx.cwd, ".pi", "architecture");
+				const modulesDir = path.join(archDir, "modules");
+				const decisionsDir = path.join(archDir, "decisions");
+
+				fs.mkdirSync(modulesDir, { recursive: true });
+				fs.mkdirSync(decisionsDir, { recursive: true });
+
+				ctx.ui.notify(
+					"Architecture directories ready. Use /architect to begin planning.",
+					"success",
+				);
+
+				return [
+					"Architecture directories scaffolded from exploration session: " + sessionId,
+					"",
+					"Next steps:",
+					"1. Review the exploration at: " + sessionPath,
+					"2. Create architecture module docs in: " + modulesDir,
+					"3. Use /architect to plan and implement epics",
+					"",
+					"Architecture directories:",
+					"  - " + modulesDir,
+					"  - " + decisionsDir,
+					"  - " + path.join(archDir, "diagrams"),
+				].join("\n");
+			}
+
+			// /domain --validate <session-id>
+			if (trimmed.startsWith("--validate")) {
+				const sessionId = trimmed.slice("--validate".length).trim();
+				if (!sessionId) {
+					ctx.ui.notify(
+						"Usage: /domain --validate <session-id>",
+						"error",
+					);
+					return "(domain command handled)";
+				}
+
+				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+				const sessionPath = path.join(explorationDir, sessionId + ".md");
+				const checks: string[] = [];
+				let allPassed = true;
+
+				if (!fs.existsSync(sessionPath)) {
+					checks.push("  FAIL Session not found");
+					allPassed = false;
+				} else {
+					const content = fs.readFileSync(sessionPath, "utf-8");
+					checks.push("  PASS Session file exists");
+					checks.push(content.includes("## Bounded Contexts") ? "  PASS Bounded contexts section" : "  FAIL Missing bounded contexts section");
+					checks.push(content.includes("## Entities") ? "  PASS Entities section" : "  FAIL Missing entities section");
+					checks.push(content.includes("## Ubiquitous Language") ? "  PASS Ubiquitous language section" : "  FAIL Missing ubiquitous language section");
+				}
+
+				const header = allPassed ? "Domain Validation - All Checks Passed" : "Domain Validation - Some Checks Failed";
+				ctx.ui.notify(header, allPassed ? "success" : "error");
+
+				return header + "\n" + checks.join("\n");
+			}
+
+			// Default: show usage
+			ctx.ui.notify(
+				[
+					"Usage:",
+					'  /domain --explore "Business context description"',
+					"  /domain --answer <session-id> <response-file>",
+					"  /domain --architect-scaffold <session-id>",
+					"  /domain --validate <session-id>",
+				].join("\n"),
+				"info",
+			);
+
+			return [
+				"Available /domain subcommands:",
+				"",
+				'  /domain --explore "..."',
+				"    Start a new DDD domain exploration session",
+				"",
+				"  /domain --answer <session-id> <response-file>",
+				"    Save an LLM response to complete an exploration",
+				"",
+				"  /domain --architect-scaffold <session-id>",
+				"    Generate architecture directories from exploration",
+				"",
+				"  /domain --validate <session-id>",
+				"    Validate exploration session structure",
+			].join("\n");
+		},
+	});
 }
