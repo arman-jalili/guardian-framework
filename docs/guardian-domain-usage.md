@@ -602,7 +602,7 @@ Checks that implementation files reference architecture modules derived from exp
 
 ## 10. Integration with /architect
 
-Domain exploration is designed to feed directly into `/architect`:
+Domain exploration is designed to feed directly into `/project` (Epic 0) and then `/architect`:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -621,6 +621,13 @@ Domain exploration is designed to feed directly into `/architect`:
 │  Create architecture module docs                            │
 │  .pi/architecture/modules/<context>.md                      │
 │  (One per bounded context from exploration)                 │
+└─────────────────────────┬──────────────────────────────────┘
+                          │
+                          ▼
+┌────────────────────────────────────────────────────────────┐
+│  /project create --lang java --buildTool maven              │
+│  Scaffold source tree, build config, CI pipeline            │
+│  FROM architecture decisions (Epic 0)                       │
 └─────────────────────────┬──────────────────────────────────┘
                           │
                           ▼
@@ -781,3 +788,4 @@ guardian domain explore --context "..." --session analytics-v1
 - [architecture.md](architecture.md) — Architecture document
 - [guardian-framework-design.md](guardian-framework-design.md) — Design specification
 - [pipeline-usage.md](pipeline-usage.md) — Pipeline engine reference
+- [guardian-domain-usage.md](guardian-domain-usage.md) — Domain exploration (this document)

@@ -21,7 +21,7 @@ Most AI coding tools operate in isolation: you prompt, they generate, you pray. 
 | **🏗️ Project Scaffolding** | `guardian project create` generates source trees, build configs, CI pipelines FROM architecture |
 | **📋 Epic & Issue Planning** | Full workflow: epic overview → module slices → issues → implementation → closeout → merge |
 | **✅ Multi-Stage Validation** | 7 validator categories with scope-based auto-selection (Simple → Critical) |
-| **🤖 Pi Extensions** | 19 TypeScript extensions: bash-guard, kanban, pipeline, architect, goal-loop, plan-mode, curator |
+| **🤖 Pi Extensions** | 20 TypeScript extensions: bash-guard, kanban, pipeline, architect, goal-loop, plan-mode, curator, domain-explorer, project-scaffolder |
 | **📤 Multi-Tool Export** | Single `.pi/` source → Claude Code, OpenCode, GitHub Copilot, oh-my-pi, Antigravity |
 | **🔋 Token Optimization** | DRY context, snippet expansion, context compaction, tiered prompts — 50–70% savings |
 
@@ -40,10 +40,11 @@ Most AI coding tools operate in isolation: you prompt, they generate, you pray. 
 │  └──────────────┘  └────────────────┘  └──────────────────────────┘   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  PHASE 2: SCAFFOLD                                                      │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐   │
-│  │ guardian init  │→ │ guardian       │→ │ guardian generate      │   │
-│  │ (framework)    │  │ project create │  │ (multi-tool exports)   │   │
-│  └────────────────┘  └────────────────┘  └────────────────────────┘   │
+│  ┌────────────────┐  ┌────────────────────┐  ┌────────────────────────┐   │
+│  │ guardian init  │→ │ guardian project   │→ │ guardian generate      │   │
+│  │ (framework)    │  │ create  OR         │  │ (multi-tool exports)   │   │
+│  │                │  │ /project create    │  │                        │   │
+│  └────────────────┘  └────────────────────┘  └────────────────────────┘   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  PHASE 3: PLAN                                                          │
 │  ┌──────────────┐  ┌────────────┐  ┌───────────────┐  ┌────────────┐  │
@@ -210,11 +211,22 @@ Produces:
 
 ### `project create` — Architecture-Driven Scaffolding
 
+**CLI:**
 ```bash
 guardian project create --lang java --buildTool maven --groupId com.mycompany
 guardian project create --lang typescript --validators ci,tests,security --dry-run
 guardian project create --lang java --buildTool gradle --force
 ```
+
+**Inside pi agent (slash command):**
+```
+/project create --lang java --buildTool maven --groupId com.mycompany
+/project create --lang typescript --validators ci,tests,security --dryRun
+/project create --lang java --buildTool gradle --force
+/project status
+```
+
+Consistent with `/domain` and `/architect` — this is **Epic 0**, run after domain exploration.
 
 Reads architecture modules from `.pi/architecture/modules/` and generates:
 - **Source directory tree** matching module boundaries and layer decisions
@@ -378,6 +390,7 @@ Guardian ships 19 Pi extensions that enable the full SDLC workflow inside the ag
 |-----------|---------|
 | **`architect.ts`** | **Epic orchestration** — end-to-end from architecture discovery to implementation, validation, MR creation, merge, and close (`/architect`) |
 | **`domain-explorer.ts`** | **DDD Domain exploration** — explore, answer, scaffold architecture, validate (`/domain --explore`, `--answer`, `--architect-scaffold`, `--validate`) |
+| **`project-scaffolder.ts`** | **Project scaffolding from architecture** — Epic 0 (`/project create --lang java --buildTool maven`, `/project status`) |
 | **`pipeline.ts`** | **Multi-step workflow engine** with per-step acceptance gates (`/pipeline`) |
 | **`kanban.ts`** | **Durable task board** with state machine, dependencies, comments, priority |
 | **`goal-loop.ts`** | **Standing goals** with validator-backed judge (`/goal`, `/subgoal`). Auto-iterates until validated |
@@ -396,6 +409,7 @@ Guardian ships 19 Pi extensions that enable the full SDLC workflow inside the ag
 | `hooks.ts` | Declarative shell hooks for lifecycle events |
 | `validation-runner.ts` | `/validate` command for running validator scripts |
 | `domain-explorer.ts` | Domain exploration tool integration |
+| `project-scaffolder.ts` | Epic 0 — scaffold project from architecture decisions (`/project create`, `/project status`) |
 
 Zero external npm dependencies — all self-contained.
 
