@@ -70,21 +70,43 @@ If the analysis needs refinement, edit the `.md` files directly or describe the 
 
 ## Step 3: Scaffold Architecture
 
-```bash
-/domain --architect-scaffold <session-id>
+**Tell the agent:**
+```
+domain scaffold from <session-id>
 ```
 
-**What happens:**
-- Reads the exploration session (`.pi/domain/exploration/<session-id>.md`)
-- Creates architecture directories under `.pi/architecture/`
-- Ready for module docs creation
+Example:
+```
+domain scaffold from payment-processing-ddd
+```
 
-**Output:**
+The agent will:
+1. Read the domain exploration (`.pi/domain/exploration/<session-id>.md`)
+2. Create one architecture module file per bounded context in `.pi/architecture/modules/`
+3. Each module file includes components with `status: planned` for the bounded context
+4. Create ADRs in `.pi/architecture/decisions/` for key technology choices
+5. Create system diagrams in `.pi/architecture/diagrams/` with mermaid
+6. Create directories if needed
+
+**Agent instructions — when the user asks you to scaffold architecture from a domain exploration:**
+1. Read `.pi/domain/exploration/<session-id>.md` to get the bounded contexts and entities
+2. Create `.pi/architecture/modules/` directory if it doesn't exist
+3. For each bounded context, create a module doc (e.g., `payment-ingestion.md`) with:
+   - Title and description of the bounded context
+   - A table of components with Name, Description, Dependencies, Status columns
+   - Components are derived from entities and domain events in that context
+   - Set each component's status to `planned`
+4. Create `.pi/architecture/decisions/` if it doesn't exist
+5. Create relevant ADR files (e.g., `ADR-001-payment-idempotency.md`)
+6. Create `.pi/architecture/diagrams/` if it doesn't exist
+7. Create system context and container diagrams using mermaid
+
+**Output structure:**
 | Path | Purpose |
 |------|---------|
-| `.pi/architecture/modules/` | Directory for one module doc per bounded context |
-| `.pi/architecture/decisions/` | Directory for ADRs (e.g., ADR-001) |
-| `.pi/architecture/diagrams/` | Directory for system diagrams with mermaid |
+| `.pi/architecture/modules/<context>.md` | One module doc per bounded context |
+| `.pi/architecture/decisions/ADR-*.md` | Architecture Decision Records |
+| `.pi/architecture/diagrams/*.md` | System diagrams with mermaid |
 
 ---
 
@@ -145,9 +167,8 @@ Each issue follows the contract freeze → implementation → proofing → readi
 Tell the agent: "Analyze this business domain using DDD: <description>"
   |  (agent writes exploration.md + ubiquitous-language.md automatically)
   |
-/domain --validate <session-id>   (optional review)
-  |
-/domain --architect-scaffold <session-id>
+Tell the agent: "domain scaffold from <session-id>"
+  |  (agent creates module docs, ADRs, diagrams)
   |
 /epic-plan --overview  or  /architect --epic "Name"
   |
