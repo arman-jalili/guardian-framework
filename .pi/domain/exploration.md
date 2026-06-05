@@ -12,6 +12,44 @@ status: {{STATUS}}
 
 ---
 
+## Business Context
+
+{{BUSINESS_CONTEXT}}
+
+---
+
+## Actors & Roles
+
+| Actor | Description | Interactions |
+|-------|-------------|-------------|
+{{ACTORS_TABLE}}
+
+---
+
+## Functional Requirements
+
+| ID | Requirement | Priority | Bounded Context |
+|----|-------------|----------|----------------|
+{{FUNCTIONAL_REQUIREMENTS_TABLE}}
+
+---
+
+## Non-Functional Requirements
+
+| ID | Requirement | Category | Target |
+|----|-------------|----------|--------|
+{{NON_FUNCTIONAL_REQUIREMENTS_TABLE}}
+
+---
+
+## Assumptions
+
+| Assumption | Impact if Wrong | Mitigation |
+|------------|----------------|-----------|
+{{ASSUMPTIONS_TABLE}}
+
+---
+
 ## Bounded Contexts
 
 | Context | Description | Entities |

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-03T17:44:56Z",
+  "timestamp": "2026-06-05T10:32:48Z",
   "mode": "all",
   "stages_run": [],
   "summary": {
@@ -85,7 +85,7 @@
   {
     "name": "package_build",
     "status": "skip",
-    "message": "Docker not available",
+    "message": "no Dockerfile found",
     "duration": 0
   },
   {

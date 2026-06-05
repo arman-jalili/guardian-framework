@@ -818,7 +818,7 @@
     },
     ".pi/preflight_report.json": {
       "category": "framework",
-      "originalHash": "sha256:10164396f01edc69fa4a56fcbc4c7524fb89bb5fee44a4bac37300ded6b77df3",
+      "originalHash": "sha256:70f738676e994b5986e21cb2845efbcddfa2d6ee0057b6ea0d6fb5b12f0697e2",
       "status": "unchanged"
     },
     ".pi/skills/architecture-coordinator/SKILL.md": {
@@ -973,13 +973,13 @@
     },
     ".pi/domain/exploration.md": {
       "category": "framework",
-      "originalHash": "sha256:8bae5c4cfc3165dbb99426022b0ac069f85381b6a450539aaaecac4be0e87229",
+      "originalHash": "sha256:a7071bb598f75a08551a84cab8e9935d728672b835ef2f92c97239d0b41af482",
       "status": "unchanged"
     },
     ".pi/extensions/project-scaffolder.ts": {
       "category": "framework",
       "originalHash": "sha256:d0dd4ddeb736cb45a785b92b8c912e5dfd54254756f1e67202e56934c8b1a751",
-      "status": "configured"
+      "status": "unchanged"
     }
   },
   "exports": {},

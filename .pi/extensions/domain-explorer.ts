@@ -4,7 +4,7 @@
  * Last Architecture Sync: 2026-05-31
  *
  * Pi extension providing:
- *   /domain --explore — Returns DDD analysis instructions + agent writes files directly
+ *   /domain --explore — Sends DDD analysis as user message + agent writes files directly
  *   /domain --architect-scaffold — Generate architecture directories from exploration
  *   /domain --validate — Validate exploration session structure
  *   domain_explore tool — (deprecated, use /domain --explore instead)
@@ -472,24 +472,148 @@ export default function (pi: ExtensionAPI) {
 					"success",
 				);
 
-				// Return IMPERATIVE instructions for the agent to write files directly.
-				// The agent MUST use its native file-writing tools (exec_command, apply_patch, etc.)
-				// to produce the two output files. This is more reliable than asking the agent
-				// to call a custom tool.
-				return [
+				// Write exploration.md with business context filled in (stub for other sections).
+				// This gives the agent a starting file it can edit with the `edit` tool.
+				const explorationMdPath = path.join(ctx.cwd, ".pi", "domain", "exploration.md");
+				const explorationTemplate = [
+					"---",
+					"session_id: " + sessionId,
+					"created: " + new Date().toISOString().split("T")[0],
+					'business_context: "' + sanitized.replace(/"/g, '\\"') + '"',
+					"status: draft",
+					"---",
+					"",
+					"# Domain Exploration: " + sessionId,
+					"",
+					"> **Status:** draft — AI-suggested, human-review needed.",
+					"",
+					"---",
+					"",
+					"## Business Context",
+					"",
+					sanitized,
+					"",
+					"---",
+					"",
+					"## Actors & Roles",
+					"",
+					"| Actor | Description | Interactions |",
+					"|-------|-------------|-------------|",
+					"| <!-- Add actors here --> | | |",
+					"",
+					"---",
+					"",
+					"## Functional Requirements",
+					"",
+					"| ID | Requirement | Priority | Bounded Context |",
+					"|----|-------------|----------|----------------|",
+					"| <!-- Add FRs here --> | | | |",
+					"",
+					"---",
+					"",
+					"## Non-Functional Requirements",
+					"",
+					"| ID | Requirement | Category | Target |",
+					"|----|-------------|----------|--------|",
+					"| <!-- Add NFRs here --> | | | |",
+					"",
+					"---",
+					"",
+					"## Assumptions",
+					"",
+					"| Assumption | Impact if Wrong | Mitigation |",
+					"|------------|----------------|-----------|",
+					"| <!-- Add assumptions here --> | | |",
+					"",
+					"---",
+					"",
+					"## Bounded Contexts",
+					"",
+					"| Context | Description | Entities |",
+					"|---------|-------------|----------|",
+					"| <!-- Add bounded contexts here --> | | |",
+					"",
+					"---",
+					"",
+					"## Entities",
+					"",
+					"| Entity | Context | Type | Description |",
+					"|--------|---------|------|-------------|",
+					"| <!-- Add entities here --> | | | |",
+					"",
+					"---",
+					"",
+					"## Domain Events",
+					"",
+					"| Event | Context | Description | Triggered By |",
+					"|-------|---------|-------------|-------------|",
+					"| <!-- Add domain events here --> | | | |",
+					"",
+					"---",
+					"",
+					"## Ubiquitous Language",
+					"",
+					"| Term | Definition | Bounded Context | Aliases/Synonyms |",
+					"|------|-----------|----------------|-----------------|",
+					"| <!-- Add UL terms here --> | | | |",
+					"",
+					"---",
+					"",
+					"## Open Questions",
+					"",
+					"<!-- Add open questions here -->",
+					"",
+					"---",
+					"",
+					"## Aggregate Roots",
+					"",
+					"<!-- Add aggregate roots here -->",
+				].join("\n");
+
+				// Write the exploration template
+				fs.writeFileSync(explorationMdPath + ".tmp", explorationTemplate, "utf-8");
+				fs.renameSync(explorationMdPath + ".tmp", explorationMdPath);
+
+				// Write/update ubiquitous-language.md (create if not exists)
+				const glPath = path.join(ctx.cwd, ".pi", "domain", "ubiquitous-language.md");
+				if (!fs.existsSync(glPath)) {
+					const glContent = [
+						"# Ubiquitous Language",
+						"",
+						"> Canonical glossary for this project.",
+						"> All code MUST use these terms. Aliases/synonyms listed below are **prohibited** in source identifiers.",
+						"",
+						"## Glossary",
+						"",
+						"| Term | Definition | Bounded Context | Aliases/Synonyms | Examples |",
+						"|------|-----------|----------------|-----------------|---------|",
+						"| <!-- Add your terms here --> | | | | |",
+					].join("\n");
+					fs.writeFileSync(glPath + ".tmp", glContent, "utf-8");
+					fs.renameSync(glPath + ".tmp", glPath);
+				}
+
+				ctx.ui.notify(
+					"Domain analysis requested for session: " + sessionId,
+					"success",
+				);
+
+				// Build the instructions for the LLM to analyze the domain and fill in the files.
+				// Using sendUserMessage() ensures the LLM ACTUALLY RECEIVES and processes these instructions,
+				// unlike returning text which is only displayed to the user.
+				const agentInstructions = [
 					"# Domain Analysis Required",
 					"",
 					"Session ID: " + sessionId,
 					"",
-					"## Instructions — YOU MUST WRITE TWO FILES",
+					"## Instructions — Analyze the domain below and fill in both files",
 					"",
-					"Analyze the business context below using Domain-Driven Design. Then write TWO files using",
-					"exec_command with cat << 'EOF', apply_patch_add_file, or your native file-writing tools.",
+					"Analyze the business context using Domain-Driven Design. Then fill in the two files using",
+					"the `read` and `edit` tools.",
 					"",
 					"### File 1: `.pi/domain/exploration.md`",
 					"",
-					"Write a complete markdown file with ALL of the following sections filled in:",
-					"- Business Context (copy the context from below)",
+					"Read the file first, then fill in ALL sections:",
 					"- Actors & Roles — table with Actor, Description, Interactions columns",
 					"- Functional Requirements — table with ID, Requirement, Priority, Bounded Context columns",
 					"- Non-Functional Requirements — table with ID, Requirement, Category, Target columns",
@@ -503,16 +627,18 @@ export default function (pi: ExtensionAPI) {
 					"",
 					"### File 2: `.pi/domain/ubiquitous-language.md`",
 					"",
-					"Add the DDD terms from your analysis to the glossary. Table format:",
-					"| Term | Definition | Bounded Context | Aliases/Synonyms | Examples |",
-					"",
-					"If the file already exists, READ it first and append new terms (deduplicate by term name).",
-					"If not, create it with the header row and your terms.",
+					"Read it first, then add DDD terms from your analysis (deduplicate by term name).",
+					"Table format: | Term | Definition | Bounded Context | Aliases/Synonyms | Examples |",
 					"",
 					"---",
 					"",
 					prompt,
 				].join("\n");
+
+				// Send as user message so the LLM receives and processes these instructions
+				pi.sendUserMessage(agentInstructions);
+
+				return "Domain analysis requested for session: " + sessionId + ". Agent is analyzing and filling in the exploration files.";
 			}
 
 			// /domain --architect-scaffold <session-id>
