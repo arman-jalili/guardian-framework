@@ -68,16 +68,19 @@ If the analysis needs refinement, edit the `.md` files directly or describe the 
 
 ---
 
-## Step 3: Scaffold Architecture
+## Step 3: Generate Architecture Docs
+
+> **IMPORTANT:** This step creates architecture DOCUMENTS (module docs, ADRs, diagrams) from the domain exploration.
+> Do NOT confuse this with Step 5 (Project Scaffold) which generates source code with Maven/Gradle.
 
 **Tell the agent:**
 ```
-domain scaffold from <session-id>
+generate architecture from <session-id>
 ```
 
 Example:
 ```
-domain scaffold from payment-processing-ddd
+generate architecture from payment-processing-ddd
 ```
 
 The agent will:
@@ -88,7 +91,11 @@ The agent will:
 5. Create system diagrams in `.pi/architecture/diagrams/` with mermaid
 6. Create directories if needed
 
-**Agent instructions — when the user asks you to scaffold architecture from a domain exploration:**
+**IMPORTANT — Agent instructions (read carefully):**
+When the user says "generate architecture from <session-id>" or asks you to create architecture
+module docs from a domain exploration, do the following. **Do NOT run `guardian project create`**
+or ask about Maven/Gradle — that is for Step 5 (greenfield project scaffold) only.
+
 1. Read `.pi/domain/exploration/<session-id>.md` to get the bounded contexts and entities
 2. Create `.pi/architecture/modules/` directory if it doesn't exist
 3. For each bounded context, create a module doc (e.g., `payment-ingestion.md`) with:
@@ -167,7 +174,7 @@ Each issue follows the contract freeze → implementation → proofing → readi
 Tell the agent: "Analyze this business domain using DDD: <description>"
   |  (agent writes exploration.md + ubiquitous-language.md automatically)
   |
-Tell the agent: "domain scaffold from <session-id>"
+Tell the agent: "generate architecture from <session-id>"
   |  (agent creates module docs, ADRs, diagrams)
   |
 /epic-plan --overview  or  /architect --epic "Name"
