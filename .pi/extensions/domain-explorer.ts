@@ -317,18 +317,10 @@ export default function (pi: ExtensionAPI) {
 				const prompt = buildExplorationPrompt(sanitized);
 				const sessionId = crypto.randomUUID();
 				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
-				const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
-
 				fs.mkdirSync(explorationDir, { recursive: true });
-				fs.writeFileSync(promptPath, prompt, "utf-8");
 
-				ctx.ui.notify(
-					`Domain exploration prompt created (session: ${sessionId})`,
-					"success",
-				);
-
-				// Also create an initial exploration.md
-				const initialMdPath = path.join(explorationDir, sessionId + ".md");
+				// Create session.md with business context (will be updated with analysis)
+				const sessionPath = path.join(explorationDir, sessionId + ".md");
 				const initialContent = [
 					"---",
 					"session_id: " + sessionId,
@@ -339,8 +331,7 @@ export default function (pi: ExtensionAPI) {
 					"",
 					"# Domain Exploration: " + sessionId,
 					"",
-					"> **Status:** awaiting LLM response",
-					"> Feed the prompt file to your LLM, then use /domain --answer to process.",
+					"> **Status:** agent analysis requested",
 					"",
 					"---",
 					"",
@@ -350,33 +341,36 @@ export default function (pi: ExtensionAPI) {
 					"",
 					"---",
 					"",
-					"## Prompt File",
+					"## Prompt",
 					"",
-					"See: " + sessionId + ".prompt.md",
+					"See the analysis request below.",
 				].join("\n");
-				fs.writeFileSync(initialMdPath, initialContent, "utf-8");
+				fs.writeFileSync(sessionPath, initialContent, "utf-8");
+
+				ctx.ui.notify(
+					"Domain analysis requested for session: " + sessionId,
+					"success",
+				);
 
 				return [
-					"Domain exploration created for session: " + sessionId,
-					"",
-					"Created files:",
-					"  " + promptPath + " (prompt — feed this to your LLM)",
-					"  " + initialMdPath + " (session placeholder)",
-					"",
-					"Next steps:",
-					"1. Read the prompt file to understand what the LLM needs to extract",
-					"2. Feed the prompt to your LLM (actors, roles, FR, NFR, assumptions, bounded contexts, entities, events, ubiquitous language)",
-					"3. Save the LLM response JSON to a file",
-					'4. Run: /domain --answer "' + sessionId + '" <response-file>',
-					"5. Run: /domain --architect-scaffold " + sessionId,
-					"6. Review architecture in .pi/architecture/ (modules, ADRs, diagrams)",
-					"7. Run: /architect or /epic-plan to plan implementation",
+					"# Domain Analysis Request",
 					"",
 					"Session ID: " + sessionId,
+					"Session file: " + sessionPath,
+					"",
+					"I need you to analyze the following business domain and extract a structured domain model.",
+					"Respond with complete JSON matching the schema below.",
+					"Then save your response and parse it:",
+					"",
+					"  1. echo '<YOUR_JSON>' > " + sessionId + ".response.json",
+					"  2. /domain --answer " + sessionId + " " + sessionId + ".response.json",
+					"  3. /domain --architect-scaffold " + sessionId,
+					"",
+					"---",
+					"",
+					prompt,
 				].join("\n");
-			}
-
-			// /domain --answer <session-id> <response-file>
+			}			// /domain --answer <session-id> <response-file>
 		if (trimmed.startsWith("--answer")) {
 			const parts = trimmed.slice("--answer".length).trim().split(/\s+/);
 			const sessionId = parts[0];
@@ -396,10 +390,9 @@ export default function (pi: ExtensionAPI) {
 
 			if (!fs.existsSync(promptPath)) {
 				ctx.ui.notify(
-					"Session not found: " + sessionId + ". Start with /domain --explore first.",
-					"error",
+					"Warning: prompt file not found (session: " + sessionId + "). Proceeding with response parsing.",
+					"warn",
 				);
-				return "(domain command handled)";
 			}
 
 			if (!fs.existsSync(responsePath)) {
