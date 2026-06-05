@@ -342,7 +342,7 @@ export default function (pi: ExtensionAPI) {
 				}
 			}
 
-			onUpdate({ type: "progress", message: "Domain exploration saved for session: " + sessionId });
+			onUpdate({ content: [{ type: "text", text: "Domain exploration saved for session: " + sessionId }] });
 			return { content: [{ type: "text" as const, text: "Domain exploration saved for " + sessionId + ". Next: /domain --architect-scaffold " + sessionId + " or review .pi/domain/exploration.md" }] };
 		},
 	});

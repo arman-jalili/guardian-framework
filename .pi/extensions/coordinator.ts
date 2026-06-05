@@ -165,7 +165,7 @@ export default function (pi: ExtensionAPI) {
 					continue;
 				}
 
-				onUpdate({ type: "progress", message: `Running ${validator} validation...` });
+				onUpdate({ content: [{ type: "text", text: `Running ${validator} validation...` }] });
 
 				const scriptPath = VALIDATORS[validator];
 				try {
@@ -217,7 +217,7 @@ export default function (pi: ExtensionAPI) {
 				scope = match?.[1] ?? "moderate";
 			}
 
-			onUpdate({ type: "progress", message: `Scope: ${scope}` });
+			onUpdate({ content: [{ type: "text", text: `Scope: ${scope}` }] });
 
 			// 2. Determine validators
 			const validatorMap: Record<string, string[]> = {
@@ -239,7 +239,7 @@ export default function (pi: ExtensionAPI) {
 				? params.validators.filter((v): v is string => typeof v === "string")
 				: (validatorMap[scope] ?? validatorMap.moderate);
 
-			onUpdate({ type: "progress", message: `Validators: ${validators.join(", ")}` });
+			onUpdate({ content: [{ type: "text", text: `Validators: ${validators.join(", ")}` }] });
 
 			// 3. Run validators
 			const validationResults = await ctx.tools.execute("guardian_validate", { validators, scope });
