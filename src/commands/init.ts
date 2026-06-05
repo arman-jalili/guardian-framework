@@ -358,6 +358,11 @@ function shouldSkipFile(
 		}
 	}
 
+	// Filter domain exploration template (internal render template, not user-facing)
+	if (relativePath.endsWith("/exploration.md")) {
+		return true;
+	}
+
 	// Filter language-specific validator scripts
 	const langScriptMatch = relativePath.match(/^scripts\/languages\/(\w+)\//);
 	if (langScriptMatch) {
