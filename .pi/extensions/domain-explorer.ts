@@ -1,13 +1,17 @@
 /**
  * Canonical Reference: .pi/architecture/modules/core-libraries.md
- * Implements: Domain Explore pi extension — domain_explore + domain_validate tools
+ * Implements: Domain Explore pi extension — /domain command + domain_explore/domain_validate tools
  * Last Architecture Sync: 2026-05-31
  *
- * Pi extension providing two tools:
- *   domain_explore   — Write a DDD exploration prompt file from business context
- *   domain_validate  — Validate exploration sessions against glossary + source code
+ * Pi extension providing:
+ *   /domain --explore — Returns DDD analysis instructions + agent writes files directly
+ *   /domain --architect-scaffold — Generate architecture directories from exploration
+ *   /domain --validate — Validate exploration session structure
+ *   domain_explore tool — (deprecated, use /domain --explore instead)
+ *   domain_validate tool — Validate exploration sessions against glossary + source code
+ *   domain_save_result tool — (fallback) Save agent's domain JSON as structured session
  *
- * No LLM SDKs. No API keys. The prompt file is the interface — feed it to pi's own LLM.
+ * No LLM SDKs. No API keys. The prompt IS the interface — the agent reads it and acts.
  */
 
 import * as crypto from "node:crypto";
@@ -84,6 +88,36 @@ function buildExplorationPrompt(context: string): string {
 		"```json",
 		"{",
 		'  "businessContext": "Brief one-line summary",',
+		'  "actors": [',
+		"    {",
+		'      "name": "ActorName",',
+		'      "description": "Who this actor is",',
+		'      "interactions": "What they do in the system"',
+		"    }",
+		"  ],",
+		'  "functionalRequirements": [',
+		"    {",
+		'      "id": "FR-001",',
+		'      "requirement": "The system shall...",',
+		'      "priority": "critical|high|medium|low",',
+		'      "boundedContext": "ContextName"',
+		"    }",
+		"  ],",
+		'  "nonFunctionalRequirements": [',
+		"    {",
+		'      "id": "NFR-001",',
+		'      "requirement": "The system shall...",',
+		'      "category": "performance|security|scalability|availability|maintainability",',
+		'      "target": "Specific measurable target"',
+		"    }",
+		"  ],",
+		'  "assumptions": [',
+		"    {",
+		'      "assumption": "We assume that...",',
+		'      "impactIfWrong": "What breaks if this is false",',
+		'      "mitigation": "How we handle it being wrong"',
+		"    }",
+		"  ],",
 		'  "boundedContexts": [',
 		"    {",
 		'      "name": "ContextName",',
@@ -123,21 +157,20 @@ function buildExplorationPrompt(context: string): string {
 	].join("\n");
 }
 
-// ── Domain Explore Tool ──
+// ── Domain Explore Tool (deprecated) ──
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
-		ctx.ui.notify("Domain explorer ready — use domain_explore and domain_validate tools", "info");
+		ctx.ui.notify("Domain explorer ready — use /domain --explore", "info");
 	});
 
-	// domain_explore
+	// domain_explore (DEPRECATED — use /domain --explore command instead)
 	pi.registerTool({
 		name: "domain_explore",
 		label: "Domain Explore",
 		description:
-			"Create a DDD domain exploration prompt from a business context description. " +
-			"Generates a .prompt.md file in .pi/domain/exploration/ that the agent feeds " +
-			"to its LLM. Returns a session ID and prompt path.",
+			"[DEPRECATED] Use /domain --explore instead. " +
+			"Creates a DDD domain exploration prompt file.",
 		parameters: Type.Object({
 			context: Type.String({ description: "Business domain description to explore" }),
 			sessionId: Type.Optional(Type.String({ description: "Optional custom session ID" })),
@@ -174,107 +207,27 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const result = [
+				"[DEPRECATED — use /domain --explore instead]",
 				"Domain Exploration Created",
 				"Session ID: " + sessionId,
 				"Prompt File: " + (dryRun ? "[dry-run, not written]" : promptPath),
 				"Context Length: " + sanitized.length + " characters",
 				"Status: awaiting-response",
 				"Existing Sessions: " + existingSessions,
-				"",
-				"Next Steps:",
-				"1. Read the prompt file",
-				"2. Feed it to your LLM",
-				"3. Save the JSON response",
-				"4. guardian domain answer " + sessionId + " <response-file>",
-				"5. guardian domain scaffold " + sessionId,
 			];
 
 			return toolResult(result.join("\n"));
 		},
 	});
 
-	// domain_validate
-	pi.registerTool({
-		name: "domain_validate",
-		label: "Domain Validate",
-		description:
-			"Validate a domain exploration session against the canonical glossary and " +
-			"source code. Checks: file exists, structural integrity, glossary compliance, " +
-			"source drift, and canonical reference integrity.",
-		parameters: Type.Object({
-			sessionId: Type.String({ description: "Exploration session ID to validate" }),
-		}),
-		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
-			const sessionId = String(params.sessionId ?? "").trim();
-			if (!sessionId) return toolResult("ERROR: sessionId is required");
-
-			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
-			const sessionPath = path.join(explorationDir, sessionId + ".md");
-			const glossaryPath = path.join(ctx.cwd, ".pi", "domain", "ubiquitous-language.md");
-			const checks: string[] = [];
-			let allPassed = true;
-
-			function addCheck(name: string, passed: boolean, detail?: string) {
-				const icon = passed ? "PASS" : "FAIL";
-				if (!passed) allPassed = false;
-				checks.push("  " + icon + " " + name + (detail ? " - " + detail : ""));
-			}
-
-			// 1. Session file exists
-			if (!fs.existsSync(sessionPath)) {
-				addCheck("Session file", false, "Not found");
-			} else {
-				addCheck("Session file", true, path.basename(sessionPath));
-			}
-
-			// 2. Parse and validate structure
-			if (fs.existsSync(sessionPath)) {
-					const content = fs.readFileSync(sessionPath, "utf-8");
-				const hasBoundedContexts = content.includes("## Bounded Contexts");
-				const hasEntities = content.includes("## Entities");
-				const hasGlossary = content.includes("## Ubiquitous Language");
-				addCheck("Bounded contexts section", hasBoundedContexts);
-				addCheck("Entities section", hasEntities);
-				addCheck("Ubiquitous language section", hasGlossary);
-				addCheck("Structural integrity", hasBoundedContexts && hasEntities && hasGlossary);
-			}
-
-			// 3. Glossary compliance
-			if (fs.existsSync(glossaryPath)) {
-					const content = fs.readFileSync(glossaryPath, "utf-8");
-				const terms = content.split("\n").filter(l => l.startsWith("|") && !l.includes("|---") && !l.includes("| Term |")).length;
-				addCheck("Glossary parsed", terms > 0, terms + " canonical terms");
-			} else {
-				addCheck("Glossary file", false, "Not found");
-			}
-
-			// 4. Source code drift
-			const scriptPath = path.join(ctx.cwd, ".pi", "scripts", "validate-ubiquitous-language.sh");
-			if (fs.existsSync(scriptPath)) {
-				try {
-					const result = await ctx.shell.execute("bash " + scriptPath, {});
-					addCheck("Source drift", result.exitCode === 0, result.stdout.slice(-80).trim());
-				} catch (err) {
-					addCheck("Source drift", false, "Error: " + String(err));
-				}
-			} else {
-				addCheck("Source drift check skipped", true, "script not found");
-			}
-
-			const header = allPassed
-				? "Domain Validation - All Checks Passed"
-				: "Domain Validation - Some Checks Failed";
-			return toolResult(header + "\n" + checks.join("\n"));
-		},
-	});
-
-	// domain_save_result
+	// domain_save_result (fallback — writes structured files from agent JSON)
 	pi.registerTool({
 		name: "domain_save_result",
 		label: "Domain Save Result",
 		description:
 			"Save the agent's domain analysis JSON as a structured exploration session. " +
-			"Call this after completing the domain analysis requested by --explore.",
+			"As a fallback for agents that prefer tool calls over direct file writes. " +
+			"Parses JSON, writes exploration.md and updates ubiquitous-language.md.",
 		parameters: Type.Object({
 			sessionId: Type.String({ description: "Session ID from --explore" }),
 			responseJson: Type.String({ description: "Domain analysis JSON from the agent" }),
@@ -342,10 +295,17 @@ export default function (pi: ExtensionAPI) {
 				"", "---", "", "## Aggregate Roots", "", ar,
 			].join("\n");
 
+			// Write exploration.md (the canonical rendered output)
+			const explorationMdPath = path.join(ctx.cwd, ".pi", "domain", "exploration.md");
+			const tmpExploration = explorationMdPath + ".tmp";
+			fs.writeFileSync(tmpExploration, sessionContent, "utf-8");
+			fs.renameSync(tmpExploration, explorationMdPath);
+
+			// Also write session file
 			const sessionPath = path.join(explorationDir, sessionId + ".md");
-			const tmp = sessionPath + ".tmp";
-			fs.writeFileSync(tmp, sessionContent, "utf-8");
-			fs.renameSync(tmp, sessionPath);
+			const tmpSession = sessionPath + ".tmp";
+			fs.writeFileSync(tmpSession, sessionContent, "utf-8");
+			fs.renameSync(tmpSession, sessionPath);
 
 			// Update ubiquitous-language.md with new terms
 			const glPath = path.join(ctx.cwd, ".pi", "domain", "ubiquitous-language.md");
@@ -383,15 +343,91 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			onUpdate({ type: "progress", message: "Domain exploration saved for session: " + sessionId });
-			return { content: [{ type: "text" as const, text: "Domain exploration saved for " + sessionId + ". Next: /domain --architect-scaffold " + sessionId }] };
+			return { content: [{ type: "text" as const, text: "Domain exploration saved for " + sessionId + ". Next: /domain --architect-scaffold " + sessionId + " or review .pi/domain/exploration.md" }] };
 		},
 	});
+
+	// domain_validate
+	pi.registerTool({
+		name: "domain_validate",
+		label: "Domain Validate",
+		description:
+			"Validate a domain exploration session against the canonical glossary and " +
+			"source code. Checks: file exists, structural integrity, glossary compliance, " +
+			"source drift, and canonical reference integrity.",
+		parameters: Type.Object({
+			sessionId: Type.String({ description: "Exploration session ID to validate" }),
+		}),
+		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
+			const sessionId = String(params.sessionId ?? "").trim();
+			if (!sessionId) return toolResult("ERROR: sessionId is required");
+
+			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+			const sessionPath = path.join(explorationDir, sessionId + ".md");
+			const glossaryPath = path.join(ctx.cwd, ".pi", "domain", "ubiquitous-language.md");
+			const checks: string[] = [];
+			let allPassed = true;
+
+			function addCheck(name: string, passed: boolean, detail?: string) {
+				const icon = passed ? "PASS" : "FAIL";
+				if (!passed) allPassed = false;
+				checks.push("  " + icon + " " + name + (detail ? " - " + detail : ""));
+			}
+
+			// 1. Session file exists
+			if (!fs.existsSync(sessionPath)) {
+				addCheck("Session file", false, "Not found");
+			} else {
+				addCheck("Session file", true, path.basename(sessionPath));
+			}
+
+			// 2. Parse and validate structure
+			if (fs.existsSync(sessionPath)) {
+				const content = fs.readFileSync(sessionPath, "utf-8");
+				const hasBoundedContexts = content.includes("## Bounded Contexts");
+				const hasEntities = content.includes("## Entities");
+				const hasGlossary = content.includes("## Ubiquitous Language");
+				addCheck("Bounded contexts section", hasBoundedContexts);
+				addCheck("Entities section", hasEntities);
+				addCheck("Ubiquitous language section", hasGlossary);
+				addCheck("Structural integrity", hasBoundedContexts && hasEntities && hasGlossary);
+			}
+
+			// 3. Glossary compliance
+			if (fs.existsSync(glossaryPath)) {
+				const content = fs.readFileSync(glossaryPath, "utf-8");
+				const terms = content.split("\n").filter(l => l.startsWith("|") && !l.includes("|---") && !l.includes("| Term |")).length;
+				addCheck("Glossary parsed", terms > 0, terms + " canonical terms");
+			} else {
+				addCheck("Glossary file", false, "Not found");
+			}
+
+			// 4. Source code drift
+			const scriptPath = path.join(ctx.cwd, ".pi", "scripts", "validate-ubiquitous-language.sh");
+			if (fs.existsSync(scriptPath)) {
+				try {
+					const result = await ctx.shell.execute("bash " + scriptPath, {});
+					addCheck("Source drift", result.exitCode === 0, result.stdout.slice(-80).trim());
+				} catch (err) {
+					addCheck("Source drift", false, "Error: " + String(err));
+				}
+			} else {
+				addCheck("Source drift check skipped", true, "script not found");
+			}
+
+			const header = allPassed
+				? "Domain Validation - All Checks Passed"
+				: "Domain Validation - Some Checks Failed";
+			return toolResult(header + "\n" + checks.join("\n"));
+		},
+	});
+
 	// ── /domain command ──
 	pi.registerCommand("domain", {
 		description:
 			"Domain exploration commands. Subcommands: --explore, --architect-scaffold, --validate",
-		handler(args: string, ctx: ExtensionContext) {
-			const trimmed = args.trim();
+		handler(args: string[], ctx: ExtensionContext) {
+			const trimmed = Array.isArray(args) ? args.join(" ").trim() : String(args).trim();
 
 			// /domain --explore "context description"
 			if (trimmed.startsWith("--explore")) {
@@ -409,7 +445,7 @@ export default function (pi: ExtensionAPI) {
 				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
 				fs.mkdirSync(explorationDir, { recursive: true });
 
-				// Create session.md with business context
+				// Create session file with business context
 				const sessionPath = path.join(explorationDir, sessionId + ".md");
 				const initialContent = [
 					"---",
@@ -436,20 +472,50 @@ export default function (pi: ExtensionAPI) {
 					"success",
 				);
 
+				// Return IMPERATIVE instructions for the agent to write files directly.
+				// The agent MUST use its native file-writing tools (exec_command, apply_patch, etc.)
+				// to produce the two output files. This is more reliable than asking the agent
+				// to call a custom tool.
 				return [
-					"# Domain Analysis",
+					"# Domain Analysis Required",
 					"",
 					"Session ID: " + sessionId,
 					"",
-					"Analyze the following business domain and extract a structured domain model.",
-					"Respond with complete JSON matching the schema below.",
-					"Then call the domain_save_result tool with your JSON and session ID: " + sessionId,
+					"## Instructions — YOU MUST WRITE TWO FILES",
+					"",
+					"Analyze the business context below using Domain-Driven Design. Then write TWO files using",
+					"exec_command with cat << 'EOF', apply_patch_add_file, or your native file-writing tools.",
+					"",
+					"### File 1: `.pi/domain/exploration.md`",
+					"",
+					"Write a complete markdown file with ALL of the following sections filled in:",
+					"- Business Context (copy the context from below)",
+					"- Actors & Roles — table with Actor, Description, Interactions columns",
+					"- Functional Requirements — table with ID, Requirement, Priority, Bounded Context columns",
+					"- Non-Functional Requirements — table with ID, Requirement, Category, Target columns",
+					"- Assumptions — table with Assumption, Impact if Wrong, Mitigation columns",
+					"- Bounded Contexts — table with Context, Description, Entities columns",
+					"- Entities — table with Entity, Context, Type, Description columns",
+					"- Domain Events — table with Event, Context, Description, Triggered By columns",
+					"- Ubiquitous Language — table with Term, Definition, Bounded Context, Aliases columns",
+					"- Open Questions",
+					"- Aggregate Roots",
+					"",
+					"### File 2: `.pi/domain/ubiquitous-language.md`",
+					"",
+					"Add the DDD terms from your analysis to the glossary. Table format:",
+					"| Term | Definition | Bounded Context | Aliases/Synonyms | Examples |",
+					"",
+					"If the file already exists, READ it first and append new terms (deduplicate by term name).",
+					"If not, create it with the header row and your terms.",
 					"",
 					"---",
 					"",
 					prompt,
 				].join("\n");
-			}			// /domain --architect-scaffold <session-id>
+			}
+
+			// /domain --architect-scaffold <session-id>
 			if (trimmed.startsWith("--architect-scaffold")) {
 				const sessionId = trimmed.slice("--architect-scaffold".length).trim();
 				if (!sessionId) {
@@ -465,7 +531,7 @@ export default function (pi: ExtensionAPI) {
 
 				if (!fs.existsSync(sessionPath)) {
 					ctx.ui.notify(
-						"Session not found: " + sessionId + ". Complete exploration with /domain --answer first.",
+						"Session not found: " + sessionId + ". Run /domain --explore first to create the session.",
 						"error",
 					);
 					return "(domain command handled)";
@@ -536,7 +602,6 @@ export default function (pi: ExtensionAPI) {
 				[
 					"Usage:",
 					'  /domain --explore "Business context description"',
-					"  /domain --answer <session-id> <response-file>",
 					"  /domain --architect-scaffold <session-id>",
 					"  /domain --validate <session-id>",
 				].join("\n"),
@@ -547,10 +612,7 @@ export default function (pi: ExtensionAPI) {
 				"Available /domain subcommands:",
 				"",
 				'  /domain --explore "..."',
-				"    Start a new DDD domain exploration session",
-				"",
-				"  /domain --answer <session-id> <response-file>",
-				"    Save an LLM response to complete an exploration",
+				"    Start a DDD domain exploration — agent writes exploration.md + glossary directly",
 				"",
 				"  /domain --architect-scaffold <session-id>",
 				"    Generate architecture directories from exploration",

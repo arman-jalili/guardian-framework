@@ -14,98 +14,83 @@ Every step produces artifacts the next step consumes. No manual file creation ne
 ```
 
 **What happens:**
-- Creates `.pi/domain/exploration/<session-id>.prompt.md` with a structured JSON prompt
-- The prompt asks the LLM to extract: actors/roles, functional requirements (FR),
-  non-functional requirements (NFR), assumptions, bounded contexts, entities,
-  domain events, ubiquitous language, open questions, aggregate roots
-- Also creates `.pi/domain/exploration/<session-id>.md` as a session placeholder
+- Creates a session ID and session file in `.pi/domain/exploration/<session-id>.md`
+- Returns a DDD analysis prompt with explicit instructions for the agent
+- The agent **automatically analyzes** the domain and writes two files:
 
-**Output:**
-| File | Purpose |
-|------|---------|
-| `.pi/domain/exploration/<id>.prompt.md` | Feed this to your LLM |
-| `.pi/domain/exploration/<id>.md` | Session placeholder (will be replaced in Step 2) |
+**Agent writes:**
+| File | Contents |
+|------|----------|
+| `.pi/domain/exploration.md` | Full analysis: Business Context, Actors/Roles, FR, NFR, Assumptions, Bounded Contexts, Entities, Domain Events, Ubiquitous Language, Open Questions, Aggregate Roots |
+| `.pi/domain/ubiquitous-language.md` | Canonical glossary with terms (deduplicated) |
+
+**Status:** The exploration files are written directly. No `--answer` step needed.
 
 ---
 
-## Step 2: Answer (Process LLM Response)
+## Step 2: Review & Validate
 
-Feed the prompt file to your LLM. The prompt asks for JSON output matching the schema.
-Save the response as a JSON file, then:
+Read the generated files:
 
 ```bash
-/domain --answer <session-id> <path-to-response.json>
+/domain --validate <session-id>
 ```
 
-**What happens:**
-- Parses the JSON response (handles markdown-wrapped JSON too)
-- Validates structure (checks for orphaned entities, duplicate names, etc.)
-- Writes a structured `.pi/domain/exploration/<session-id>.md` with sections for:
-  Business Context, Actors & Roles, Functional Requirements, Non-Functional Requirements,
-  Assumptions, Bounded Contexts, Entities, Domain Events, Ubiquitous Language,
-  Open Questions, Aggregate Roots
-- Updates `.pi/domain/ubiquitous-language.md` with new terms from the response
-- Reports validation warnings (missing sections, orphaned refs, etc.)
+What to check:
+1. Are the bounded contexts correct?
+2. Does the ubiquitous language match your team's vocabulary?
+3. Are the open questions acceptable or should you refine?
+4. Change `status: draft` to `status: validated` when agreed upon
 
-**Output:**
-| File | Purpose |
-|------|---------|
-| `.pi/domain/exploration/<id>.md` | Structured exploration with all sections populated |
-| `.pi/domain/ubiquitous-language.md` | Updated with new terms (deduplicated) |
+If the analysis needs refinement, edit the `.md` files directly or run `/domain --explore` again with more precise context.
 
 ---
 
-## Step 3: Clear Open Questions
-
-Review the exploration `.md` file. The `Open Questions` section has ambiguities.
-Clear them by editing the file directly or in a follow-up `/domain --answer` run.
-Change `status: draft` to `status: validated` when the exploration is agreed upon.
-
----
-
-## Step 4: Scaffold Architecture
+## Step 3: Scaffold Architecture
 
 ```bash
 /domain --architect-scaffold <session-id>
 ```
 
 **What happens:**
-- Reads the exploration `.md` file
-- For each bounded context, generates an architecture module doc in `.pi/architecture/modules/`
-- Generates **ADR-001** (Architecture Pattern decision) in `.pi/architecture/decisions/`
-- Generates **system-context.md** with mermaid diagrams in `.pi/architecture/diagrams/`
-- Architecture diagrams show: bounded contexts as subgraphs, layer dependency direction
+- Reads the exploration session (`.pi/domain/exploration/<session-id>.md`)
+- Creates architecture directories under `.pi/architecture/`
+- Ready for module docs creation
 
 **Output:**
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| `.pi/architecture/modules/<context>.md` | One module doc per bounded context |
-| `.pi/architecture/decisions/ADR-001-domain-driven-architecture.md` | Architecture pattern ADR |
-| `.pi/architecture/diagrams/system-context.md` | Mermaid context and container diagrams |
+| `.pi/architecture/modules/` | Directory for one module doc per bounded context |
+| `.pi/architecture/decisions/` | Directory for ADRs (e.g., ADR-001) |
+| `.pi/architecture/diagrams/` | Directory for system diagrams with mermaid |
 
 ---
 
-## Step 5: Plan Implementation
+## Step 4: Plan Implementation
 
+Two approaches:
+
+**A) Module exists:** Use `/epic-plan`
 ```bash
-/architect --epic "First epic name"
-# or
-/epic-plan --overview
+/epic-plan --module <module-name>
 ```
 
-**What happens:**
-- Discovers the architecture modules generated in Step 4
-- Produces issues in a fixed 4-layer structure:
-  1. Contract Freeze — define interfaces before implementation
-  2. Implementation Issues — one per component
-  3. Proofing — deterministic validation scripts + CI integration
-  4. Architecture Readiness — runbook, DR, docs, observability, CI enforcement
+**B) Cross-module:** Use `/epic-plan --overview` or `/architect`
+```bash
+/architect --epic "First epic name"
+```
+
+**Epic structure (4 layers):**
+1. **Contract Freeze** — define interfaces before implementation
+2. **Implementation Issues** — one per component
+3. **Proofing** — deterministic validation scripts + CI integration
+4. **Architecture Readiness** — runbook, DR, docs, observability, CI enforcement
 
 ---
 
-## Step 6: Scaffold Project (Epic 0 — first time only)
+## Step 5: Scaffold Project (Epic 0 — greenfield only)
 
-For a greenfield project, BEFORE implementing the first epic:
+For a new project, BEFORE implementing the first epic:
 
 ```bash
 guardian project create --lang java --buildTool maven
@@ -121,7 +106,7 @@ Existing projects skip this step (detects existing `src/`).
 
 ---
 
-## Step 7: Implement
+## Step 6: Implement
 
 ```bash
 /implement-series
@@ -136,17 +121,15 @@ Each issue follows the contract freeze → implementation → proofing → readi
 
 ```
 /domain --explore "Describe your domain"
-    ↓
-/domain --answer <session-id> <response.json>
-    ↓
+    |  (agent writes exploration.md + ubiquitous-language.md automatically)
+/domain --validate <session-id>   (optional review)
+    |
 /domain --architect-scaffold <session-id>
-    ↓
-/architect --epic "Epic name"
-  or
-/epic-plan --overview
-    ↓
-guardian project create --lang java   (greenfield only)
-    ↓
+    |
+/epic-plan --overview  or  /architect --epic "Name"
+    |
+guardian project create --lang java   (greenfield only, Epic 0)
+    |
 /implement-series
 ```
 
@@ -154,8 +137,9 @@ guardian project create --lang java   (greenfield only)
 
 | Path | Contents |
 |------|----------|
-| `.pi/domain/exploration/` | Session prompts, answers, explorations |
+| `.pi/domain/exploration/` | Session files (one per explore run) |
+| `.pi/domain/exploration.md` | Active exploration analysis (rendered) |
 | `.pi/domain/ubiquitous-language.md` | Canonical glossary (auto-updated) |
 | `.pi/architecture/modules/` | Module docs (one per bounded context) |
-| `.pi/architecture/decisions/` | ADRs (ADR-001 generated by scaffold) |
+| `.pi/architecture/decisions/` | ADRs |
 | `.pi/architecture/diagrams/` | System diagrams with mermaid |
