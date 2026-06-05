@@ -67,15 +67,57 @@ export interface DomainEventInfo {
 }
 
 /**
+ * A single actor or role in the domain.
+ */
+export interface ActorRole {
+	name: string;
+	description: string;
+	interactions: string;
+}
+
+/**
+ * A single functional requirement.
+ */
+export interface FunctionalRequirement {
+	id: string;
+	requirement: string;
+	priority: "critical" | "high" | "medium" | "low";
+	boundedContext: string;
+}
+
+/**
+ * A single non-functional requirement.
+ */
+export interface NonFunctionalRequirement {
+	id: string;
+	requirement: string;
+	category: "performance" | "security" | "scalability" | "availability" | "maintainability" | "usability" | "other";
+	target: string;
+}
+
+/**
+ * A single assumption about the domain.
+ */
+export interface Assumption {
+	assumption: string;
+	impactIfWrong: string;
+	mitigation: string;
+}
+
+/**
  * Full result of a domain exploration session.
  */
 export interface ExplorationResult {
 	sessionId: string;
 	businessContext: string;
 	status: "draft" | "validated";
+	actors: ActorRole[];
 	boundedContexts: BoundedContextInfo[];
 	entities: EntityInfo[];
 	domainEvents: DomainEventInfo[];
+	functionalRequirements: FunctionalRequirement[];
+	nonFunctionalRequirements: NonFunctionalRequirement[];
+	assumptions: Assumption[];
 	ubiquitousLanguage: UbiquitousTerm[];
 	openQuestions: string;
 	aggregateRoots: string;
@@ -136,6 +178,36 @@ Respond with ONLY valid JSON matching this exact structure. Do not include markd
   "sessionId": "auto-generated-uuid",
   "businessContext": "original description",
   "status": "draft",
+  "actors": [
+    {
+      "name": "ActorName",
+      "description": "Who this actor is",
+      "interactions": "What they do in the system"
+    }
+  ],
+  "functionalRequirements": [
+    {
+      "id": "FR-001",
+      "requirement": "The system shall...",
+      "priority": "critical|high|medium|low",
+      "boundedContext": "ContextName"
+    }
+  ],
+  "nonFunctionalRequirements": [
+    {
+      "id": "NFR-001",
+      "requirement": "The system shall...",
+      "category": "performance|security|scalability|availability|maintainability",
+      "target": "Specific measurable target"
+    }
+  ],
+  "assumptions": [
+    {
+      "assumption": "We assume that...",
+      "impactIfWrong": "What breaks if this is false",
+      "mitigation": "How we handle it being wrong"
+    }
+  ],
   "boundedContexts": [
     {
       "name": "ContextName",
@@ -199,6 +271,13 @@ export function parseExplorationResponse(
 			sessionId: sessionId ?? (parsed.sessionId as string) ?? crypto.randomUUID(),
 			businessContext: coerceString(parsed.businessContext, ""),
 			status: "draft",
+			actors: Array.isArray(parsed.actors)
+				? parsed.actors.map((a: Record<string, unknown>) => ({
+						name: coerceString(a.name, "Unknown"),
+						description: coerceString(a.description, ""),
+						interactions: coerceString(a.interactions, ""),
+					}))
+				: [],
 			boundedContexts: Array.isArray(parsed.boundedContexts)
 				? parsed.boundedContexts.map((bc: Record<string, unknown>) => ({
 						name: coerceString(bc.name, "Unknown"),
@@ -220,6 +299,29 @@ export function parseExplorationResponse(
 						context: coerceString(ev.context, ""),
 						description: coerceString(ev.description, ""),
 						triggeredBy: coerceString(ev.triggeredBy, ""),
+					}))
+				: [],
+			functionalRequirements: Array.isArray(parsed.functionalRequirements)
+				? parsed.functionalRequirements.map((fr: Record<string, unknown>) => ({
+						id: coerceString(fr.id, "FR-???"),
+						requirement: coerceString(fr.requirement, ""),
+						priority: coerceFrPriority(fr.priority),
+						boundedContext: coerceString(fr.boundedContext, ""),
+					}))
+				: [],
+			nonFunctionalRequirements: Array.isArray(parsed.nonFunctionalRequirements)
+				? parsed.nonFunctionalRequirements.map((nfr: Record<string, unknown>) => ({
+						id: coerceString(nfr.id, "NFR-???"),
+						requirement: coerceString(nfr.requirement, ""),
+						category: coerceNfrCategory(nfr.category),
+						target: coerceString(nfr.target, ""),
+					}))
+				: [],
+			assumptions: Array.isArray(parsed.assumptions)
+				? parsed.assumptions.map((a: Record<string, unknown>) => ({
+						assumption: coerceString(a.assumption, ""),
+						impactIfWrong: coerceString(a.impactIfWrong, ""),
+						method: coerceString(a.mitigation, ""),
 					}))
 				: [],
 			ubiquitousLanguage: Array.isArray(parsed.ubiquitousLanguage)
@@ -262,6 +364,24 @@ function coerceEntityType(val: unknown): EntityInfo["type"] {
 	return "entity";
 }
 
+function coerceFrPriority(val: unknown): FunctionalRequirement["priority"] {
+	if (val === "critical") return "critical";
+	if (val === "high") return "high";
+	if (val === "medium") return "medium";
+	if (val === "low") return "low";
+	return "medium";
+}
+
+function coerceNfrCategory(val: unknown): NonFunctionalRequirement["category"] {
+	if (val === "performance") return "performance";
+	if (val === "security") return "security";
+	if (val === "scalability") return "scalability";
+	if (val === "availability") return "availability";
+	if (val === "maintainability") return "maintainability";
+	if (val === "usability") return "usability";
+	return "other";
+}
+
 // ── Output Validation ───────────────────────────────────────────────────────
 
 /**
@@ -281,6 +401,22 @@ export function validateDomainExploration(result: ExplorationResult): string[] {
 
 	if (result.entities.length === 0) {
 		warnings.push("No entities identified");
+	}
+
+	if (result.actors.length === 0) {
+		warnings.push("No actors or roles identified");
+	}
+
+	if (result.functionalRequirements.length === 0) {
+		warnings.push("No functional requirements identified");
+	}
+
+	if (result.nonFunctionalRequirements.length === 0) {
+		warnings.push("No non-functional requirements identified");
+	}
+
+	if (result.assumptions.length === 0) {
+		warnings.push("No assumptions documented");
 	}
 
 	if (result.ubiquitousLanguage.length === 0) {
@@ -861,6 +997,22 @@ export function renderExplorationTemplate(result: ExplorationResult): string {
 	const template = loadExplorationTemplate();
 
 	// Build tables
+	const actorsTable = result.actors
+		.map((a) => `| \${a.name} | \${a.description} | \${a.interactions} |`)
+		.join("\n");
+
+	const functionalRequirementsTable = result.functionalRequirements
+		.map((fr) => `| \${fr.id} | \${fr.requirement} | \${fr.priority} | \${fr.boundedContext} |`)
+		.join("\n");
+
+	const nonFunctionalRequirementsTable = result.nonFunctionalRequirements
+		.map((nfr) => `| \${nfr.id} | \${nfr.requirement} | \${nfr.category} | \${nfr.target} |`)
+		.join("\n");
+
+	const assumptionsTable = result.assumptions
+		.map((a) => `| \${a.assumption} | \${a.impactIfWrong} | \${a.mitigation || a.method || ""} |`)
+		.join("\n");
+
 	const boundedContextsTable = result.boundedContexts
 		.map((bc) => `| ${bc.name} | ${bc.description} | ${bc.entities.join(", ")} |`)
 		.join("\n");
@@ -887,6 +1039,10 @@ export function renderExplorationTemplate(result: ExplorationResult): string {
 		.replaceAll("{{CREATED_DATE}}", new Date().toISOString().split("T")[0])
 		.replaceAll("{{BUSINESS_CONTEXT}}", escapePlaceholder(result.businessContext))
 		.replaceAll("{{STATUS}}", result.status)
+		.replaceAll("{{ACTORS_TABLE}}", actorsTable || "None identified yet.")
+		.replaceAll("{{FUNCTIONAL_REQUIREMENTS_TABLE}}", functionalRequirementsTable || "None identified yet.")
+		.replaceAll("{{NON_FUNCTIONAL_REQUIREMENTS_TABLE}}", nonFunctionalRequirementsTable || "None identified yet.")
+		.replaceAll("{{ASSUMPTIONS_TABLE}}", assumptionsTable || "None identified yet.")
 		.replaceAll("{{BOUNDED_CONTEXTS_TABLE}}", boundedContextsTable || "None identified yet.")
 		.replaceAll("{{ENTITIES_TABLE}}", entitiesTable || "None identified yet.")
 		.replaceAll("{{DOMAIN_EVENTS_TABLE}}", domainEventsTable || "None identified yet.")

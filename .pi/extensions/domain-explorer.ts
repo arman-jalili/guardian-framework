@@ -84,6 +84,36 @@ function buildExplorationPrompt(context: string): string {
 		"```json",
 		"{",
 		'  "businessContext": "Brief one-line summary",',
+		'  "actors": [',
+		"    {",
+		'      "name": "ActorName",',
+		'      "description": "Who this actor is (person, system, role)",',
+		'      "interactions": "What they do with the system"',
+		"    }",
+		"  ],",
+		'  "functionalRequirements": [',
+		"    {",
+		'      "id": "FR-001",',
+		'      "requirement": "The system shall [do something]",',
+		'      "priority": "critical | high | medium | low",',
+		'      "boundedContext": "BoundedContextName"',
+		"    }",
+		"  ],",
+		'  "nonFunctionalRequirements": [',
+		"    {",
+		'      "id": "NFR-001",',
+		'      "requirement": "The system shall [meet some quality attribute]",',
+		'      "category": "performance | security | scalability | availability | maintainability",',
+		'      "target": "Specific measurable target (e.g. < 200ms p99 latency)"',
+		"    }",
+		"  ],",
+		'  "assumptions": [',
+		"    {",
+		'      "assumption": "We assume that...",',
+		'      "impactIfWrong": "What breaks if this assumption is false",',
+		'      "mitigation": "How we mitigate the risk"',
+		"    }",
+		"  ],",
 		'  "boundedContexts": [',
 		"    {",
 		'      "name": "ContextName",',
@@ -122,8 +152,6 @@ function buildExplorationPrompt(context: string): string {
 		"```",
 	].join("\n");
 }
-
-// ── Domain Explore Tool ──
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
@@ -299,149 +327,579 @@ export default function (pi: ExtensionAPI) {
 					"success",
 				);
 
-				return [
-					"I've prepared a DDD domain exploration for you.",
+				// Also create an initial exploration.md
+				const initialMdPath = path.join(explorationDir, sessionId + ".md");
+				const initialContent = [
+					"---",
+					"session_id: " + sessionId,
+					"created: " + new Date().toISOString().split("T")[0],
+					'business_context: "' + sanitized.replace(/"/g, '\\"') + '"',
+					"status: draft",
+					"---",
 					"",
-					"1. Read the prompt file: " + promptPath,
-					"2. Feed the prompt to your LLM to get a structured domain model",
-					"3. Save the JSON response to a file",
-					"4. Use /domain --answer " + sessionId + " <response-file>",
-					"5. Use /domain --architect-scaffold " + sessionId + " to generate architecture",
+					"# Domain Exploration: " + sessionId,
+					"",
+					"> **Status:** awaiting LLM response",
+					"> Feed the prompt file to your LLM, then use /domain --answer to process.",
+					"",
+					"---",
+					"",
+					"## Business Context",
+					"",
+					sanitized,
+					"",
+					"---",
+					"",
+					"## Prompt File",
+					"",
+					"See: " + sessionId + ".prompt.md",
+				].join("\n");
+				fs.writeFileSync(initialMdPath, initialContent, "utf-8");
+
+				return [
+					"Domain exploration created for session: " + sessionId,
+					"",
+					"Created files:",
+					"  " + promptPath + " (prompt — feed this to your LLM)",
+					"  " + initialMdPath + " (session placeholder)",
+					"",
+					"Next steps:",
+					"1. Read the prompt file to understand what the LLM needs to extract",
+					"2. Feed the prompt to your LLM (actors, roles, FR, NFR, assumptions, bounded contexts, entities, events, ubiquitous language)",
+					"3. Save the LLM response JSON to a file",
+					'4. Run: /domain --answer "' + sessionId + '" <response-file>',
+					"5. Run: /domain --architect-scaffold " + sessionId,
+					"6. Review architecture in .pi/architecture/ (modules, ADRs, diagrams)",
+					"7. Run: /architect or /epic-plan to plan implementation",
 					"",
 					"Session ID: " + sessionId,
 				].join("\n");
 			}
 
 			// /domain --answer <session-id> <response-file>
-			if (trimmed.startsWith("--answer")) {
-				const parts = trimmed.slice("--answer".length).trim().split(/\s+/);
-				const sessionId = parts[0];
-				const responseFile = parts.slice(1).join(" ");
+		if (trimmed.startsWith("--answer")) {
+			const parts = trimmed.slice("--answer".length).trim().split(/\s+/);
+			const sessionId = parts[0];
+			const responseFile = parts.slice(1).join(" ");
 
-				if (!sessionId || !responseFile) {
-					ctx.ui.notify(
-						"Usage: /domain --answer <session-id> <response-file>",
-						"error",
-					);
-					return "(domain command handled)";
+			if (!sessionId || !responseFile) {
+				ctx.ui.notify(
+					"Usage: /domain --answer <session-id> <response-file>",
+					"error",
+				);
+				return "(domain command handled)";
+			}
+
+			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+			const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
+			const responsePath = path.resolve(ctx.cwd, responseFile);
+
+			if (!fs.existsSync(promptPath)) {
+				ctx.ui.notify(
+					"Session not found: " + sessionId + ". Start with /domain --explore first.",
+					"error",
+				);
+				return "(domain command handled)";
+			}
+
+			if (!fs.existsSync(responsePath)) {
+				ctx.ui.notify(
+					"Response file not found: " + responsePath,
+					"error",
+				);
+				return "(domain command handled)";
+			}
+
+			const response = fs.readFileSync(responsePath, "utf-8");
+
+			// Parse JSON from response (strip markdown fences if present)
+			let cleaned = response.trim();
+			const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+			if (jsonMatch) cleaned = jsonMatch[1].trim();
+
+			let parsedJson: Record<string, unknown>;
+			try {
+				parsedJson = JSON.parse(cleaned) as Record<string, unknown>;
+			} catch (e) {
+				ctx.ui.notify("Failed to parse response as JSON: " + String(e), "error");
+				return "ERROR: Response must be valid JSON. Check the file at " + responsePath;
+			}
+
+			const now = new Date().toISOString().split("T")[0];
+			const businessContext = String(parsedJson.businessContext ?? "");
+
+			// Build table rows
+			function toTableRow(arr: unknown[], fields: string[]): string {
+				if (!Array.isArray(arr) || arr.length === 0) return "None identified yet.";
+				return arr.map((item: Record<string, unknown>) => {
+					const vals = fields.map((f) => String(item[f] ?? "").replace(/\n/g, " "));
+					return "| " + vals.join(" | ") + " |";
+				}).join("\n");
+			}
+
+			const actors = toTableRow(parsedJson.actors as unknown[], ["name", "description", "interactions"]);
+			const functionalReqs = toTableRow(parsedJson.functionalRequirements as unknown[], ["id", "requirement", "priority", "boundedContext"]);
+			const nonFunctionalReqs = toTableRow(parsedJson.nonFunctionalRequirements as unknown[], ["id", "requirement", "category", "target"]);
+			const assumptions = toTableRow(parsedJson.assumptions as unknown[], ["assumption", "impactIfWrong", "mitigation"]);
+			const boundedContexts = toTableRow(parsedJson.boundedContexts as unknown[], ["name", "description", "entities"]);
+			const entities = toTableRow(parsedJson.entities as unknown[], ["name", "context", "type", "description"]);
+			const domainEvents = toTableRow(parsedJson.domainEvents as unknown[], ["name", "context", "description", "triggeredBy"]);
+			const ulTerms = toTableRow(parsedJson.ubiquitousLanguage as unknown[], ["term", "definition", "boundedContext", "aliases"]);
+			const openQuestions = String(parsedJson.openQuestions ?? "None");
+			const aggregateRoots = String(parsedJson.aggregateRoots ?? "None");
+
+			// Build structured session content
+			const sessionContent = [
+				"---",
+				"session_id: " + sessionId,
+				"created: " + now,
+				'business_context: "' + businessContext.replace(/"/g, '\\"') + '"',
+				"status: draft",
+				"---",
+				"",
+				"# Domain Exploration: " + sessionId,
+				"",
+				"> Status: **draft** — *draft* = AI-suggested, *validated* = human-reviewed.",
+				"",
+				"---",
+				"",
+				"## Business Context",
+				"",
+				businessContext,
+				"",
+				"---",
+				"",
+				"## Actors & Roles",
+				"",
+				"| Actor | Description | Interactions |",
+				"|-------|-------------|-------------|",
+				actors,
+				"",
+				"---",
+				"",
+				"## Functional Requirements",
+				"",
+				"| ID | Requirement | Priority | Bounded Context |",
+				"|----|-------------|----------|----------------|",
+				functionalReqs,
+				"",
+				"---",
+				"",
+				"## Non-Functional Requirements",
+				"",
+				"| ID | Requirement | Category | Target |",
+				"|----|-------------|----------|--------|",
+				nonFunctionalReqs,
+				"",
+				"---",
+				"",
+				"## Assumptions",
+				"",
+				"| Assumption | Impact if Wrong | Mitigation |",
+				"|------------|----------------|-----------|",
+				assumptions,
+				"",
+				"---",
+				"",
+				"## Bounded Contexts",
+				"",
+				"| Context | Description | Entities |",
+				"|---------|-------------|----------|",
+				boundedContexts,
+				"",
+				"---",
+				"",
+				"## Entities",
+				"",
+				"| Entity | Context | Type | Description |",
+				"|--------|---------|------|-------------|",
+				entities,
+				"",
+				"---",
+				"",
+				"## Domain Events",
+				"",
+				"| Event | Context | Description | Triggered By |",
+				"|-------|---------|-------------|-------------|",
+				domainEvents,
+				"",
+				"---",
+				"",
+				"## Ubiquitous Language",
+				"",
+				"| Term | Definition | Bounded Context | Aliases/Synonyms |",
+				"|------|-----------|----------------|-----------------|",
+				ulTerms,
+				"",
+				"---",
+				"",
+				"## Open Questions",
+				"",
+				openQuestions,
+				"",
+				"---",
+				"",
+				"## Aggregate Roots",
+				"",
+				aggregateRoots,
+			].join("\n");
+
+			const sessionPath = path.join(explorationDir, sessionId + ".md");
+			fs.mkdirSync(explorationDir, { recursive: true });
+			fs.writeFileSync(sessionPath, sessionContent, "utf-8");
+
+			// Also update ubiquitous-language.md with new terms
+			const glossaryPath = path.join(ctx.cwd, ".pi", "domain", "ubiquitous-language.md");
+			const ulTermsRaw = parsedJson.ubiquitousLanguage as Array<Record<string, unknown>> | undefined;
+			if (Array.isArray(ulTermsRaw) && ulTermsRaw.length > 0) {
+				// Read existing glossary
+				let glossaryContent = "";
+				if (fs.existsSync(glossaryPath)) {
+					glossaryContent = fs.readFileSync(glossaryPath, "utf-8");
+				} else {
+					glossaryContent = [
+						"# Ubiquitous Language",
+						"",
+						"> Canonical glossary for this project.",
+						"> All code MUST use these terms. Aliases listed below are prohibited in source identifiers.",
+						"",
+						"## Glossary",
+						"",
+						"| Term | Definition | Bounded Context | Aliases/Synonyms | Examples |",
+						"|------|-----------|----------------|-----------------|---------|",
+					].join("\n");
 				}
 
-				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
-				const promptPath = path.join(explorationDir, sessionId + ".prompt.md");
-				const responsePath = path.resolve(ctx.cwd, responseFile);
-				const sessionPath = path.join(explorationDir, sessionId + ".md");
-
-				if (!fs.existsSync(promptPath)) {
-					ctx.ui.notify(
-						"Session not found: " + sessionId + ". Start with /domain --explore first.",
-						"error",
-					);
-					return "(domain command handled)";
+				// Extract existing term names (lowercase)
+				const existingTerms = new Set<string>();
+				for (const line of glossaryContent.split("\n")) {
+					if (line.startsWith("| ") && !line.includes("| Term |") && !line.includes("|---|")) {
+						const term = line.split("|")[1]?.trim()?.toLowerCase();
+						if (term) existingTerms.add(term);
+					}
 				}
 
-				if (!fs.existsSync(responsePath)) {
-					ctx.ui.notify(
-						"Response file not found: " + responsePath,
-						"error",
-					);
-					return "(domain command handled)";
+				// Append new terms that don't exist yet
+				const newRows: string[] = [];
+				for (const t of ulTermsRaw) {
+					const termName = String(t.term ?? "").trim();
+					if (!termName || existingTerms.has(termName.toLowerCase())) continue;
+					const def = String(t.definition ?? "").replace(/\n/g, " ");
+					const bc = String(t.boundedContext ?? "");
+					const aliases = Array.isArray(t.aliases) ? t.aliases.join(", ") : "";
+					const examples = String(t.examples ?? "");
+					newRows.push("| " + termName + " | " + def + " | " + bc + " | " + aliases + " | " + examples + " |");
+					existingTerms.add(termName.toLowerCase());
 				}
 
-				const response = fs.readFileSync(responsePath, "utf-8");
-				const prompt = fs.readFileSync(promptPath, "utf-8");
+				if (newRows.length > 0) {
+					// Find the last table row and append after it
+					const lines = glossaryContent.split("\n");
+					// Find the separator line (|---|) and append new rows after the last data row
+					let lastDataLine = -1;
+					for (let i = lines.length - 1; i >= 0; i--) {
+						if (lines[i].startsWith("| ") && !lines[i].includes("|---|") && !lines[i].includes("| Term |")) {
+							lastDataLine = i;
+							break;
+						}
+					}
+					if (lastDataLine >= 0) {
+						lines.splice(lastDataLine + 1, 0, ...newRows);
+					} else {
+						// No data rows yet — find the separator and add after
+						for (let i = 0; i < lines.length; i++) {
+							if (lines[i].includes("|---|")) {
+								lines.splice(i + 1, 0, ...newRows);
+								break;
+							}
+						}
+					}
+					fs.writeFileSync(glossaryPath, lines.join("\n"), "utf-8");
+				}
+			}
+
+			ctx.ui.notify(
+				"Domain exploration response parsed and saved for session: " + sessionId,
+				"success",
+			);
+
+			return [
+				"Domain exploration saved for session: " + sessionId,
+				"",
+				"Contains: " + actors.split("\n").length + " actor(s), " + boundedContexts.split("\n").length + " context(s), " + entities.split("\n").length + " entity(ies)",
+				"Ubiquitous language glossary updated with new terms.",
+				"",
+				"Next steps:",
+				"1. Review the session file at " + sessionPath,
+				"2. Clear open questions and update status to validated (edit the file)",
+				"3. Run: /domain --architect-scaffold " + sessionId + " to generate architecture modules + ADRs + diagrams",
+				"4. Then use /architect or /epic-plan to plan the implementation",
+			].join("\n");
+		}			// /domain --architect-scaffold <session-id>
+		if (trimmed.startsWith("--architect-scaffold")) {
+			const sessionId = trimmed.slice("--architect-scaffold".length).trim();
+			if (!sessionId) {
+				ctx.ui.notify(
+					"Usage: /domain --architect-scaffold <session-id>",
+					"error",
+				);
+				return "(domain command handled)";
+			}
+
+			const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
+			const sessionPath = path.join(explorationDir, sessionId + ".md");
+
+			if (!fs.existsSync(sessionPath)) {
+				ctx.ui.notify(
+					"Session not found: " + sessionId + ". Complete exploration with /domain --answer first.",
+					"error",
+				);
+				return "(domain command handled)";
+			}
+
+			const sessionContent = fs.readFileSync(sessionPath, "utf-8");
+
+			// Parse front matter
+			const sessionMatch = sessionContent.match(/^---\n([\s\S]*?)\n---/);
+			const getField = (name: string): string => {
+				if (!sessionMatch) return "";
+				const m = sessionMatch[1].match(new RegExp(name + ':\s*"(.+?)"'));
+				return m ? m[1] : "";
+			};
+			const businessContext = getField("business_context");
+
+			// Parse tables from the body
+			const body = sessionMatch ? sessionContent.slice(sessionMatch[0].length) : sessionContent;
+
+			function parseTable(sectionName: string): Array<Record<string, string>> {
+				const regex = new RegExp("## " + sectionName + "\\n+([\\s\\S]*?)(?:\\n##|\\n---|$)");
+				const sectionMatch = body.match(regex);
+				if (!sectionMatch) return [];
+				const section = sectionMatch[1];
+				const lines = section.split("\n").filter((l: string) => l.startsWith("|"));
+				// Skip header and separator
+				const dataLines = lines.filter((l: string) => !l.includes("|---") && !l.includes("| ---"));
+				return dataLines.map((line: string) => {
+					const cols = line.trim().split("|").filter((_: string, i: number, a: string[]) => i > 0 && i < a.length - 1).map((s: string) => s.trim());
+					return { cols };
+				}).filter((r: { cols: string[] }) => r.cols.length > 0).map((r: { cols: string[] }) => {
+					const obj: Record<string, string> = {};
+					r.cols.forEach((c: string, i: number) => { obj["col" + i] = c; });
+					return obj;
+				});
+			}
+
+			const boundedContexts = parseTable("Bounded Contexts");
+			const actors = parseTable("Actors & Roles");
+
+			if (boundedContexts.length === 0 && actors.length === 0) {
+				ctx.ui.notify("No bounded contexts or actors found in session. Explore a domain first.", "error");
+				return "(domain command handled)";
+			}
+
+			const now = new Date().toISOString().split("T")[0];
+			const modulesDir = path.join(ctx.cwd, ".pi", "architecture", "modules");
+			const decisionsDir = path.join(ctx.cwd, ".pi", "architecture", "decisions");
+			const diagramsDir = path.join(ctx.cwd, ".pi", "architecture", "diagrams");
+			fs.mkdirSync(modulesDir, { recursive: true });
+			fs.mkdirSync(decisionsDir, { recursive: true });
+			fs.mkdirSync(diagramsDir, { recursive: true });
+
+			const generated: string[] = [];
+
+			// Helper: name to kebab-case module id
+			function toModuleId(name: string): string {
+				return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+			}
+
+			// Generate one module doc per bounded context
+			for (const bc of boundedContexts) {
+				const ctxName = bc.col0 || "Unnamed";
+				const ctxDesc = bc.col1 || "";
+				const entities = (bc.col2 || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+				const moduleId = toModuleId(ctxName);
+
+				const components = entities.map((e: string) =>
+					"## Component: " + e + "\n" +
+					"status: planned\n" +
+					"description: Part of " + ctxName + " bounded context.\n" +
+					"depends: none\n"
+				).join("\n");
+
+				// Also check entities table for more detail
+				const entitiesTable = parseTable("Entities");
+				const matchingEntities = entitiesTable.filter((e: Record<string, string>) => e.col1 === ctxName);
 
 				const content = [
-					"# Domain Exploration",
+					"# " + ctxName,
 					"",
-					"Session ID: " + sessionId,
+					"## Module Status",
 					"",
-					"## Prompt",
+					"**Status:** Planned",
+					"**Last reviewed:** " + now,
+					"**Source session:** " + sessionId,
 					"",
-					prompt,
+					"## Description",
 					"",
-					"## Response",
+					ctxDesc,
 					"",
-					response,
+					"## Components",
 					"",
-					"## Bounded Contexts",
+					components || "No components defined yet.\n",
+					"## Dependencies",
 					"",
-					"*(Parsed from response)*",
-					"",
-					"## Entities",
-					"",
-					"*(Parsed from response)*",
+					"None identified yet.",
 					"",
 					"## Ubiquitous Language",
 					"",
-					"*(Parsed from response)*",
-				].join("\n");
-
-				fs.mkdirSync(explorationDir, { recursive: true });
-				fs.writeFileSync(sessionPath, content, "utf-8");
-
-				ctx.ui.notify(
-					"Domain exploration session saved to " + sessionPath,
-					"success",
-				);
-
-				return [
-					"Domain exploration response saved for session: " + sessionId,
+					"Refer to .pi/domain/ubiquitous-language.md",
 					"",
-					"Next step: Use /domain --architect-scaffold " + sessionId + " to generate architecture modules from this exploration.",
-					"Or: /domain --validate " + sessionId + " to check glossary compliance.",
+					"## Architecture Diagrams",
+					"",
+					"See .pi/architecture/diagrams/" + moduleId + ".md",
 				].join("\n");
+
+				const filePath = path.join(modulesDir, moduleId + ".md");
+				// Atomic write
+				const tmpPath = filePath + ".tmp";
+				fs.writeFileSync(tmpPath, content, "utf-8");
+				fs.renameSync(tmpPath, filePath);
+				generated.push(moduleId + ".md");
 			}
 
-			// /domain --architect-scaffold <session-id>
-			if (trimmed.startsWith("--architect-scaffold")) {
-				const sessionId = trimmed.slice("--architect-scaffold".length).trim();
-				if (!sessionId) {
-					ctx.ui.notify(
-						"Usage: /domain --architect-scaffold <session-id>",
-						"error",
-					);
-					return "(domain command handled)";
-				}
+			// Generate ADR-001: Domain-Driven Design architecture decision
+			const contextNames = boundedContexts.map((bc: Record<string, string>) => bc.col0 || "Unnamed");
+			const adrContent = [
+				"# ADR-001: Architecture Pattern",
+				"",
+				"**Status:** Proposed",
+				"**Date:** " + now,
+				"**Source Session:** " + sessionId,
+				"",
+				"## Context",
+				"",
+				"Domain exploration identified " + boundedContexts.length + " bounded context(s): " + contextNames.join(", ") + ".",
+				"The system needs an architectural pattern that enforces clean separation between these contexts.",
+				"",
+				"## Decision",
+				"",
+				"Use Domain-Driven Design with Clean Architecture/Hexagonal layering:",
+				"",
+				"- domain/ — Enterprise business rules (entities, value objects, aggregates)",
+				"- application/ — Application services, use cases, ports",
+				"- infrastructure/ — Adapters, repositories, external services",
+				"- interfaces/ — HTTP, messaging, CLI entry points (sub-layer per protocol)",
+				"",
+				"Each bounded context gets its own package tree following this layer structure.",
+				"Dependency rule: domain → application ← infrastructure, interfaces. Domain never imports infrastructure.",
+				"",
+				"## Consequences",
+				"",
+				"- Clear module boundaries prevent cross-context coupling",
+				"- Each context can be developed and deployed independently if needed",
+				"- Testability: domain logic can be tested without infrastructure",
+				"- Learning curve: team must understand Clean Architecture conventions",
+			].join("\n");
 
-				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
-				const sessionPath = path.join(explorationDir, sessionId + ".md");
+			const adrPath = path.join(decisionsDir, "ADR-001-domain-driven-architecture.md");
+			const adrTmp = adrPath + ".tmp";
+			fs.writeFileSync(adrTmp, adrContent, "utf-8");
+			fs.renameSync(adrTmp, adrPath);
+			generated.push("decisions/ADR-001-domain-driven-architecture.md");
 
-				if (!fs.existsSync(sessionPath)) {
-					ctx.ui.notify(
-						"Session not found: " + sessionId + ". Complete exploration with /domain --answer first.",
-						"error",
-					);
-					return "(domain command handled)";
-				}
+			// Generate diagram markdown with mermaid
+			const nowDate = now;
+			const mermaidLines = [
+				"# System Context Diagram",
+				"",
+				"Generated from domain exploration session: " + sessionId,
+				"Date: " + nowDate,
+				"",
+				"## Context Diagram",
+				"",
+				"\`\`\`mermaid",
+				"graph TD",
+			];
 
-				const archDir = path.join(ctx.cwd, ".pi", "architecture");
-				const modulesDir = path.join(archDir, "modules");
-				const decisionsDir = path.join(archDir, "decisions");
-
-				fs.mkdirSync(modulesDir, { recursive: true });
-				fs.mkdirSync(decisionsDir, { recursive: true });
-
-				ctx.ui.notify(
-					"Architecture directories ready. Use /architect to begin planning.",
-					"success",
-				);
-
-				return [
-					"Architecture directories scaffolded from exploration session: " + sessionId,
-					"",
-					"Next steps:",
-					"1. Review the exploration at: " + sessionPath,
-					"2. Create architecture module docs in: " + modulesDir,
-					"3. Use /architect to plan and implement epics",
-					"",
-					"Architecture directories:",
-					"  - " + modulesDir,
-					"  - " + decisionsDir,
-					"  - " + path.join(archDir, "diagrams"),
-				].join("\n");
+			// Add actors
+			let nodeNum = 0;
+			for (const actor of actors) {
+				const name = actor.col0 || "Actor";
+				mermaidLines.push("    A" + nodeNum + "[" + name + "]");
+				nodeNum++;
 			}
 
-			// /domain --validate <session-id>
+			// Add bounded contexts
+			const bcNodeMap: Record<string, string> = {};
+			for (const bc of boundedContexts) {
+				const name = bc.col0 || "Context";
+				const nodeId = "BC" + nodeNum;
+				mermaidLines.push("    " + nodeId + "[" + name + "]");
+				bcNodeMap[name] = nodeId;
+				nodeNum++;
+			}
+
+			// Connect actors to contexts
+			let edgeNum = 0;
+			for (let i = 0; i < Math.min(actors.length, boundedContexts.length); i++) {
+				mermaidLines.push("    A" + i + " -->|interacts| " + "BC" + i);
+				edgeNum++;
+			}
+
+			mermaidLines.push("\`\`\`");
+			mermaidLines.push("");
+			mermaidLines.push("## Container / Module Diagram");
+			mermaidLines.push("");
+			mermaidLines.push("\`\`\`mermaid");
+			mermaidLines.push("graph RL");
+			mermaidLines.push('    subgraph "Bounded Contexts"');
+			for (let i = 0; i < boundedContexts.length; i++) {
+				const name = boundedContexts[i].col0 || "Context";
+				mermaidLines.push("        BC" + i + "[" + name + "]");
+			}
+			mermaidLines.push("    end");
+			mermaidLines.push("");
+			mermaidLines.push('    subgraph "Layers"');
+			mermaidLines.push("        Domain[domain/]");
+			mermaidLines.push("        App[application/]");
+			mermaidLines.push("        Infra[infrastructure/]");
+			mermaidLines.push("        HTTP[interfaces/http/]");
+			mermaidLines.push("        Msg[interfaces/messaging/]");
+			mermaidLines.push("    end");
+			mermaidLines.push("");
+			mermaidLines.push("    Domain --> App");
+			mermaidLines.push("    App --> Infra");
+			mermaidLines.push("    HTTP --> App");
+			mermaidLines.push("    Msg --> App");
+			mermaidLines.push("\`\`\`");
+
+			const diagramContent = mermaidLines.join("\n");
+			const diagramPath = path.join(diagramsDir, "system-context.md");
+			const diagramTmp = diagramPath + ".tmp";
+			fs.writeFileSync(diagramTmp, diagramContent, "utf-8");
+			fs.renameSync(diagramTmp, diagramPath);
+			generated.push("diagrams/system-context.md");
+
+			ctx.ui.notify(
+				"Architecture scaffolded: " + generated.length + " file(s) generated from session " + sessionId,
+				"success",
+			);
+
+			return [
+				"Architecture scaffolded from session: " + sessionId,
+				"",
+				"Generated files:",
+			].concat(generated.map((f: string) => "  - .pi/architecture/" + f)).concat([
+				"",
+				"Next steps:",
+				"1. Review the generated module docs in .pi/architecture/modules/",
+				"2. Review ADR-001 in .pi/architecture/decisions/",
+				"3. Review diagrams in .pi/architecture/diagrams/",
+				"4. Run: /architect --epic "<epic-name>" to plan implementation",
+				"5. Or run: /epic-plan --overview to plan across all modules",
+				"6. After planning, Epic 0: guardian project create to scaffold project structure",
+			].join("\n"));
+		}			// /domain --validate <session-id>
 			if (trimmed.startsWith("--validate")) {
 				const sessionId = trimmed.slice("--validate".length).trim();
 				if (!sessionId) {
@@ -482,6 +940,14 @@ export default function (pi: ExtensionAPI) {
 					"  /domain --answer <session-id> <response-file>",
 					"  /domain --architect-scaffold <session-id>",
 					"  /domain --validate <session-id>",
+					"",
+					"Full workflow:",
+					'  1. /domain --explore \"Describe your business domain\"',
+					'  2. Feed the .prompt.md to your LLM, save JSON response',
+					'  3. /domain --answer <session-id> <response.json>',
+					'  4. /domain --architect-scaffold <session-id>',
+					'  5. Review modules, ADRs, diagrams in .pi/architecture/',
+					'  6. /architect or /epic-plan to plan implementation',
 				].join("\n"),
 				"info",
 			);
@@ -489,17 +955,26 @@ export default function (pi: ExtensionAPI) {
 			return [
 				"Available /domain subcommands:",
 				"",
-				'  /domain --explore "..."',
-				"    Start a new DDD domain exploration session",
+				'  /domain --explore "Business context description"',
+				"    Start a DDD domain exploration (creates .prompt.md with actors, FR, NFR, assumptions, contexts)",
 				"",
 				"  /domain --answer <session-id> <response-file>",
-				"    Save an LLM response to complete an exploration",
+				"    Parse LLM JSON response into structured exploration.md + update ubiquitous-language.md",
 				"",
 				"  /domain --architect-scaffold <session-id>",
-				"    Generate architecture directories from exploration",
+				"    Generate architecture modules, ADR-001, and mermaid diagrams from exploration",
 				"",
 				"  /domain --validate <session-id>",
-				"    Validate exploration session structure",
+				"    Validate exploration session structure and completeness",
+				"",
+				"Full workflow:",
+				'  1. /domain --explore \"Describe your business domain\"',
+				"  2. Feed .prompt.md to your LLM, save response as JSON",
+				"  3. /domain --answer <session-id> <response-file>",
+				'  4. /domain --architect-scaffold <session-id>',
+				"  5. Review architecture in .pi/architecture/ (modules, ADRs, diagrams)",
+				"  6. guardian project create --lang java (Epic 0: scaffold project structure)",
+				"  7. /architect or /epic-plan to plan and implement",
 			].join("\n");
 		},
 	});
