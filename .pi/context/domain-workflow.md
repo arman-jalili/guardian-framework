@@ -141,19 +141,60 @@ Two approaches:
 
 ## Step 5: Scaffold Project (Epic 0 — greenfield only)
 
-For a new project, BEFORE implementing the first epic:
+For a new project, BEFORE implementing the first epic, tell the agent:
 
-```bash
-guardian project create --lang java --buildTool maven
+```
+scaffold project from architecture --lang java --buildTool maven
 ```
 
-This reads the architecture modules and generates:
-- Source directories per module + layer
-- Build configuration (pom.xml / build.gradle)
-- CI pipeline (GitHub Actions or GitLab CI)
-- Stage scripts for the hardening pipeline
+The agent will read the architecture modules and generate:
+- Source directories per module + layer (`src/main/java/com/.../<module>/<layer>/`)
+- Build configuration (`pom.xml` or `build.gradle`)
+- CI pipeline (`.github/workflows/`)
+- `README.md`
 
-Existing projects skip this step (detects existing `src/`).
+**IMPORTANT — Agent instructions (read carefully):**
+When the user says "scaffold project from architecture" or asks you to create the
+project structure from architecture modules:
+
+1. Read all `.md` files in `.pi/architecture/modules/` to get the module names
+2. Determine layers based on language (Java: domain, application, infrastructure, api)
+3. Create source directories: `src/main/java/<groupId>/<module>/<layer>/.gitkeep`
+4. Create test directories: `src/test/java/<groupId>/<module>/<layer>/.gitkeep`
+5. Create placeholder source files in each directory with canonical reference headers
+6. Generate build file (`pom.xml` for Maven or `build.gradle` for Gradle) with:
+   - All modules listed as submodules or packages
+   - Dependencies for Spring Boot, JPA, Validation, Lombok, Testcontainers
+7. Generate CI pipeline (`.github/workflows/ci.yml`) with:
+   - Build and test stages
+   - Steps for compilation, tests, and quality checks
+8. Update `README.md` with project overview and build instructions
+9. Do NOT run `guardian project create` CLI — create files directly using `write` tool
+
+Existing projects (with `src/` directory) skip this step.
+
+**Agent instructions for build file generation — Maven pom.xml:**
+- Include spring-boot-starter-parent as parent
+- Set Java version to 17 or 21
+- Create a multi-module POM with one module per bounded context
+- Each module has its own POM with appropriate dependencies
+- Include: spring-boot-starter-web, spring-boot-starter-data-jpa, spring-boot-starter-validation,
+  lombok, postgresql, h2 (test), testcontainers, springdoc-openapi
+- Add maven-surefire-plugin, spring-boot-maven-plugin, jacoco-maven-plugin
+
+**Agent instructions for build file generation — Gradle build.gradle:**
+- Apply java, spring-boot, and jacoco plugins
+- Set Java version to 17 or 21
+- Create a multi-module build with one subproject per bounded context
+- Include same dependencies as Maven version
+
+**Agent instructions for CI pipeline (.github/workflows/ci.yml):**
+- Trigger on push and pull_request to main
+- Java 17/21 setup with actions/setup-java
+- Cache Maven/Gradle dependencies
+- Build step: `mvn verify` or `gradle build`
+- Run tests with jacoco report
+- Upload test reports as artifacts
 
 ---
 
@@ -177,9 +218,10 @@ Tell the agent: "Analyze this business domain using DDD: <description>"
 Tell the agent: "generate architecture from <session-id>"
   |  (agent creates module docs, ADRs, diagrams)
   |
-/epic-plan --overview  or  /architect --epic "Name"
+Tell the agent: "scaffold project from architecture --lang java --buildTool maven"
+  |  (Epic 0 — agent creates source dirs, pom.xml, CI pipeline)
   |
-guardian project create --lang java   (greenfield only, Epic 0)
+/epic-plan --overview  or  /architect --epic "Name"
   |
 /implement-series
 ```
