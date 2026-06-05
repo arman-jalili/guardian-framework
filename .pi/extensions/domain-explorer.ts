@@ -636,7 +636,7 @@ export default function (pi: ExtensionAPI) {
 				fs.mkdirSync(decisionsDir, { recursive: true });
 
 				ctx.ui.notify(
-					"Architecture directories ready. Use /architect to begin planning.",
+					"Architecture directories ready for session: " + sessionId + ". Use /architect to begin planning.",
 					"success",
 				);
 
