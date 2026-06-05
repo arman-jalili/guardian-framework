@@ -9,22 +9,44 @@ Every step produces artifacts the next step consumes. No manual file creation ne
 
 ## Step 1: Explore the Domain
 
+**Two ways to start:**
+
+### Option A: Tell the agent directly
+Just describe your business domain to the agent. The agent will analyze it using Domain-Driven Design and write two files:
+- `.pi/domain/exploration.md` — Full analysis: Business Context, Actors/Roles, FR, NFR, Assumptions, Bounded Contexts, Entities, Domain Events, Ubiquitous Language, Open Questions, Aggregate Roots
+- `.pi/domain/ubiquitous-language.md` — Canonical glossary with terms (deduplicated)
+
+**Agent instructions — when the user asks you to analyze a business domain:**
+1. Read `.pi/domain/exploration.md` if it exists (to see if there's a stub to fill in)
+2. Analyze the business context using Domain-Driven Design
+3. Use `read`/`edit`/`write` tools to fill in or create `.pi/domain/exploration.md` with ALL sections:
+   - Business Context
+   - Actors & Roles — table with Actor, Description, Interactions columns
+   - Functional Requirements — table with ID, Requirement, Priority, Bounded Context columns
+   - Non-Functional Requirements — table with ID, Requirement, Category, Target columns
+   - Assumptions — table with Assumption, Impact if Wrong, Mitigation columns
+   - Bounded Contexts — table with Context, Description, Entities columns
+   - Entities — table with Entity, Context, Type, Description columns
+   - Domain Events — table with Event, Context, Description, Triggered By columns
+   - Ubiquitous Language — table with Term, Definition, Bounded Context, Aliases columns
+   - Open Questions
+   - Aggregate Roots
+4. Create or update `.pi/domain/ubiquitous-language.md` with the DDD terms from your analysis
+   - If the file already exists, READ it first and append new terms (deduplicate by term name)
+   - Table format: | Term | Definition | Bounded Context | Aliases/Synonyms | Examples |
+
+### Option B: Use the slash command
 ```bash
 /domain --explore "Describe your business domain here..."
 ```
 
 **What happens:**
 - Creates a session ID and session file in `.pi/domain/exploration/<session-id>.md`
-- Returns a DDD analysis prompt with explicit instructions for the agent
-- The agent **automatically analyzes** the domain and writes two files:
+- Creates stub `.pi/domain/exploration.md` with the business context filled in
+- Creates `.pi/domain/ubiquitous-language.md` if it doesn't exist
+- Returns a message telling you what was created
 
-**Agent writes:**
-| File | Contents |
-|------|----------|
-| `.pi/domain/exploration.md` | Full analysis: Business Context, Actors/Roles, FR, NFR, Assumptions, Bounded Contexts, Entities, Domain Events, Ubiquitous Language, Open Questions, Aggregate Roots |
-| `.pi/domain/ubiquitous-language.md` | Canonical glossary with terms (deduplicated) |
-
-**Status:** The exploration files are written directly. No `--answer` step needed.
+**Then ask the agent to fill in the analysis.** The agent will read the stub file and fill in all DDD sections using the `read` and `edit` tools.
 
 ---
 
@@ -42,7 +64,7 @@ What to check:
 3. Are the open questions acceptable or should you refine?
 4. Change `status: draft` to `status: validated` when agreed upon
 
-If the analysis needs refinement, edit the `.md` files directly or run `/domain --explore` again with more precise context.
+If the analysis needs refinement, edit the `.md` files directly or describe the changes to the agent.
 
 ---
 
@@ -120,16 +142,17 @@ Each issue follows the contract freeze → implementation → proofing → readi
 ## Quick Reference
 
 ```
-/domain --explore "Describe your domain"
-    |  (agent writes exploration.md + ubiquitous-language.md automatically)
+Tell the agent: "Analyze this business domain using DDD: <description>"
+  |  (agent writes exploration.md + ubiquitous-language.md automatically)
+  |
 /domain --validate <session-id>   (optional review)
-    |
+  |
 /domain --architect-scaffold <session-id>
-    |
+  |
 /epic-plan --overview  or  /architect --epic "Name"
-    |
+  |
 guardian project create --lang java   (greenfield only, Epic 0)
-    |
+  |
 /implement-series
 ```
 
