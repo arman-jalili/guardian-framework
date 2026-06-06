@@ -236,3 +236,30 @@ Tell the agent: "scaffold project from architecture --lang java --buildTool mave
 | `.pi/architecture/modules/` | Module docs (one per bounded context) |
 | `.pi/architecture/decisions/` | ADRs |
 | `.pi/architecture/diagrams/` | System diagrams with mermaid |
+
+---
+
+## Agent Definitions
+
+Each agent has a canonical definition in `.pi/agents/`:
+
+| Agent | Role | What It Decides |
+|-------|------|-----------------|
+| Architecture Coordinator | Coordinator | Scope, dependencies, validators, CI gates |
+| Issue Factory | Coordinator | Issue breakdown, labels, acceptance criteria |
+| Bootstrap Implementer | Builder | Code, tests, docs within one issue |
+| Architecture Validator | Validator | Architecture conformance pass/fail |
+| Security Validator | Validator | Security control pass/fail |
+| Operations Validator | Validator | Operational readiness pass/fail |
+
+## Deterministic Validation
+
+Before agent judgment, run automated checks:
+
+```bash
+# Validate planning packet structure
+python scripts/ci/check_planning_packet.py --input=planning_packet.md
+
+# Validate agent output schema
+python scripts/ci/validate_agent_output.py --input=output.md --schema=architecture-validator
+```

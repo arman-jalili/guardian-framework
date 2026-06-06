@@ -435,3 +435,40 @@ Language-specific code patterns are stored in `templates/languages/`:
 - `go-patterns.md`
 
 Selected during `guardian init` based on project language.
+---
+
+## Agent Definitions
+
+Canonical agent definitions in `.pi/agents/` using the 6-section format:
+
+| Agent | Role | Phase |
+|-------|------|-------|
+| [Architecture Coordinator](agents/architecture-coordinator.md) | Coordinator | A — Planning |
+| [Issue Factory](agents/issue-factory.md) | Coordinator | B — Issue Generation |
+| [Bootstrap Implementer](agents/bootstrap-implementer.md) | Builder | C — Implementation |
+| [Architecture Validator](agents/architecture-validator.md) | Validator | D — Validation |
+| [Security Validator](agents/security-validator.md) | Validator | D — Validation |
+| [Operations Validator](agents/operations-validator.md) | Validator | D — Validation |
+
+Each definition specifies: **Purpose**, **Authority**, **Inputs**, **Outputs**, **Definition of Done**, **Escalation Rule**.
+
+## 4-Phase Delivery Pipeline
+
+Work flows through sequential phases:
+
+```
+Phase A: Planning       → .pi/agents/architecture-coordinator.md
+Phase B: Issue Gen      → .pi/agents/issue-factory.md
+Phase C: Implement      → .pi/agents/bootstrap-implementer.md
+Phase D: Validation     → .pi/agents/architecture-validator.md + security + operations
+```
+
+Each phase produces a validated artifact before the next begins.
+
+## Deterministic Validation Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/ci/check_planning_packet.py` | Validates planning packet structure before issue generation |
+| `scripts/ci/validate_agent_output.py` | Validates agent output schema per role type |
+| `scripts/ci/run_preflight.sh` | Orchestrates local CI checks |

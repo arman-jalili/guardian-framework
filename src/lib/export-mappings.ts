@@ -29,7 +29,7 @@ export function getExportStructure(tool: Tool): string[] {
 		case "agents":
 			return ["agents", "context", "workflows", "scripts"];
 		case "github":
-			return ["instructions", "agents", "copilot"];
+			return ["instructions", "agents", "copilot", "workflows"];
 		case "omp":
 			return ["agents", "extensions"];
 
@@ -189,6 +189,44 @@ export function getExportMappings(tool: Tool): ExportMapping[] {
 					dest: "agents/architecture-coordinator.agent.md",
 				},
 				{ source: "github/agents/epic-planner.agent.md", dest: "agents/epic-planner.agent.md" },
+				{
+					source: "github/agents/architecture-validator.agent.md",
+					dest: "agents/architecture-validator.agent.md",
+				},
+				{
+					source: "github/agents/issue-factory.agent.md",
+					dest: "agents/issue-factory.agent.md",
+				},
+				{
+					source: "github/agents/bootstrap-implementer.agent.md",
+					dest: "agents/bootstrap-implementer.agent.md",
+				},
+				{
+					source: "github/agents/security-validator.agent.md",
+					dest: "agents/security-validator.agent.md",
+				},
+				{
+					source: "github/agents/operations-validator.agent.md",
+					dest: "agents/operations-validator.agent.md",
+				},
+				// 4-phase workflow documents
+				{
+					source: "github/workflows/01-planning-workflow.md",
+					dest: "workflows/01-planning-workflow.md",
+				},
+				{
+					source: "github/workflows/02-issue-generation-workflow.md",
+					dest: "workflows/02-issue-generation-workflow.md",
+				},
+				{
+					source: "github/workflows/03-implementation-workflow.md",
+					dest: "workflows/03-implementation-workflow.md",
+				},
+				{
+					source: "github/workflows/04-validation-workflow.md",
+					dest: "workflows/04-validation-workflow.md",
+				},
+
 				// Settings
 				{ source: "github/copilot/settings.json", dest: "copilot/settings.json" },
 			];
