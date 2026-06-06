@@ -426,7 +426,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("domain", {
 		description:
 			"Domain exploration commands. Subcommands: --explore, --architect-scaffold, --validate",
-		handler(args: string[], ctx: ExtensionContext) {
+		async handler(args: string[], ctx: ExtensionContext) {
 			const trimmed = Array.isArray(args) ? args.join(" ").trim() : String(args).trim();
 
 			// /domain --explore "context description"
@@ -607,6 +607,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// /domain --architect-scaffold <session-id>
+			// /domain --architect-scaffold <session-id>
 			if (trimmed.startsWith("--architect-scaffold")) {
 				const sessionId = trimmed.slice("--architect-scaffold".length).trim();
 				if (!sessionId) {
@@ -622,40 +623,224 @@ export default function (pi: ExtensionAPI) {
 
 				if (!fs.existsSync(sessionPath)) {
 					ctx.ui.notify(
-						"Session not found: " + sessionId + ". Run /domain --explore first to create the session.",
+						"Session not found: " + sessionId + ". Run /domain --explore first.",
 						"error",
 					);
 					return "(domain command handled)";
 				}
 
+				// Create architecture directories
 				const archDir = path.join(ctx.cwd, ".pi", "architecture");
 				const modulesDir = path.join(archDir, "modules");
 				const decisionsDir = path.join(archDir, "decisions");
+				const diagramsDir = path.join(archDir, "diagrams");
 
 				fs.mkdirSync(modulesDir, { recursive: true });
 				fs.mkdirSync(decisionsDir, { recursive: true });
+				fs.mkdirSync(diagramsDir, { recursive: true });
+
+				// Read session file to extract bounded contexts
+				const sessionContent = fs.readFileSync(sessionPath, "utf-8");
+				const timestamp = new Date().toISOString().split("T")[0];
+
+				// Parse bounded context names from markdown table
+				const bcNames: string[] = [];
+				const bcSection = sessionContent.match(/## Bounded Contexts[\s\S]*?(?=\n## |$)/);
+				if (bcSection) {
+					const bcLines = bcSection[0].split("\n");
+					let inData = false;
+					for (const line of bcLines) {
+						if (line.includes("|---")) { inData = true; continue; }
+						if (!inData || !line.startsWith("|")) continue;
+						const cells = line.split("|").map(c => c.trim()).filter(c => c);
+						if (cells.length >= 1 && cells[0] !== "Context" && cells[0] !== "Bounded Context") {
+							bcNames.push(cells[0]);
+						}
+					}
+				}
+
+				// Step 1: Call guardian CLI to scaffold module docs per bounded context
+				let scaffoldModules: string[] = [];
+				let scaffoldWarnings: string[] = [];
+				let scaffoldError = "";
+
+				try {
+					const cmd = "guardian-framework domain scaffold " + sessionId + " 2>&1";
+					const shellResult = await ctx.shell.execute(cmd);
+					if (shellResult.exitCode === 0) {
+						const outputLines = shellResult.stdout.split("\n");
+						for (const line of outputLines) {
+							const t = line.trim();
+							if (t.endsWith(".md") && !t.startsWith("Warnings:")) {
+								scaffoldModules.push(t);
+							}
+							if (t.startsWith("Warnings:") || t.includes("already exists")) {
+								scaffoldWarnings.push(t);
+							}
+						}
+						ctx.ui.notify("Generated " + scaffoldModules.length + " module doc(s) from exploration", "success");
+					} else {
+						scaffoldError = shellResult.stdout.slice(0, 200);
+						ctx.ui.notify("Module scaffold warning: " + scaffoldError.slice(0, 80), "info");
+					}
+				} catch (e) {
+					scaffoldError = String(e).slice(0, 200);
+					ctx.ui.notify("Module scaffold unavailable - agent can create docs directly", "info");
+				}
+
+				// Step 2: Generate ADR-001 with architecture pattern
+				const adrPath = path.join(decisionsDir, "ADR-001-architecture-pattern.md");
+				if (!fs.existsSync(adrPath)) {
+					const bcList = bcNames.length > 0
+						? bcNames.map(n => "  - " + n).join("\n")
+						: "  - (to be defined during architecture planning)";
+
+					const adrContent = [
+						"# ADR-001: Domain-Driven Design with Bounded Contexts",
+						"",
+						"**Status:** Proposed",
+						"**Date:** " + timestamp,
+						"**Session:** " + sessionId,
+						"",
+						"## Context",
+						"",
+						"The domain exploration identified bounded contexts that must be",
+						"implemented as independently evolvable modules.",
+						"",
+						bcList,
+						"",
+						"## Decision",
+						"",
+						"We will use Domain-Driven Design with bounded contexts as independently",
+						"evolvable modules (Modular Monolith pattern).",
+						"",
+						"## Consequences",
+						"",
+						"- Each bounded context owns its data and domain logic",
+						"- Cross-context communication through domain events",
+						"- Contexts can be extracted to separate services when needed",
+						"- Disciplined dependency management required",
+						"",
+						"## Alternatives Considered",
+						"",
+						"- Monolith without domain boundaries: rejected - no separation of concerns",
+						"- Microservices from day one: rejected - over-engineering for initial scope",
+						"- Layered Architecture: rejected - does not enforce domain boundaries",
+						"",
+						"## Affected Modules",
+						"",
+						bcList,
+					].join("\n");
+
+					const adrTmp = adrPath + ".tmp";
+					fs.writeFileSync(adrTmp, adrContent, "utf-8");
+					fs.renameSync(adrTmp, adrPath);
+				}
+
+				// Step 3: Generate system context diagram
+				const diagramPath = path.join(diagramsDir, "system-context.md");
+				if (!fs.existsSync(diagramPath)) {
+					let contextName = "System";
+					const ctxMatch = sessionContent.match(/business_context:\s*"(.+?)"/);
+					if (ctxMatch) {
+						contextName = ctxMatch[1].split(".")[0].slice(0, 80);
+					}
+
+					// Build mermaid diagram from bounded contexts
+					let bcDiagram = "";
+					if (bcNames.length > 0) {
+						const nodeLines = bcNames.map((n, i) =>
+							"    " + String.fromCharCode(65 + i) + "[" + n + "]"
+						).join("\n");
+						const edgeLines = bcNames.slice(0, -1).map((n, i) =>
+							"    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events"
+						).join("\n");
+						const lastNode = bcNames.length > 1
+							? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[Consumers]"
+							: bcNames.length === 1
+								? "    A[" + bcNames[0] + "] --> Downstream[Consumers]"
+								: "";
+						bcDiagram = nodeLines + "\n\n" + edgeLines + (lastNode ? "\n" + lastNode : "");
+					} else {
+						bcDiagram = "    A[Module 1] --> B[Module 2] : events";
+					}
+
+					const diagramContent = [
+						"# System Context Diagram",
+						"",
+						"## Context",
+						"",
+						contextName,
+						"",
+						"## Bounded Contexts Flow",
+						"",
+						"```mermaid",
+						"graph LR",
+						bcDiagram,
+						"```",
+						"",
+						"---",
+						"",
+						"*Generated from session: " + sessionId,
+						"*Date: " + timestamp,
+					].join("\n");
+
+					const diagramTmp = diagramPath + ".tmp";
+					fs.writeFileSync(diagramTmp, diagramContent, "utf-8");
+					fs.renameSync(diagramTmp, diagramPath);
+				}
 
 				ctx.ui.notify(
-					"Architecture directories ready for session: " + sessionId + ". Use /architect to begin planning.",
+					"Architecture scaffolded: " + scaffoldModules.length + " modules, ADR-001, diagrams",
 					"success",
 				);
 
-				return [
-					"Architecture directories scaffolded from exploration session: " + sessionId,
+				const resultLines = [
+					"## Architecture Scaffold Complete",
 					"",
-					"Next steps:",
-					"1. Review the exploration at: " + sessionPath,
-					"2. Create architecture module docs in: " + modulesDir,
-					"3. Use /architect to plan and implement epics",
+					"Session: " + sessionId,
 					"",
-					"Architecture directories:",
-					"  - " + modulesDir,
-					"  - " + decisionsDir,
-					"  - " + path.join(archDir, "diagrams"),
-				].join("\n");
-			}
+					"### Generated Artifacts",
+				];
 
-			// /domain --validate <session-id>
+				resultLines.push("", "**Module Documents** (" + modulesDir + "):");
+				if (scaffoldModules.length > 0) {
+					for (const mod of scaffoldModules) {
+						resultLines.push("- " + mod);
+					}
+				} else {
+					resultLines.push("- (agent should create module docs from bounded contexts)");
+				}
+
+				resultLines.push("", "**Architecture Decisions** (" + decisionsDir + "):");
+				resultLines.push("- ADR-001-architecture-pattern.md");
+
+				resultLines.push("", "**Diagrams** (" + diagramsDir + "):");
+				resultLines.push("- system-context.md");
+
+				resultLines.push("", "**Bounded Contexts Discovered**: " + bcNames.length);
+				for (const bc of bcNames) {
+					resultLines.push("- " + bc);
+				}
+
+				if (scaffoldError) {
+					resultLines.push("", "**Note**: " + scaffoldError);
+				}
+
+				resultLines.push("", "### Next Steps");
+				resultLines.push("1. Review the module docs in .pi/architecture/modules/");
+				resultLines.push("2. Review ADR-001 in .pi/architecture/decisions/");
+				resultLines.push("3. Review the system diagram in .pi/architecture/diagrams/");
+				resultLines.push("4. Use /epic-plan --overview or /architect to plan implementation");
+				resultLines.push("");
+				resultLines.push("Or run through the full delivery pipeline:");
+				resultLines.push("  1. /domain --validate " + sessionId + "    (validate exploration)");
+				resultLines.push("  2. (architecture scaffold just completed)");
+				resultLines.push("  3. guardian project create --lang <lang>   (Epic 0 - greenfield only)");
+				resultLines.push("  4. /epic-plan --module <module>    (plan each module)");
+
+				return resultLines.join("\n");
+			}
 			if (trimmed.startsWith("--validate")) {
 				const sessionId = trimmed.slice("--validate".length).trim();
 				if (!sessionId) {
