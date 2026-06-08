@@ -894,7 +894,16 @@ export default function (pi: ExtensionAPI) {
 				resultLines.push("  3. guardian project create --lang <lang>   (Epic 0 - greenfield only)");
 				resultLines.push("  4. /epic-plan --module <module>    (plan each module)");
 
-				return resultLines.join("\n");
+				// Send the results as a follow-up message so the agent sees them
+				try {
+					pi.sendMessage(
+						{ content: resultLines.join("\n"), display: true },
+						{ deliverAs: "followUp", triggerTurn: true },
+					);
+				} catch (e) {
+					return resultLines.join("\n");
+				}
+				return "Architecture scaffold dispatched. Session: " + sessionId;
 			}
 			if (trimmed.startsWith("--validate")) {
 				const sessionId = trimmed.slice("--validate".length).trim();
