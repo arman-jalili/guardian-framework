@@ -22,6 +22,65 @@
  *   /architect abort
  */
 
+/**
+ * Architect Extension — Full Architecture-to-Implementation Pipeline
+ *
+ * OVERVIEW
+ * ========
+ * /architect is the planning engine that reads architecture module docs from
+ * .pi/architecture/modules/ and produces epics + issues for implementation.
+ * It is the bridge between domain exploration (/domain --explore) and
+ * implementation (/implement-series).
+ *
+ * PREREQUISITES
+ * ============
+ * - .pi/architecture/modules/*.md must exist (from /domain --architect-scaffold
+ *   or manually created)
+ * - Git repository initialized (handled automatically if missing)
+ * - gh or glab CLI authenticated for remote issue creation (optional)
+ *
+ * COMMANDS
+ * =======
+ * /architect --epic "Name" [--tracking-issue N]
+ *   Starts a new epic: discovers architecture modules, finds the next
+ *   planned slice, generates issues, creates pipeline state, and sends
+ *   implementation instructions to the agent via pi.sendMessage() with
+ *   triggerTurn=true.
+ *
+ * /architect status
+ *   Shows current epic state: module, component, pipeline progress,
+ *   issues, and validators.
+ *
+ * /architect next-epic
+ *   Shows which module and components should be implemented next,
+ *   based on component status (planned vs implemented).
+ *
+ * /architect abort
+ *   Cancels the current epic, cleans pipeline state.
+ *
+ * TOOLS (agent-callable)
+ * =====================
+ * architect_status
+ *   Returns current epic state and progress as formatted text.
+ *   Parameters: none
+ *
+ * architect_discover
+ *   Discovers architecture modules and finds the next logical slice.
+ *   Returns: module list with component counts and next planned slice.
+ *   Parameters: none
+ *
+ * WORKFLOW
+ * =======
+ * 1. /domain --explore "intent"          (discovery)
+ * 2. /domain --architect-scaffold <id>   (generates modules)
+ * 3. /architect --epic "Name"            (planning + issue gen)
+ * 4. Agent implements issues via pipeline
+ *
+ * The architect reads each module doc, parses its ## Component sections,
+ * identifies components with status: "planned", and generates one issue
+ * per planned component with appropriate labels and canonical references.
+ */
+
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -59,6 +118,14 @@ type ExtensionAPI = {
 			description: string;
 			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
+	): void;
+	sendMessage<T = unknown>(
+		message: { customType?: string; content: string; display?: boolean; details?: Record<string, unknown> },
+		options?: { deliverAs?: "steer" | "followUp" | "nextTurn"; triggerTurn?: boolean },
+	): void;
+	sendUserMessage(
+		content: string,
+		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
 };
 
@@ -525,6 +592,381 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 7. Run all validators
 8. Create MR
 `;
+// ── Contract Freeze Generator ──
+
+function generateContractFreezeMarkdown(
+	slice: ArchitectureSlice,
+	epicName: string,
+): string {
+	const moduleId = slice.module.replace(/^module-/, "");
+
+	return `---
+guardian_issue:
+  id: "ISSUE-CONTRACT-FREEZE"
+  epic: "${epicName}"
+  component: "Contract Freeze"
+  module: "${slice.module}"
+  status: planned
+  priority: critical
+  dependencies: []
+
+  in_scope:
+    - Define public interfaces for all components in this epic
+    - Define DTOs, schemas, and API contracts
+    - Document event payloads and topics
+    - Create interface stubs with no implementation
+    - Freeze: no implementation changes without contract change
+
+  out_of_scope:
+    - Any implementation logic
+    - Database schema changes
+    - Infrastructure setup
+
+  affected_layers:
+    domain:
+      - Interface definitions for domain services
+    application:
+      - Input/output DTO definitions
+    api:
+      - REST/event contracts
+
+  canonical_references:
+    - module: ".pi/architecture/modules/${slice.module}.md"
+
+  acceptance_criteria:
+    - "All component interfaces defined as interfaces/types"
+    - "DTO schemas documented"
+    - "API contracts frozen and reviewed"
+    - "Implementation PRs reference these contracts"
+
+  validators:
+    - architecture
+    - canonical
+
+  implementation_notes: |
+    Define the contract before any implementation. Every implementation issue
+    depends on this contract being frozen first. The contract should include:
+    interfaces, types, DTOs, event schemas, API paths, error formats.
+
+  file_changes:
+    - "create: src/${moduleId}/contracts/"
+    - "create: src/${moduleId}/contracts/dtos/"
+    - "create: src/${moduleId}/contracts/events/"
+---
+
+# Contract Freeze: ${slice.module}
+
+## Intent
+
+Define and freeze all public interfaces, contracts, and schemas for the ${slice.module}
+epic before any implementation begins. This prevents architecture drift — implementation
+must satisfy contracts, not the other way around.
+
+## Included Components
+
+${slice.nextLogicalSlice.map((c: { name: string }) => `- ${c.name}`).join("\n")}
+
+## What Must Be Frozen
+
+### Interfaces
+- Service interfaces for every component
+- Repository/DAO interfaces
+- Factory interfaces
+
+### Contracts
+- Input/output DTO schemas
+- API endpoint contracts (method, path, request/response)
+- Event payload schemas
+- Error response formats
+
+### Out of Bounds (no contracts needed)
+- Internal implementation details
+- Database column names (hidden behind repository)
+- Framework-specific annotations
+
+## Acceptance Criteria
+
+| # | Criterion | How to Verify |
+|---|-----------|---------------|
+| 1 | All component interfaces defined | Check src/${moduleId}/contracts/ |
+| 2 | Contracts reviewed and frozen | PR approval |
+| 3 | DTO schemas documented | OpenAPI / TypeSpec / equivalent |
+| 4 | Implementation depends on contracts | No implementation without interface |
+
+## Implementation
+
+> **Agent:** Create interface-only files. No implementation. Focus on:
+> 1. Reading the architecture module to understand each component's role
+> 2. Defining clean TypeScript/Java/Python interfaces
+> 3. DTOs with proper validation decorators
+> 4. Event schemas with required fields
+>
+> The goal is a reviewed, frozen contract that implementation issues can depend on.
+`;
+}
+
+// ── Proofing Issue Generator ──
+
+function generateProofingMarkdown(
+	slice: ArchitectureSlice,
+	epicName: string,
+): string {
+	const moduleId = slice.module.replace(/^module-/, "");
+
+	return `---
+guardian_issue:
+  id: "ISSUE-PROOFING"
+  epic: "${epicName}"
+  component: "Proofing & CI Enforcement"
+  module: "${slice.module}"
+  status: planned
+  priority: critical
+  dependencies: []
+
+  in_scope:
+    - Create deterministic validation scripts for each contract
+    - Verify all interfaces have matching implementations
+    - Check test coverage meets thresholds
+    - Integrate proofing scripts into .pi/scripts/ci/
+    - Scripts must be self-contained shell scripts (zero token cost)
+
+  out_of_scope:
+    - Implementation changes
+    - New features
+    - Production deployment
+
+  affected_layers:
+    ci:
+      - New proofing scripts in .pi/scripts/ci/
+      - Updated CI stage configuration
+
+  canonical_references:
+    - module: ".pi/architecture/modules/${slice.module}.md"
+
+  acceptance_criteria:
+    - "All proofing scripts created and executable"
+    - "Each contract has at least one validation check"
+    - "Scripts pass on current implementation"
+    - "Scripts fail if implementation is removed"
+    - "Scripts integrated into CI pipeline (stage in run_hardening_stages.sh)"
+
+  validators:
+    - ci
+    - tests
+    - canonical
+
+  implementation_notes: |
+    Create deterministic shell scripts that validate: each defined interface has an
+    implementation, each implementation has tests, test coverage meets threshold,
+    contracts are not violated. These escape the LLM ad-hoc check trap — they run
+    every build for zero token cost.
+
+  file_changes:
+    - "create: .pi/scripts/ci/check_${moduleId}_contracts.sh"
+    - "create: .pi/scripts/ci/check_${moduleId}_coverage.sh"
+    - "modify: .pi/scripts/ci/run_hardening_stages.sh"
+---
+
+# Proofing & CI Enforcement: ${slice.module}
+
+## Intent
+
+Create deterministic, automated validation scripts that prove every contract from the
+freeze phase is correctly implemented and tested. These scripts make compliance
+automatic — no human review needed for routine checks.
+
+## What Each Script Does
+
+### Contract Implementation Check
+- Reads each interface from the contract freeze
+- Verifies a concrete implementation class exists
+- Verifies all interface methods are implemented
+- Reports violations with file:line references
+
+### Coverage Threshold Check
+- Runs the project's coverage tool
+- Asserts each module meets minimum coverage (default 80%)
+- Fails the build if coverage drops
+
+### CI Integration
+Each check becomes a CI stage in the hardening pipeline — it runs automatically
+on every PR. No LLM cost. No human review. Just pass or fail.
+
+## Scripts To Create
+
+| Script | Purpose | Location |
+|--------|---------|----------|
+| check_${moduleId}_contracts.sh | Validate contract implementation | .pi/scripts/ci/ |
+| check_${moduleId}_coverage.sh | Enforce coverage thresholds | .pi/scripts/ci/ |
+| stage_${moduleId}_proofing.sh | CI stage wrapper | .pi/scripts/ci/ |
+
+## CI Pipeline Update
+
+Add the new stage to \`run_hardening_stages.sh\`:
+
+\`\`\`bash
+run_stage "11" "${moduleId}_proofing" \\
+    "\${SCRIPTS_DIR}/stage_${moduleId}_proofing.sh" \\
+    "always"
+\`\`\`
+
+## Acceptance Criteria
+
+| # | Criterion | Script |
+|---|-----------|--------|
+| 1 | All interfaces have implementations | check_contracts.sh |
+| 2 | Coverage ≥ 80% per module | check_coverage.sh |
+| 3 | CI runs checks on every PR | run_hardening_stages.sh |
+| 4 | All scripts exit 0 on pass, 1 on fail | self-validating |
+
+## Implementation
+
+> **Agent:** Create shell scripts. Keep them simple — grep, find, awk.
+> No frameworks, no dependencies. Each script should be:
+> 1. Runnable standalone (bash script.sh)
+> 2. Runnable as a CI stage
+> 3. Self-documenting with --help
+> 4. Exit 0 for pass, 1 for fail
+>
+> End by running the full CI pipeline to verify integration:
+> \`bash .pi/scripts/ci/run_hardening_stages.sh\`
+`;
+}
+
+// ── Architecture Readiness Generator (expanded) ──
+
+function generateArchitectureReadinessMarkdown(
+	slice: ArchitectureSlice,
+	epicName: string,
+): string {
+	const moduleId = slice.module.replace(/^module-/, "");
+
+	return `---
+guardian_issue:
+  id: "ISSUE-READINESS"
+  epic: "${epicName}"
+  component: "Architecture Readiness"
+  module: "${slice.module}"
+  status: planned
+  priority: critical
+  dependencies: []
+
+  in_scope:
+    - Create runbook (startup, shutdown, recovery procedures)
+    - Create DR plan (backup, restore, failover)
+    - Add observability (metrics, tracing, structured logging)
+    - Add health check endpoints
+    - Update architecture documentation
+    - Sync canonical references
+    - Verify CI enforces all the above
+
+  out_of_scope:
+    - New feature work
+    - Implementation changes
+
+  affected_layers:
+    domain:
+      - Architecture documentation updates
+    application:
+      - Observability hooks
+    infrastructure:
+      - Health checks, monitoring config
+    ci:
+      - Verify proofing scripts + validators in CI
+
+  canonical_references:
+    - module: ".pi/architecture/modules/${slice.module}.md"
+
+  acceptance_criteria:
+    - "Runbook created and reviewed"
+    - "DR plan documented"
+    - "Observability patterns in place (tracing, metrics, logging)"
+    - "Health check endpoint responds"
+    - "Architecture docs synced with implementation"
+    - "Canonical references verified (validate-canonical.sh passes)"
+    - "Proofing scripts integrated in CI and passing"
+    - "All validators pass: ci, tests, security, architecture, canonical, operations"
+
+  validators:
+    - ci
+    - tests
+    - security
+    - architecture
+    - canonical
+    - operations
+
+  implementation_notes: |
+    The final issue in every epic. Production readiness means: the team can operate it
+    (runbook), recover from failure (DR plan), observe it (metrics/tracing/logging),
+    and CI will catch regressions (proofing scripts + validators).
+
+  file_changes:
+    - "create: docs/runbook-${moduleId}.md"
+    - "create: docs/dr-plan-${moduleId}.md"
+    - "modify: .pi/architecture/CHANGELOG.md"
+    - "modify: .pi/architecture/modules/${slice.module}.md"
+---
+
+# Architecture Readiness: ${slice.module}
+
+## Intent
+
+Make the ${slice.module} module production-ready. This is the final issue in every epic
+— it closes the loop between implementation and operability.
+
+## Deliverables
+
+### Runbook
+\`docs/runbook-${moduleId}.md\` covering:
+- Startup sequence and dependencies
+- Graceful shutdown procedure
+- Common failure modes and recovery
+- Configuration reference
+
+### DR Plan
+\`docs/dr-plan-${moduleId}.md\` covering:
+- Backup strategy and schedule
+- Restore procedure
+- Failover plan
+- RTO/RPO targets
+
+### Observability
+- Metrics: key business and technical metrics exposed
+- Tracing: distributed tracing context propagated
+- Logging: structured logging with correlation IDs
+- Health: /health endpoint with dependency checks
+
+### CI Enforcement
+Verify that:
+- Proofing scripts from the proofing issue are in CI
+- All validators (ci, tests, security, architecture, canonical, operations) pass
+- A CI pipeline run against this state succeeds
+
+## Acceptance Criteria
+
+| # | Criterion | Validator |
+|---|-----------|-----------|
+| 1 | Runbook exists | manual review |
+| 2 | DR plan exists | manual review |
+| 3 | Observability patterns present | validate-operations.sh |
+| 4 | Canonical references synced | validate-canonical.sh |
+| 5 | CI enforce validators | validate-ci.sh |
+| 6 | All proofing scripts pass | run_hardening_stages.sh |
+| 7 | Architecture docs updated | validate-architecture.sh |
+
+## Implementation
+
+> **Agent:** Close out the epic properly:
+> 1. Write runbook and DR plan docs
+> 2. Add observability instrumentation
+> 3. Update architecture module docs with final implementation details
+> 4. Sync CHANGE LOG
+> 5. Verify proofing scripts from the proofing issue pass
+> 6. Run full validation suite
+> 7. Architecture readiness validator: bash .pi/scripts/validate-architecture-readiness.sh
+> 8. Create final MR
+`;
+}
 }
 
 // ── Epic State Persistence ──
@@ -626,6 +1068,26 @@ class EpicManager {
 		const issuesDir = join(this.cwd, ISSUES_DIR);
 		if (!existsSync(issuesDir)) mkdirSync(issuesDir, { recursive: true });
 
+		// 1. Contract freeze (first issue — define interfaces before implementation)
+		const freezeId = "issue-contract-freeze";
+		const freezeEntry = {
+			id: freezeId,
+			title: "Contract Freeze: Define interfaces and contracts",
+			status: "planned",
+			remoteIssueId: null as string | null,
+		};
+		const freezeMarkdown = generateContractFreezeMarkdown(slice, name);
+		writeFileSync(join(issuesDir, `${freezeId}.md`), freezeMarkdown);
+		if (hasRemote && remoteRepo) {
+			const result = createRemoteIssue(this.cwd, freezeEntry.title, join(issuesDir, `${freezeId}.md`), "epic,contract", remoteRepo);
+			if (result.success && result.issueNumber) {
+				freezeEntry.remoteIssueId = result.issueNumber;
+				if (trackingIssueId) linkRemoteIssue(this.cwd, result.issueNumber, trackingIssueId);
+			}
+		}
+		issues.push(freezeEntry);
+
+		// 2. Implementation issues (one per component)
 		for (let i = 0; i < slice.nextLogicalSlice.length; i++) {
 			const component = slice.nextLogicalSlice[i];
 			const issueId = `issue-${component.name.toLowerCase().replace(/\s+/g, "-").replace(/\//g, "-")}`;
@@ -668,39 +1130,35 @@ class EpicManager {
 			issues.push(issueEntry);
 		}
 
-		// Add architecture readiness issue
-		const readinessId = "issue-architecture-readiness";
-		const readinessEntry = {
-			id: readinessId,
-			title: "Architecture Readiness: Runbook, DR, Docs, Observability",
+		// 3. Proofing issue (deterministic validation scripts + CI integration)
+		const proofingId = "issue-proofing";
+		const proofingEntry = {
+			id: proofingId,
+			title: "Proofing & CI Enforcement: Validation scripts + CI integration",
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
+		const proofingMarkdown = generateProofingMarkdown(slice, name);
+		writeFileSync(join(issuesDir, `${proofingId}.md`), proofingMarkdown);
+		if (hasRemote && remoteRepo) {
+			const result = createRemoteIssue(this.cwd, proofingEntry.title, join(issuesDir, `${proofingId}.md`), "epic,proofing", remoteRepo);
+			if (result.success && result.issueNumber) {
+				proofingEntry.remoteIssueId = result.issueNumber;
+				if (trackingIssueId) linkRemoteIssue(this.cwd, result.issueNumber, trackingIssueId);
+			}
+		}
+		issues.push(proofingEntry);
 
-		const readinessMarkdown = `---
-guardian_issue:
-  id: "ISSUE-READINESS"
-  epic: "${name}"
-  component: "Architecture Readiness"
-  module: "${slice.module}"
-  status: planned
-  priority: critical
----
-
-# Architecture Readiness
-
-## Intent
-
-Ensure the ${slice.module} module is production-ready with runbook, DR plan, documentation, and observability.
-
-## Acceptance Criteria
-- Runbook created (docs/runbook.md)
-- DR plan created (docs/dr-plan.md)
-- Architecture docs updated
-- Canonical references synced
-- Observability patterns in place
-`;
-		writeFileSync(join(issuesDir, `${readinessId}.md`.replace(/\//g, "-")), readinessMarkdown);
+		// 4. Architecture readiness issue (last — observability, runbook, docs, CI enforcement)
+		const readinessId = "issue-architecture-readiness";
+		const readinessEntry = {
+			id: readinessId,
+			title: "Architecture Readiness: Runbook, DR, Docs, Observability, CI Enforcement",
+			status: "planned",
+			remoteIssueId: null as string | null,
+		};
+		const readinessMarkdown = generateArchitectureReadinessMarkdown(slice, name);
+		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
 
 		// Create remote readiness issue if available
 		if (hasRemote && remoteRepo) {
@@ -1108,7 +1566,12 @@ export default function (pi: ExtensionAPI) {
 					issueContent || "Issue content not available.",
 				].join("\n");
 
-				return { content: [{ type: "text", text: instructions }] };
+				// Send instructions as follow-up so the agent processes them as a new turn
+				pi.sendMessage(
+					{ content: instructions, display: true },
+					{ deliverAs: "followUp", triggerTurn: true },
+				);
+				return;
 			} catch (e) {
 				ctx.ui.notify(`Architect error: ${e}`, "error");
 			}

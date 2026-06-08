@@ -22,6 +22,65 @@
  *   /architect abort
  */
 
+/**
+ * Architect Extension — Full Architecture-to-Implementation Pipeline
+ *
+ * OVERVIEW
+ * ========
+ * /architect is the planning engine that reads architecture module docs from
+ * .pi/architecture/modules/ and produces epics + issues for implementation.
+ * It is the bridge between domain exploration (/domain --explore) and
+ * implementation (/implement-series).
+ *
+ * PREREQUISITES
+ * ============
+ * - .pi/architecture/modules/*.md must exist (from /domain --architect-scaffold
+ *   or manually created)
+ * - Git repository initialized (handled automatically if missing)
+ * - gh or glab CLI authenticated for remote issue creation (optional)
+ *
+ * COMMANDS
+ * =======
+ * /architect --epic "Name" [--tracking-issue N]
+ *   Starts a new epic: discovers architecture modules, finds the next
+ *   planned slice, generates issues, creates pipeline state, and sends
+ *   implementation instructions to the agent via pi.sendMessage() with
+ *   triggerTurn=true.
+ *
+ * /architect status
+ *   Shows current epic state: module, component, pipeline progress,
+ *   issues, and validators.
+ *
+ * /architect next-epic
+ *   Shows which module and components should be implemented next,
+ *   based on component status (planned vs implemented).
+ *
+ * /architect abort
+ *   Cancels the current epic, cleans pipeline state.
+ *
+ * TOOLS (agent-callable)
+ * =====================
+ * architect_status
+ *   Returns current epic state and progress as formatted text.
+ *   Parameters: none
+ *
+ * architect_discover
+ *   Discovers architecture modules and finds the next logical slice.
+ *   Returns: module list with component counts and next planned slice.
+ *   Parameters: none
+ *
+ * WORKFLOW
+ * =======
+ * 1. /domain --explore "intent"          (discovery)
+ * 2. /domain --architect-scaffold <id>   (generates modules)
+ * 3. /architect --epic "Name"            (planning + issue gen)
+ * 4. Agent implements issues via pipeline
+ *
+ * The architect reads each module doc, parses its ## Component sections,
+ * identifies components with status: "planned", and generates one issue
+ * per planned component with appropriate labels and canonical references.
+ */
+
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -59,6 +118,14 @@ type ExtensionAPI = {
 			description: string;
 			handler(args: string, ctx: ExtensionContext): unknown | Promise<unknown>;
 		},
+	): void;
+	sendMessage<T = unknown>(
+		message: { customType?: string; content: string; display?: boolean; details?: Record<string, unknown> },
+		options?: { deliverAs?: "steer" | "followUp" | "nextTurn"; triggerTurn?: boolean },
+	): void;
+	sendUserMessage(
+		content: string,
+		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
 };
 
@@ -1499,7 +1566,12 @@ export default function (pi: ExtensionAPI) {
 					issueContent || "Issue content not available.",
 				].join("\n");
 
-				return { content: [{ type: "text", text: instructions }] };
+				// Send instructions as follow-up so the agent processes them as a new turn
+				pi.sendMessage(
+					{ content: instructions, display: true },
+					{ deliverAs: "followUp", triggerTurn: true },
+				);
+				return;
 			} catch (e) {
 				ctx.ui.notify(`Architect error: ${e}`, "error");
 			}
