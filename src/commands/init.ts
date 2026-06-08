@@ -301,6 +301,100 @@ function scaffoldPiDirectory(
 		errors.push(`context/patterns.md: ${patternsResult.error.message}`);
 	}
 
+	// Create initial domain exploration.md placeholder (empty template for agent to fill)
+	const explorationPath = path.join(piDir, "domain", "exploration.md");
+	const domainDir = path.dirname(explorationPath);
+	if (!fs.existsSync(domainDir)) {
+		fs.mkdirSync(domainDir, { recursive: true });
+	}
+	if (!fs.existsSync(explorationPath)) {
+		const placeholder = [
+			"# Domain Exploration",
+			"",
+			"> **Status:** awaiting-analysis — Run `/domain --explore \"business context\"` to begin.",
+			"",
+			"---",
+			"",
+			"## Business Context",
+			"",
+			"_Describe the business domain here after running /domain --explore_",
+			"",
+			"---",
+			"",
+			"## Actors & Roles",
+			"",
+			"| Actor | Description | Interactions |",
+			"|-------|-------------|-------------|",
+			"| <!-- Agents fill this after --explore --> | | |",
+			"",
+			"---",
+			"",
+			"## Functional Requirements",
+			"",
+			"| ID | Requirement | Priority | Bounded Context |",
+			"|----|-------------|----------|----------------|",
+			"",
+			"---",
+			"",
+			"## Non-Functional Requirements",
+			"",
+			"| ID | Requirement | Category | Target |",
+			"|----|-------------|----------|--------|",
+			"",
+			"---",
+			"",
+			"## Assumptions",
+			"",
+			"| Assumption | Impact if Wrong | Mitigation |",
+			"|------------|----------------|-----------|",
+			"",
+			"---",
+			"",
+			"## Bounded Contexts",
+			"",
+			"| Context | Description | Entities |",
+			"|---------|-------------|----------|",
+			"",
+			"---",
+			"",
+			"## Entities",
+			"",
+			"| Entity | Context | Type | Description |",
+			"|--------|---------|------|-------------|",
+			"",
+			"---",
+			"",
+			"## Domain Events",
+			"",
+			"| Event | Context | Description | Triggered By |",
+			"|-------|---------|-------------|-------------|",
+			"",
+			"---",
+			"",
+			"## Ubiquitous Language",
+			"",
+			"| Term | Definition | Bounded Context | Aliases/Synonyms |",
+			"|------|-----------|----------------|-----------------|",
+			"",
+			"---",
+			"",
+			"## Open Questions",
+			"",
+			"_None identified yet._",
+			"",
+			"---",
+			"",
+			"## Aggregate Roots",
+			"",
+			"_None identified yet._",
+		].join("\n");
+		fs.writeFileSync(explorationPath, placeholder, "utf-8");
+		scaffoldedFiles[`${PI_DIR}/domain/exploration.md`] = {
+			category: "user",
+			content: placeholder,
+		};
+	}
+
 	// Write INDEX.md and README.md
 	const indexPath = path.join(piDir, "INDEX.md");
 	const indexResult = readTemplate("INDEX.md");
