@@ -674,13 +674,33 @@ export default function (pi: ExtensionAPI) {
 				fs.mkdirSync(decisionsDir, { recursive: true });
 				fs.mkdirSync(diagramsDir, { recursive: true });
 
-				// Read session file to extract bounded contexts
+				// Read the rendered exploration.md (agent-filled) and the session file
 				const sessionContent = fs.readFileSync(sessionPath, "utf-8");
+				const explorationMdPath = path.join(ctx.cwd, ".pi", "domain", "exploration.md");
 				const timestamp = new Date().toISOString().split("T")[0];
 
-				// Parse bounded context names from markdown table
+				// If exploration.md exists and has analysis sections, sync them into the session file
+				let analysisContent = "";
+				if (fs.existsSync(explorationMdPath)) {
+					analysisContent = fs.readFileSync(explorationMdPath, "utf-8");
+					// Only update session file if exploration.md has analysis beyond business context
+					if (analysisContent.includes("## Actors") || analysisContent.includes("## Bounded Contexts")) {
+						// Preserve the session file's frontmatter, replace the body with exploration content
+						const frontMatch = sessionContent.match(/^---\n[\s\S]*?\n---/);
+						const analysisBody = analysisContent.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+						if (frontMatch && analysisBody) {
+							const updatedSession = frontMatch[0] + "\n" + analysisBody[1];
+							const tmp = sessionPath + ".tmp";
+							fs.writeFileSync(tmp, updatedSession, "utf-8");
+							fs.renameSync(tmp, sessionPath);
+						}
+					}
+				}
+
+				// Parse bounded context names from (now synced) session content
 				const bcNames: string[] = [];
-				const bcSection = sessionContent.match(/## Bounded Contexts[\s\S]*?(?=\n## |$)/);
+				const sourceForBC = analysisContent || sessionContent;
+				const bcSection = sourceForBC.match(/## Bounded Contexts[\s\S]*?(?=\n## |$)/);
 				if (bcSection) {
 					const bcLines = bcSection[0].split("\n");
 					let inData = false;
