@@ -58,6 +58,14 @@ type ExtensionAPI = {
 		description: string;
 		handler(args: string[], ctx: ExtensionContext): unknown | Promise<unknown>;
 	}): void;
+	sendMessage<T = unknown>(
+		message: { customType?: string; content: string; display?: boolean; details?: Record<string, unknown> },
+		options?: { deliverAs?: "steer" | "followUp" | "nextTurn"; triggerTurn?: boolean },
+	): void;
+	sendUserMessage(
+		content: string,
+		options?: { deliverAs?: "steer" | "followUp" },
+	): void;
 };
 
 // ── Helpers ──
@@ -585,40 +593,27 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				ctx.ui.notify(
-					"Domain session created: " + sessionId,
+					"Domain analysis requested: " + sessionId,
 					"success",
 				);
 
-				return [
-					"## Domain Analysis Required — Fill in the stub files",
+				// Inject the DDD analysis prompt as a follow-up message to the agent.
+				// Using sendMessage with triggerTurn=true causes the agent to process
+				// this as a new conversation turn, not as a command response.
+				const analysisPrompt = [
+					"I need you to analyze the following business domain using Domain-Driven Design.",
+					"I have created stub files in .pi/domain/exploration.md and .pi/domain/ubiquitous-language.md.",
 					"",
-					"Session ID: " + sessionId,
-					"",
-					"I have created stub files with the business context. Your job is to:",
-					"",
-					"1. **READ** \`.pi/domain/exploration.md\` — it has the business context and empty tables",
-					"2. **ANALYZE** the business domain using DDD:",
-					"   - Identify actors, roles, and their interactions",
-					"   - Extract functional and non-functional requirements",
-					"   - Document assumptions",
-					"   - Identify bounded contexts, entities, value objects, aggregate roots",
-					"   - Define domain events and their triggers",
-					"   - Build the ubiquitous language glossary",
-					"3. **FILL IN** all empty tables in \`.pi/domain/exploration.md\` with your analysis",
-					"4. **UPDATE** \`.pi/domain/ubiquitous-language.md\` with the glossary terms",
-					"",
-					"Use exec_command with cat, apply_patch, or any file-writing tool.",
-					"Do NOT skip this step — the architecture scaffold depends on these files.",
+					"Your task:",
+					"1. READ .pi/domain/exploration.md — it has the business context and empty tables",
+					"2. ANALYZE the domain: actors, FR/NFR, assumptions, bounded contexts, entities, events , glossary",
+					"3. FILL IN all empty tables in .pi/domain/exploration.md with your analysis",
+					"4. UPDATE .pi/domain/ubiquitous-language.md with the glossary terms",
 					"",
 					"Business Context:",
 					sanitized,
 					"",
-					"---",
-					"",
-					"### Output Format (JSON Schema for Reference)",
-					"",
-					"Use this schema to structure your domain analysis:",
-					"",
+					"Use this JSON schema as a reference for structuring your analysis:",
 					'```json',
 					"{",
 					'  "actors": [{ "name": "", "description": "", "interactions": "" }],',
@@ -631,11 +626,19 @@ export default function (pi: ExtensionAPI) {
 					'  "ubiquitousLanguage": [{ "term": "", "definition": "", "boundedContext": "", "aliases": [""], "examples": "" }]',
 					"}",
 					'```',
-					"",
-					"---",
-					"",
-					"Now go ahead and fill in the files. I will wait for you to complete this.",
 				].join("\n");
+
+				try {
+					pi.sendMessage(
+						{ content: analysisPrompt, display: true },
+						{ deliverAs: "followUp", triggerTurn: true },
+					);
+				} catch (e) {
+					// Fallback: if sendMessage is unavailable, return the prompt directly
+					return analysisPrompt;
+				}
+
+				return "Domain analysis dispatched to agent. Session: " + sessionId;
 			}
 
 			// /domain --architect-scaffold <session-id>
