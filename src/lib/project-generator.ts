@@ -43,7 +43,9 @@ export function discoverModules(archDir: string): string[] {
 			const content = fs.readFileSync(path.join(modulesDir, file), "utf-8");
 			const match = content.match(/^#\s+(.+)/m);
 			if (match) {
-				modules.push(match[1].trim());
+				const name = match[1].trim();
+				// Strip " Module" suffix if present (common in scaffolded docs)
+				modules.push(name.replace(/\s*Module$/i, ""));
 			}
 		}
 	} catch {
