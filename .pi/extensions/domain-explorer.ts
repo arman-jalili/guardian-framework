@@ -743,111 +743,107 @@ export default function (pi: ExtensionAPI) {
 					ctx.ui.notify("Module scaffold unavailable - agent can create docs directly", "info");
 				}
 
-				// Step 2: Generate ADR-001 with architecture pattern
+				// Step 2: Always regenerate ADR-001 to reflect current session
 				const adrPath = path.join(decisionsDir, "ADR-001-architecture-pattern.md");
-				if (!fs.existsSync(adrPath)) {
-					const bcList = bcNames.length > 0
-						? bcNames.map(n => "  - " + n).join("\n")
-						: "  - (to be defined during architecture planning)";
+				const bcList = bcNames.length > 0
+				? bcNames.map(n => "  - " + n).join("\n")
+				: "  - (to be defined during architecture planning)";
 
-					const adrContent = [
-						"# ADR-001: Domain-Driven Design with Bounded Contexts",
-						"",
-						"**Status:** Proposed",
-						"**Date:** " + timestamp,
-						"**Session:** " + sessionId,
-						"",
-						"## Context",
-						"",
-						"The domain exploration identified bounded contexts that must be",
-						"implemented as independently evolvable modules.",
-						"",
-						bcList,
-						"",
-						"## Decision",
-						"",
-						"We will use Domain-Driven Design with bounded contexts as independently",
-						"evolvable modules (Modular Monolith pattern).",
-						"",
-						"## Consequences",
-						"",
-						"- Each bounded context owns its data and domain logic",
-						"- Cross-context communication through domain events",
-						"- Contexts can be extracted to separate services when needed",
-						"- Disciplined dependency management required",
-						"",
-						"## Alternatives Considered",
-						"",
-						"- Monolith without domain boundaries: rejected - no separation of concerns",
-						"- Microservices from day one: rejected - over-engineering for initial scope",
-						"- Layered Architecture: rejected - does not enforce domain boundaries",
-						"",
-						"## Affected Modules",
-						"",
-						bcList,
-					].join("\n");
+				const adrContent = [
+				"# ADR-001: Domain-Driven Design with Bounded Contexts",
+				"",
+				"**Status:** Proposed",
+				"**Date:** " + timestamp,
+				"**Session:** " + sessionId,
+				"",
+				"## Context",
+				"",
+				"The domain exploration identified bounded contexts that must be",
+				"implemented as independently evolvable modules.",
+				"",
+				bcList,
+				"",
+				"## Decision",
+				"",
+				"We will use Domain-Driven Design with bounded contexts as independently",
+				"evolvable modules (Modular Monolith pattern).",
+				"",
+				"## Consequences",
+				"",
+				"- Each bounded context owns its data and domain logic",
+				"- Cross-context communication through domain events",
+				"- Contexts can be extracted to separate services when needed",
+				"- Disciplined dependency management required",
+				"",
+				"## Alternatives Considered",
+				"",
+				"- Monolith without domain boundaries: rejected - no separation of concerns",
+				"- Microservices from day one: rejected - over-engineering for initial scope",
+				"- Layered Architecture: rejected - does not enforce domain boundaries",
+				"",
+				"## Affected Modules",
+				"",
+				bcList,
+				].join("\n");
 
-					const adrTmp = adrPath + ".tmp";
-					fs.writeFileSync(adrTmp, adrContent, "utf-8");
-					fs.renameSync(adrTmp, adrPath);
-				}
+				const adrTmp = adrPath + ".tmp";
+				fs.writeFileSync(adrTmp, adrContent, "utf-8");
+				fs.renameSync(adrTmp, adrPath);
 
 				// Step 3: Generate system context diagram
 				const diagramPath = path.join(diagramsDir, "system-context.md");
-				if (!fs.existsSync(diagramPath)) {
-					let contextName = "System";
-					const ctxMatch = sessionContent.match(/business_context:\s*"(.+?)"/);
-					if (ctxMatch) {
-						contextName = ctxMatch[1].split(".")[0].slice(0, 80);
-					}
-
-					// Build mermaid diagram from bounded contexts
-					let bcDiagram = "";
-					if (bcNames.length > 0) {
-						const nodeLines = bcNames.map((n, i) =>
-							"    " + String.fromCharCode(65 + i) + "[" + n + "]"
-						).join("\n");
-						const edgeLines = bcNames.slice(0, -1).map((n, i) =>
-							"    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events"
-						).join("\n");
-						const lastNode = bcNames.length > 1
-							? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[Consumers]"
-							: bcNames.length === 1
-								? "    A[" + bcNames[0] + "] --> Downstream[Consumers]"
-								: "";
-						bcDiagram = nodeLines + "\n\n" + edgeLines + (lastNode ? "\n" + lastNode : "");
-					} else {
-						bcDiagram = "    A[Module 1] --> B[Module 2] : events";
-					}
-
-					const diagramContent = [
-						"# System Context Diagram",
-						"",
-						"## Context",
-						"",
-						contextName,
-						"",
-						"## Bounded Contexts Flow",
-						"",
-						"```mermaid",
-						"graph LR",
-						bcDiagram,
-						"```",
-						"",
-						"---",
-						"",
-						"*Generated from session: " + sessionId,
-						"*Date: " + timestamp,
-					].join("\n");
-
-					const diagramTmp = diagramPath + ".tmp";
-					fs.writeFileSync(diagramTmp, diagramContent, "utf-8");
-					fs.renameSync(diagramTmp, diagramPath);
+				let contextName = "System";
+				const ctxMatch = sessionContent.match(/business_context:\s*"(.+?)"/);
+				if (ctxMatch) {
+					contextName = ctxMatch[1].split(".")[0].slice(0, 80);
 				}
 
+				// Build mermaid diagram from bounded contexts
+				let bcDiagram = "";
+				if (bcNames.length > 0) {
+					const nodeLines = bcNames.map((n, i) =>
+						"    " + String.fromCharCode(65 + i) + "[" + n + "]"
+					).join("\n");
+					const edgeLines = bcNames.slice(0, -1).map((n, i) =>
+						"    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events"
+					).join("\n");
+					const lastNode = bcNames.length > 1
+						? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[Consumers]"
+						: bcNames.length === 1
+							? "    A[" + bcNames[0] + "] --> Downstream[Consumers]"
+							: "";
+					bcDiagram = nodeLines + "\n\n" + edgeLines + (lastNode ? "\n" + lastNode : "");
+				} else {
+					bcDiagram = "    A[Module 1] --> B[Module 2] : events";
+				}
+
+				const diagramContent = [
+					"# System Context Diagram",
+					"",
+					"## Context",
+					"",
+					contextName,
+					"",
+					"## Bounded Contexts Flow",
+					"",
+					"```mermaid",
+					"graph LR",
+					bcDiagram,
+					"```",
+					"",
+					"---",
+					"",
+					"*Generated from session: " + sessionId,
+					"*Date: " + timestamp,
+				].join("\n");
+
+				const diagramTmp = diagramPath + ".tmp";
+				fs.writeFileSync(diagramTmp, diagramContent, "utf-8");
+				fs.renameSync(diagramTmp, diagramPath);
+
 				ctx.ui.notify(
-					"Architecture scaffolded: " + scaffoldModules.length + " modules, ADR-001, diagrams",
-					"success",
+				"Architecture scaffolded: " + scaffoldModules.length + " modules, ADR-001, diagrams",
+				"success",
 				);
 
 				const resultLines = [
