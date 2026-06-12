@@ -22,7 +22,7 @@ Most AI coding tools operate in isolation: you prompt, they generate, you pray. 
 | **📋 Epic & Issue Planning** | Full workflow: epic overview → module slices → issues → implementation → closeout → merge |
 | **✅ Multi-Stage Validation** | 7 validator categories with scope-based auto-selection (Simple → Critical) |
 | **🤖 Pi Extensions** | 20 TypeScript extensions: bash-guard, kanban, pipeline, architect, goal-loop, plan-mode, curator, domain-explorer, project-scaffolder |
-| **📤 Multi-Tool Export** | Single `.pi/` source → Claude Code, OpenCode, GitHub Copilot, oh-my-pi, Antigravity |
+| **📤 Multi-Tool Export** | Single `.pi/` source → Claude Code, OpenCode, GitHub Copilot, `.agents/`, oh-my-pi |
 | **🔋 Token Optimization** | DRY context, snippet expansion, context compaction, tiered prompts — 50–70% savings |
 
 **Result:** Every line of code traces to a validated architecture decision. No orphaned code. No drift. No surprises.

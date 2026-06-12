@@ -134,7 +134,7 @@ Guardian also incorporates production-tested patterns from [Hermes-Agent](https:
 
 ```
 Arguments: parseArgs({ allowPositionals: true, options: {...} })
-Commands:  init | generate | update | upgrade | uninstall | info
+Commands:  init | generate | update | upgrade | uninstall | info | stats | validate | verify | trust | domain | project
 Dispatch:  switch (command) → runXxx(targetDir, options)
 ```
 
@@ -616,18 +616,33 @@ templates/pi/
 │   ├── patterns-base.md       ← Base patterns (all languages)
 │   ├── patterns.md            ← Language-specific patterns (overwritten)
 │   └── project.md             ← Project facts template
-├── extensions/                ← Pi TypeScript extensions (12 files)
+├── extensions/                ← Pi TypeScript extensions (20 files)
+│   ├── architect.ts           ← Epic lifecycle management
+│   ├── architect-lib/         ← Architect shared helpers + generators
 │   ├── ask-user-question.ts   ← Structured question tool
 │   ├── bash-guard.ts          ← Destructive command blocking
+│   ├── config-reload.ts       ← Hot config reload (fs.watch)
 │   ├── coordinator.ts         ← Scope + validation tools
+│   ├── curator.ts             ← Skill curation lifecycle
+│   ├── domain-explorer.ts     ← DDD domain exploration
 │   ├── filechanges.ts         ← File change tracking
+│   ├── goal-loop.ts           ← Persistent standing goals
+│   ├── hooks.ts               ← 3-layer shell-script hooks
+│   ├── kanban.ts              ← Durable task board
+│   ├── pipeline.ts            ← Multi-step pipeline engine
+│   ├── plan-mode.ts           ← Queued edit batch review
+│   ├── project-scaffolder.ts  ← Project scaffolding from architecture
 │   ├── read-only-mode.ts      ← Safe exploration mode
+│   ├── redaction.ts           ← Auto-strip secrets
+│   ├── session-persistence.ts ← Session state + auto-titling
+│   ├── slash-commands.ts      ← /init, /validate, /scope, /snippet
+│   ├── snippets.ts            ← #handle → XML expansion
 │   └── validation-runner.ts   ← Validation command
 ├── github/                    ← GitHub Copilot CLI templates
-├── prompts/                   ← Workflow templates (16 files)
-├── scripts/                   ← Validator shell scripts (13 files)
+├── prompts/                   ← Workflow templates (21 files)
+├── scripts/                   ← Validator shell scripts (19 files)
 ├── skills/
-│   ├── agents/                ← Agent definitions (20 files)
+│   ├── agents/                ← Agent definitions (27 files)
 │   └── validators/            ← Validator definitions (10 files)
 ├── INDEX.md                   ← Quick reference
 └── README.md                  ← Framework docs

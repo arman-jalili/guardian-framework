@@ -1,8 +1,10 @@
 # Guardian — Design Specification
 
-**Version:** 2.0.0
-**Date:** 2026-04-25
-**Status:** Final Draft
+> **HISTORICAL / ASPIRATIONAL:** This document was written during the design phase (April 2026) and describes the *intended* architecture. The actual implementation diverged significantly. **For current architecture, see [`docs/architecture.md`](architecture.md).** Key differences are noted inline but this document has not been exhaustively updated.
+
+**Version:** 0.1.0 (actual) / 2.0.0 (design target)
+**Date:** 2026-04-25 (design) / last reviewed 2026-06-12
+**Status:** Design artifact — superseded by `docs/architecture.md`
 **Architecture:** Pi-First (Source of Truth)
 
 ---
@@ -158,13 +160,17 @@ export default function (pi: ExtensionAPI) {
 ```json
 {
   "dependencies": {
-    "@clack/prompts": "^0.7.0"
+    "@clack/prompts": "^0.7.0",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@biomejs/biome": "^1.9.0",
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
   }
 }
 ```
+> **Note:** The actual implementation also uses `yaml` for front-matter parsing, Biome for linting, and TypeScript for type-checking.
 
 ---
 
@@ -382,45 +388,61 @@ templates/languages/              # Shared across all exports
 
 ## Directory Structure (Guardian)
 
+> **Note:** The actual implementation uses `src/lib/` instead of `src/prompts/`, `src/scaffold/`, `src/config/`, and `src/utils/`. See `docs/architecture.md` for the current structure.
+
 ```
 guardian-framework/
 ├── src/
 │   ├── index.ts              # CLI entry point
 │   ├── commands/
 │   │   ├── init.ts           # Scaffold command
+│   │   ├── generate.ts       # Export generator
 │   │   ├── update.ts         # Smart merge update
 │   │   ├── upgrade.ts        # Version migration
 │   │   ├── uninstall.ts      # Managed file removal
 │   │   ├── info.ts           # Status display
-│   │   └── generate.ts       # Export generator (pi → other formats)
-│   ├── prompts/
-│   │   ├── tool-select.ts    # AI tool selection
-│   │   ├── language-select.ts # Language/framework selection
-│   │   ├── validator-select.ts # Validator selection
-│   │   └── workflow-select.ts # Workflow selection
-│   ├── scaffold/
-│   │   ├── generator.ts      # Template rendering
-│   │   ├── exporter.ts       # Pi → Claude/OpenCode/Agents export
-│   │   ├── file-writer.ts    # Atomic writes
-│   │   ├── merge.ts          # Smart merge logic
-│   │   ├── diff.ts           # Diff display
-│   │   └── checksum.ts       # File hash calculation
-│   ├── templates/
-│   │   ├── pi/               # SOURCE OF TRUTH (see structure above)
-│   │   ├── languages/        # Language-specific patterns
-│   │   └── migrations/       # Version migration scripts
-│   ├── config/
-│   │   ├── version.ts        # Current framework version
-│   │   ├── manifest.ts       # Manifest schema definition
-│   │   ├── categories.ts     # File categorization rules
-│   │   └── exit-codes.ts     # CLI exit codes
-│   │   └── mappings.ts       # Pi → export mappings
-│   └── utils/
-│       ├── logger.ts         # Pretty console output
-│       ├── validators.ts     # Input validation
-│       ├── file-utils.ts     # Atomic writes, directory checks
-│       ├── diff.ts           # Diff generation
-│       └── checksum.ts       # SHA-256 file hashing
+│   │   ├── domain.ts         # DDD domain exploration
+│   │   ├── project.ts        # Project scaffolding
+│   │   ├── stats.ts          # Token savings analytics
+│   │   └── validate.ts       # TOML-based validation
+│   └── lib/
+│       ├── templates.ts      # Template loading + rendering
+│       ├── manifest.ts       # Manifest state management
+│       ├── toml-filter.ts    # TOML validator parsing
+│       ├── export-mappings.ts # Export target mappings
+│       ├── trust.ts          # Trust-gated config
+│       ├── integrity.ts      # File integrity verification
+│       ├── workflow-config.ts # YAML front matter config
+│       ├── workspace-hooks.ts # Lifecycle hook execution
+│       ├── retry.ts          # Exponential backoff
+│       ├── retry-queue.ts    # Persistent retry state
+│       ├── code-filter.ts    # Language-aware code filtering
+│       ├── ci-generator.ts   # CI pipeline generation
+│       ├── project-generator.ts # Project scaffolding
+│       ├── domain-explorer.ts # DDD exploration engine
+│       ├── build-config.ts   # Build configuration
+│       ├── prompts.ts        # Dialog prompts
+│       ├── tracking.ts       # Token tracking + analytics
+│       ├── result.ts         # Result type
+│       └── logger.ts         # Structured logging
+│
+├── templates/
+│   ├── pi/                   # Pi source of truth
+│   ├── claude/               # Claude Code templates
+│   ├── opencode/             # OpenCode templates
+│   ├── languages/            # Language-specific patterns
+│   ├── agents/               # Agent definitions
+│   └── project/              # Project templates
+│
+├── .pi/                      # Framework runtime
+│   ├── agents/               # Agent definitions (6 files)
+│   ├── skills/agents/        # Agent skills (27 files)
+│   ├── skills/validators/    # Validator definitions (10 files)
+│   ├── prompts/              # Workflow templates (21 files)
+│   ├── scripts/              # Validator shell scripts
+│   ├── extensions/           # Pi TypeScript extensions (20 files)
+│   ├── architecture/         # ADRs, module docs, diagrams
+│   └── context/              # Shared context files
 │
 ├── package.json
 ├── bun.lock
