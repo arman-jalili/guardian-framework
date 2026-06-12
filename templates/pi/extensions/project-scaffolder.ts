@@ -20,7 +20,8 @@
  */
 
 import { type ExecSyncOptions, execSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import * as path from "node:path";
 import { join } from "node:path";
 
 // ── Types ──
@@ -150,7 +151,19 @@ export default function (pi: ExtensionAPI) {
 
 				const lang = String(parsed.lang || parsed.language || "").toLowerCase();
 				const buildTool = String(parsed.buildTool || "").toLowerCase() || undefined;
-				const groupId = String(parsed.groupId || parsed.group || "com.example");
+
+				// Read groupId from manifest if not passed via CLI (matches guardian CLI behavior)
+				let groupId = String(parsed.groupId || parsed.group || "");
+				if (!groupId) {
+					try {
+						const manifestPath = path.join(ctx.cwd, "guardian-manifest.json");
+						if (fs.existsSync(manifestPath)) {
+							const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+							groupId = manifest.groupId || "";
+						}
+					} catch { /* ignore malformed manifest */ }
+				}
+				if (!groupId) groupId = "com.example";
 				const validators = String(parsed.validators || "ci,tests");
 				const dryRun = parsed.dryRun === true || parsed["dry-run"] === true || parsed.d === true;
 				const force = parsed.force === true || parsed.f === true;
