@@ -215,6 +215,9 @@ Every MR must pass 10 hardening stages before it can merge. This is Guardian's c
 | 8 | `migration_verify` | Migration apply + index/policy check | Only if migration files changed |
 | 9 | `package_build` | Docker build | Only on main branch |
 | 10 | `release_readiness` | Runbook, observability, release policy | Always |
+| 11 | `remaining` | Unclassified staging, catch-all | Always |
+
+> **Note:** There are 11 stage scripts (`stage_docs_policy.sh` through `stage_remaining.sh`). The pipeline runner auto-discovers all `stage_*.sh` files.
 
 ### Running the Hardening Pipeline
 
@@ -231,7 +234,7 @@ bash .pi/scripts/ci/run_hardening_stages.sh --verbose
 
 ### Architecture Conformance (Stage 2)
 
-This is the most important stage. It checks 11+ architectural contracts:
+This is the most important stage. It checks 11+ architectural contracts via `check_architecture_conformance.sh`:
 
 | Check | What It Verifies |
 |-------|-----------------|
@@ -248,7 +251,7 @@ This is the most important stage. It checks 11+ architectural contracts:
 | `architecture_sanity` | No orphaned imports, concurrency safety, no env collisions |
 | `import_boundaries` | No cross-layer violations (domain→infrastructure→api) |
 
-Each check tries a **language-specific validator** first (`.py` for Python, `.ts` for TypeScript, `.sh` for Rust/Go), then falls back to grep-based pattern matching.
+Each check first looks for a language-specific validator script (`.py`, `.ts`, `.sh`), then falls back to grep-based pattern matching built into `check_architecture_conformance.sh`.
 
 ### Adding Language-Specific Validators
 
@@ -256,14 +259,14 @@ Drop your validators in `.pi/scripts/ci/`:
 
 ```
 .pi/scripts/ci/
-├── check_tenant_isolation.py      # Python validator
-├── check_tenant_isolation.ts      # TypeScript validator
+├── check_tenant_isolation.py      # Python validator (aspirational)
+├── check_tenant_isolation.ts      # TypeScript validator (aspirational)
 ├── check_event_ordering.py
 ├── check_outbox_dlq.py
 └── ...
 ```
 
-The conformance runner auto-detects the project language and runs the right validator.
+The conformance runner auto-detects the project language and runs the right validator if available; otherwise falls back to grep-based pattern matching.
 
 ### Adding Custom Conformance Checks
 

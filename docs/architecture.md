@@ -104,9 +104,9 @@ Guardian also incorporates production-tested patterns from [Hermes-Agent](https:
 │  │workspace    │ │retry.ts      │ │logger.ts         │   │
 │  │-hooks.ts    │ │(backoff)     │ │(structured JSON) │   │
 │  └─────────────┘ └──────────────┘ └──────────────────┘   │
-│  ┌─────────────┐ ┌──────────────┐                        │
-│  │retry-queue  │ │generate.ts   │ (generate + mappings)  │
-│  │(persistence)│ │(export logic)│                        │
+│  ┌─────────────┐ ┌──────────────────┐                    │
+│  │retry-queue  │ │export-mappings │ (generate +          │
+│  │(persistence)│ │.ts (mappings)  │  mappings)           │
 │  └─────────────┘ └──────────────┘                        │
 └──────────────────────────────────────────────────────────┘
             │               │              │
@@ -640,7 +640,7 @@ templates/pi/
 │   └── validation-runner.ts   ← Validation command
 ├── github/                    ← GitHub Copilot CLI templates
 ├── prompts/                   ← Workflow templates (21 files)
-├── scripts/                   ← Validator shell scripts (19 files)
+├── scripts/                   ← Validator shell scripts (+ ci/, git/, languages/ subdirs)
 ├── skills/
 │   ├── agents/                ← Agent definitions (27 files)
 │   └── validators/            ← Validator definitions (10 files)

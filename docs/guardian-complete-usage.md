@@ -171,16 +171,29 @@ depends: Component Name
 │       └── ADR-002-db-strategy.md
 ├── scripts/
 │   ├── validate-ci.sh              # CI validator
+│   ├── validate-tests.sh           # Test validator
 │   ├── validate-security.sh        # Security validator
+│   ├── validate-operations.sh      # Operations validator
+│   ├── validate-architecture.sh    # Architecture validator
 │   ├── validate-canonical.sh       # Canonical reference validator
+│   ├── validate-integration.sh     # Integration validator
 │   ├── validate-architecture-readiness.sh  # Epic readiness validator
+│   ├── validate-ubiquitous-language.sh     # Ubiquitous language check
 │   ├── generate-architecture.sh    # Generate modules from intent/docs
+│   ├── validation-cache.sh         # Retry optimization
+│   ├── create-mr.sh                # MR creation
+│   ├── merge-mr.sh                 # MR merge
+│   ├── mr-validation.sh            # MR validation
+│   ├── create-feature-branch.sh    # Branch creation
+│   ├── fetch-issues.sh             # Issue fetching
+│   ├── categorize-issues.sh        # Issue categorization
 │   ├── ci/
 │   │   ├── check_architecture_conformance.sh  # 11+ conformance checks
 │   │   ├── run_hardening_stages.sh             # 10-stage orchestrator
 │   │   ├── run_preflight.sh                    # Local preflight engine
 │   │   ├── run_stage.sh                        # Individual stage runner
-│   │   └── validate_agent_output.sh            # Agent output validator
+│   │   ├── validate_agent_output.sh            # Agent output validator
+│   │   └── stage_*.sh                          # 11 stage scripts (docs_policy through remaining)
 │   └── git/
 │       ├── create-tracking-issue.sh
 │       ├── update-tracking-issue.sh
@@ -479,10 +492,12 @@ Every MR must pass **10 mandatory hardening stages** before it can merge. This i
 | 8 | `migration_verify` | Migration apply + index/policy check | Only if migration files changed |
 | 9 | `package_build` | Docker build | Only on main branch |
 | 10 | `release_readiness` | Runbook, observability, release policy | Always |
+| 11 | `remaining` | Unclassified staging, catch-all | Always |
 
+> **Note:** There are 11 stage scripts in `.pi/scripts/ci/` (`stage_docs_policy.sh` through `stage_remaining.sh`). The pipeline runner auto-discovers all `stage_*.sh` files. Add custom stages by creating new `stage_*.sh` files.
 ### Architecture Conformance (Stage 2)
 
-The most important stage. Checks 11+ architectural contracts:
+The most important stage. Checks 11+ architectural contracts via `check_architecture_conformance.sh`:
 
 | Check | What It Verifies |
 |-------|-----------------|
@@ -499,6 +514,7 @@ The most important stage. Checks 11+ architectural contracts:
 | `architecture_sanity` | No orphaned imports, concurrency safety, no env collisions |
 | `import_boundaries` | No cross-layer violations (domain→infrastructure→api) |
 
+Each check first looks for a language-specific validator script (`.py` for Python, `.ts` for TypeScript, `.sh` for Rust/Go), then falls back to grep-based pattern matching. Language-specific validator files can be created in `.pi/scripts/ci/`; without them, the grep-based fallbacks run automatically.
 ### Running the Hardening Pipeline
 
 ```bash
@@ -518,15 +534,15 @@ Drop your validators in `.pi/scripts/ci/`:
 
 ```
 .pi/scripts/ci/
-├── check_tenant_isolation.py      # Python validator
-├── check_tenant_isolation.ts      # TypeScript validator
-├── check_tenant_isolation.sh      # Rust/Go validator
+├── check_tenant_isolation.py      # Python validator (aspirational — create your own)
+├── check_tenant_isolation.ts      # TypeScript validator (aspirational — create your own)
+├── check_tenant_isolation.sh      # Rust/Go validator (aspirational — create your own)
 ├── check_event_ordering.py
 ├── check_outbox_dlq.py
 └── ...
 ```
 
-The conformance runner auto-detects the project language and runs the right validator.
+The conformance runner auto-detects the project language and runs the right validator. If no language-specific validator exists, it falls back to grep-based pattern matching (already built into `check_architecture_conformance.sh`).
 
 ---
 

@@ -211,11 +211,12 @@ templates/pi/                     # SOURCE OF TRUTH
 │
 ├── skills/
 │   ├── validators/               # Validation skills
-│   │   ├── ci.md                 # CI validation skill
-│   │   ├── test.md               # Test validation skill
-│   │   ├── security.md           # Security validation skill
-│   │   └── operations.md         # Operations validation skill
-│   │   └── integration.md        # Integration validation skill
+│   │   ├── ci-validator.md       # CI validation skill
+│   │   ├── test-validator.md     # Test validation skill
+│   │   ├── security-validator.md # Security validation skill
+│   │   ├── operations-validator.md # Operations validation skill
+│   │   ├── architecture-validator.md # Architecture validation skill
+│   │   └── integration-validator.md # Integration validation skill
 │   │
 │   └── agents/                   # Agent definitions as skills
 │       ├── architecture-coordinator.md
@@ -236,18 +237,58 @@ templates/pi/                     # SOURCE OF TRUTH
 │   ├── refactoring.md            # /refactoring command
 │   └── issue-implementation.md   # /issue-impl command
 │
-├── extensions/                   # TypeScript extensions (pi-only)
+├── extensions/                   # TypeScript extensions (pi-only) — 20 files
 │   ├── validation-runner.ts      # Runs shell validators inside pi
-│   ├── guardian-manifest.ts      # Manifest handling
-│   ├── smart-merge.ts            # Update logic
-│   └── scope-classifier.ts       # Task scope classification
+│   ├── architect.ts              # Epic lifecycle management
+│   ├── pipeline.ts               # Multi-step pipeline engine
+│   ├── coordinator.ts            # Scope + validation tools
+│   ├── goal-loop.ts              # Persistent standing goals
+│   ├── kanban.ts                 # Durable task board
+│   ├── hooks.ts                  # 3-layer shell-script hooks
+│   ├── curator.ts                # Skill curation lifecycle
+│   ├── bash-guard.ts             # Destructive command blocking
+│   ├── config-reload.ts          # Hot config reload (fs.watch)
+│   ├── plan-mode.ts              # Queued edit batch review
+│   ├── snippets.ts               # #handle → XML expansion
+│   ├── redaction.ts              # Auto-strip secrets
+│   ├── domain-explorer.ts        # DDD domain exploration
+│   ├── filechanges.ts            # File change tracking
+│   ├── project-scaffolder.ts     # Project scaffolding
+│   ├── ask-user-question.ts      # Structured question tool
+│   ├── read-only-mode.ts         # Safe exploration mode
+│   ├── session-persistence.ts    # Session state + auto-titling
+│   └── slash-commands.ts         # /init, /validate, /scope, /snippet
+│
+│   NOTE: The initial design included guardian-manifest.ts, smart-merge.ts,
+│   and scope-classifier.ts as planned extensions, but actual implementation
+│   uses architect.ts, coordinator.ts, and the CLI commands instead. See
+│   docs/architecture.md §6 for the current extension roster.
 │
 ├── scripts/                      # Shell scripts (called by extensions)
 │   ├── validate-ci.sh            # CI validation
 │   ├── validate-tests.sh         # Test validation
 │   ├── validate-operations.sh    # Operations validation
 │   ├── validate-security.sh      # Security validation
-│   └── validation-cache.sh       # Retry optimization
+│   ├── validation-cache.sh       # Retry optimization
+│   ├── ci/                       # CI hardening pipeline stages
+│   │   ├── run_hardening_stages.sh   # 10-stage orchestrator
+│   │   ├── run_stage.sh              # Individual stage runner
+│   │   ├── run_preflight.sh          # Local preflight engine
+│   │   ├── validate_agent_output.sh  # Agent output validator
+│   │   ├── check_architecture_conformance.sh  # Conformance checks
+│   │   └── stage_*.sh                 # Individual stage scripts
+│   ├── git/                      # Git integration scripts
+│   │   ├── create-tracking-issue.sh
+│   │   ├── update-tracking-issue.sh
+│   │   ├── close-issue.sh
+│   │   ├── close-epic.sh
+│   │   └── link-issue-to-epic.sh
+│   └── languages/                # Language-specific validator variants
+│       ├── typescript/
+│       ├── python/
+│       ├── rust/
+│       ├── go/
+│       └── java/
 │
 ├── context/                      # Shared context files
 │   ├── checklists.md             # Validation checklists
@@ -1052,7 +1093,9 @@ export default function (pi: ExtensionAPI) {
 }
 ```
 
-### guardian-manifest.ts
+### guardian-manifest.ts (DESIGN ARTIFACT)
+
+> **This extension was never implemented as a file.** The code below is a design sketch. In the actual implementation, manifest handling is done by the CLI `info` command (`src/commands/info.ts`) and the `src/lib/manifest.ts` library. See `docs/architecture.md` for the actual extension set.
 
 Provides manifest access and status display:
 
@@ -1112,7 +1155,9 @@ Guardian Status:
 }
 ```
 
-### scope-classifier.ts
+### scope-classifier.ts (DESIGN ARTIFACT)
+
+> **This extension was never implemented as a file.** The code below is a design sketch. In the actual implementation, scope classification is handled by `coordinator.ts` (with tools `guardian_scope`, `guardian_validate`, `guardian_coordinate`). See `docs/architecture.md` for the actual extension set.
 
 Classifies task scope inside pi:
 
@@ -1205,7 +1250,9 @@ function classifyScope(desc: string) {
 }
 ```
 
-### smart-merge.ts
+### smart-merge.ts (DESIGN ARTIFACT)
+
+> **This extension was never implemented as a file.** The code below is a design sketch. In the actual implementation, smart merge is handled by the CLI `update` command (`src/commands/update.ts`) and `src/lib/manifest.ts` library, not by a pi extension. See `docs/architecture.md` for the actual update flow.
 
 Handles smart merge updates inside pi:
 
@@ -1429,10 +1476,12 @@ Extensions can use Node.js builtins:
 
 ## Utility Functions
 
-### Exporter
+### Exporter (conceptual)
+
+> **Note:** The actual export logic lives in `src/commands/generate.ts` and `src/lib/export-mappings.ts`. The code below is a simplified illustration of the mapping concept, not the actual implementation.
 
 ```typescript
-// src/scaffold/exporter.ts
+// src/lib/export-mappings.ts
 interface ExportMapping {
   source: string;       // pi source path (glob)
   dest: string;         // export destination path
@@ -1577,11 +1626,10 @@ pi install @guardian/pi-framework      # Add to existing pi
 - Smart merge for .pi/
 - Automatic export regeneration
 
-### Phase 4: Pi Extensions
-- validation-runner.ts extension
-- guardian-manifest.ts extension
-- scope-classifier.ts extension
-- smart-merge.ts extension
+### Phase 4: Pi Extensions (partial — see note)
+- **Implemented:** validation-runner.ts
+- **Not implemented (design-only):** guardian-manifest.ts, scope-classifier.ts, smart-merge.ts
+- **Actual replacements:** coordinator.ts combines scope classification + validation; update CLI handles smart merge; architect.ts handles epic-to-issue lifecycle
 
 ### Phase 5: Polish
 - Upgrade command with migrations
