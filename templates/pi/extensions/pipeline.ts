@@ -438,6 +438,88 @@ class PipelineManager {
 	}
 }
 
+// ── Step-specific instruction builders ──
+
+function getDefaultBranch(cwd: string): string {
+	try {
+		const symRef = execSync("git symbolic-ref refs/remotes/origin/HEAD", {
+			cwd, encoding: "utf-8"
+		}).trim();
+		return symRef.replace(/^refs\/remotes\/origin\//, "");
+	} catch {
+		return "main";
+	}
+}
+
+function buildImplementInstructions(issueId: string, branchExists: boolean): string {
+	const slug = issueId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+	const branch = `feat/${slug}`;
+
+	if (branchExists) {
+		return [
+			"## MANDATORY GIT WORKFLOW",
+			"",
+			`Branch \`${branch}\` already exists. Continue working on it.`,
+			"",
+			"1. **CHECKOUT:** `git checkout " + branch + "`",
+			"2. Implement the issue requirements",
+			"3. **COMMIT every logical chunk:** `git add <files> && git commit -m \"feat: description\"`",
+			"4. **PUSH regularly:** `git push origin " + branch + "`",
+			"5. When implementation complete, commit+push final changes then call `pipeline_run_acceptance`",
+			"",
+			"⛔ DO NOT skip git. Every commit must be pushed. This is MANDATORY.",
+		].join("\n");
+	}
+
+	return [
+		"## MANDATORY GIT WORKFLOW — DO NOT SKIP",
+		"",
+		"1. **CREATE BRANCH:** `git checkout -b " + branch + "`",
+		"2. Implement the issue requirements",
+		"3. **COMMIT every logical chunk:** `git add <files> && git commit -m \"feat: description\"`",
+		"4. **PUSH regularly:** `git push origin " + branch + "`",
+		"5. When implementation complete, commit+push final changes then call `pipeline_run_acceptance`",
+		"",
+		"⛔ **CRITICAL:** You MUST create a branch, commit, and push. The pipeline validates git history.",
+		"Do NOT implement directly on main. Do NOT skip git operations.",
+	].join("\n");
+}
+
+function buildCreateMRInstructions(issueId: string, repo: string, defaultBranch: string): string {
+	const slug = issueId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+	const branch = `feat/${slug}`;
+
+	return [
+		"## MANDATORY: CREATE PULL REQUEST",
+		"",
+		"1. **ENSURE pushed:** `git push origin " + branch + "`",
+		"2. **CREATE PR:** `gh pr create --base " + defaultBranch + " --head " + branch + " --title \"" + issueId + ": <description>\" --body \"Closes #<issue-number>\"`",
+		"3. Wait for CI checks to pass on the PR",
+		"4. If checks fail, fix, commit+push, re-check",
+		"5. When PR is created and CI passes, call `pipeline_advance`",
+		"",
+		"⛔ **CRITICAL:** You MUST create a PR via `gh pr create`. Do NOT skip this.",
+		"The repository is: " + (repo || "check guardian-manifest.json"),
+	].join("\n");
+}
+
+function buildMergeInstructions(issueId: string, defaultBranch: string): string {
+	const slug = issueId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+	const branch = `feat/${slug}`;
+
+	return [
+		"## MANDATORY: MERGE PULL REQUEST",
+		"",
+		"1. Find the PR for branch `" + branch + "`: `gh pr list --head " + branch + " --json number --jq '.[0].number'`",
+		"2. **MERGE PR:** `gh pr merge <PR_NUMBER> --squash --delete-branch`",
+		"3. **CHECKOUT main:** `git checkout " + defaultBranch + "`",
+		"4. **PULL latest:** `git pull origin " + defaultBranch + "`",
+		"5. Call `pipeline_advance`",
+		"",
+		"⛔ **CRITICAL:** You MUST merge the PR via `gh pr merge`. Do NOT skip this.",
+	].join("\n");
+}
+
 // ── Extension ──
 
 export default function (pi: ExtensionAPI) {
@@ -857,6 +939,30 @@ export default function (pi: ExtensionAPI) {
 				}
 			}
 
+			// Build step-specific git-mandatory instructions
+			const repo = readRepository(ctx.cwd) || "";
+			const defaultBranch = getDefaultBranch(ctx.cwd);
+			const slug = issueId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+			const branch = `feat/${slug}`;
+
+			let stepInstructions = "";
+			if (step.name === "implement") {
+				let branchExists = false;
+				try {
+					execSync(`git rev-parse --verify ${branch}`, { cwd: ctx.cwd, encoding: "utf-8" });
+					branchExists = true;
+				} catch { /* doesn't exist */ }
+				stepInstructions = buildImplementInstructions(issueId, branchExists);
+			} else if (step.name === "validate") {
+				stepInstructions = "## VALIDATION STEP\n\n1. Ensure all changes committed+push to feature branch\n2. Call `pipeline_run_acceptance`\n3. If pass: `pipeline_advance`. If fail: fix, commit+push, re-run.\n\n⛔ All changes must be committed and pushed before validation.";
+			} else if (step.name === "create-mr") {
+				stepInstructions = buildCreateMRInstructions(issueId, repo, defaultBranch);
+			} else if (step.name === "merge") {
+				stepInstructions = buildMergeInstructions(issueId, defaultBranch);
+			} else {
+				stepInstructions = "## Instructions\n\n1. Complete the work for this step\n2. Commit and push all changes\n3. Call `pipeline_run_acceptance` then `pipeline_advance`";
+			}
+
 			const text = [
 				"## Pipeline Task",
 				"",
@@ -867,6 +973,10 @@ export default function (pi: ExtensionAPI) {
 				"",
 				"---",
 				"",
+				stepInstructions,
+				"",
+				"---",
+				"",
 				stepPrompt || "",
 				"",
 				"---",
@@ -874,15 +984,6 @@ export default function (pi: ExtensionAPI) {
 				"## Issue Context",
 				"",
 				issueContent,
-				"",
-				"---",
-				"",
-				"**Instructions:**",
-				"1. Create branch: `feat/${issueId}`",
-				"2. Review the issue context above",
-				"3. Follow the step prompt instructions",
-				"4. When complete, call `pipeline_run_acceptance` to validate your work",
-				"5. Then call `pipeline_advance` to move to the next step",
 			].join("\n");
 
 			return { content: [{ type: "text" as const, text }] };
