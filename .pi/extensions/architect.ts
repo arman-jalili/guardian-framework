@@ -51,9 +51,6 @@ import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 
 // ── Types ──
 
