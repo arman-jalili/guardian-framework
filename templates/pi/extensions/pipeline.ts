@@ -284,6 +284,17 @@ class PipelineManager {
 		return this.state;
 	}
 
+	reload(): void {
+		const raw = loadPipelineState(this.cwd);
+		if (raw) {
+			// Migrate old string-step format to StepConfig objects
+			if (raw.steps.length > 0 && typeof raw.steps[0] === "string") {
+				raw.steps = buildSteps(raw.steps as unknown as string[]);
+			}
+		}
+		this.state = raw;
+	}
+
 	create(
 		name: string,
 		items: string[],
@@ -445,6 +456,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Manage multi-step pipeline workflows",
 		handler: async (args, ctx) => {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 
 			// pi passes args as a string. Split into tokens.
@@ -579,6 +591,7 @@ export default function (pi: ExtensionAPI) {
 		parameters: { type: "object", properties: {} },
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 			if (!state) {
 				return { content: [{ type: "text" as const, text: "No active pipeline." }] };
@@ -600,6 +613,7 @@ export default function (pi: ExtensionAPI) {
 		},
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 			if (!state || state.status !== "running") {
 				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
@@ -662,12 +676,20 @@ export default function (pi: ExtensionAPI) {
 					`**Next task:** Item "${currentItem}" → Step: implement`,
 					"",
 					"**Instructions:**",
-					"1. Review the issue context below",
-					"2. Implement the component according to the issue spec",
-					"3. Run `pipeline_run_acceptance` to validate",
-					"4. Call `pipeline_advance` when done",
+					"1. Create branch: `feat/${currentItem}`",
+					"2. Review the issue context below",
+					"3. Implement the component according to the issue spec",
+					"4. Run `pipeline_run_acceptance` to validate",
+					"5. Call `pipeline_advance` when done",
 					"",
-					"⚠️ **IMPORTANT:** After you complete this item and call `pipeline_advance`, the pipeline will automatically advance to the next step. Continue this loop until all items are done. Do not stop after completing a single item — keep going through implement → validate → create-mr → merge for every item.",
+					"**Available tools:**",
+					"- `pipeline_next_task` — get full context for current step",
+					"- `pipeline_run_acceptance` — run validators (CI, tests, security, shell, LLM)",
+					"- `pipeline_advance` — mark step passed, advance to next",
+					"- `pipeline_fail` — mark step failed, skip remaining steps for this item",
+					"- `pipeline_status` — check overall pipeline progress",
+					"",
+					"⚠️ **IMPORTANT:** After each step, call `pipeline_run_acceptance` then `pipeline_advance`. The pipeline flows: implement → validate → create-mr → merge. Continue through ALL items — do not stop after completing one.",
 					"",
 					"---",
 					"",
@@ -699,6 +721,7 @@ export default function (pi: ExtensionAPI) {
 		},
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 			if (!state || state.status !== "running") {
 				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
@@ -794,6 +817,7 @@ export default function (pi: ExtensionAPI) {
 		},
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 			if (!state || state.status !== "running") {
 				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
@@ -854,10 +878,11 @@ export default function (pi: ExtensionAPI) {
 				"---",
 				"",
 				"**Instructions:**",
-				"1. Review the issue context above",
-				"2. Follow the step prompt instructions",
-				"3. When complete, call `pipeline_run_acceptance` to validate your work",
-				"4. Then call `pipeline_advance` to move to the next step",
+				"1. Create branch: `feat/${issueId}`",
+				"2. Review the issue context above",
+				"3. Follow the step prompt instructions",
+				"4. When complete, call `pipeline_run_acceptance` to validate your work",
+				"5. Then call `pipeline_advance` to move to the next step",
 			].join("\n");
 
 			return { content: [{ type: "text" as const, text }] };
@@ -872,6 +897,7 @@ export default function (pi: ExtensionAPI) {
 		parameters: { type: "object", properties: {} },
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new PipelineManager(ctx.cwd);
+			manager.reload();
 			const state = manager.getState();
 			if (!state || state.status !== "running") {
 				return { content: [{ type: "text" as const, text: "No running pipeline." }] };
@@ -884,6 +910,45 @@ export default function (pi: ExtensionAPI) {
 				manager.markStepPassed(step.name);
 				return {
 					content: [{ type: "text" as const, text: `Step "${step.name}" passed (no gate).` }],
+				};
+			}
+
+			if (acceptance.type === "llm") {
+				const promptPath = join(ctx.cwd, acceptance.prompt);
+				let validatorPrompt = "";
+				try {
+					if (existsSync(promptPath)) {
+						validatorPrompt = readFileSync(promptPath, "utf-8");
+					}
+				} catch {
+					// ignore
+				}
+				if (!validatorPrompt) {
+					return {
+						content: [{
+							type: "text" as const,
+							text: `LLM validator prompt not found: ${acceptance.prompt}. Skipping gate.`,
+						}],
+					};
+				}
+				return {
+					content: [{
+						type: "text" as const,
+						text: [
+							`## LLM Validator: ${step.name}`,
+							"",
+							"Read the validator agent definition below. Execute it as an agent:",
+							"1. Read and understand the validation criteria",
+							"2. Audit the current implementation against each criterion",
+							"3. Report pass/fail with evidence for each criterion",
+							"4. If all pass, call `pipeline_advance`",
+							"5. If any fail, fix the issues and re-run acceptance",
+							"",
+							"---",
+							"",
+							validatorPrompt,
+						].join("\n"),
+					}],
 				};
 			}
 
@@ -979,7 +1044,20 @@ function buildSteps(stepNames: string[]): StepConfig[] {
 		},
 		merge: {
 			name: "merge",
+			prompt: ".pi/prompts/issue-merge.md",
 			acceptance: { type: "validator", validators: ["ci", "canonical"] },
+		},
+		"architecture-validator": {
+			name: "architecture-validator",
+			acceptance: { type: "llm", prompt: ".pi/agents/architecture-validator.md" },
+		},
+		"security-validator": {
+			name: "security-validator",
+			acceptance: { type: "llm", prompt: ".pi/agents/security-validator.md" },
+		},
+		"operations-validator": {
+			name: "operations-validator",
+			acceptance: { type: "llm", prompt: ".pi/agents/operations-validator.md" },
 		},
 		document: {
 			name: "document",

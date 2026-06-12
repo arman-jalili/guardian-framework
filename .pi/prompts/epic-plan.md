@@ -103,7 +103,17 @@ For each epic, identify which modules are involved and in what order:
 2. **[Issue]** Add monitoring alert for new endpoint — Scope: simple
 ```
 
-### Step 5: Validator Review (All Modules)
+### Step 5: Deterministic Packet Validation
+
+Before validator review, validate the planning packet structure:
+
+```bash
+python scripts/ci/check_planning_packet.py --input=planning_packet.md
+```
+
+If packet validation fails, fix the structure before proceeding to validators.
+
+### Step 6: Validator Review (All Modules)
 
 Run validators against the full epic plan:
 

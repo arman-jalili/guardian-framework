@@ -49,7 +49,7 @@
     ".pi/context/patterns.md": {
       "category": "user",
       "originalHash": "sha256:7d8b47ab97c88448dca82e254d3d2142a8ee384b957ffabbb7ef4abac36f894e",
-      "status": "unchanged"
+      "status": "modified"
     },
     ".pi/context/output-formats.md": {
       "category": "framework",
@@ -69,7 +69,7 @@
     ".pi/agent/AGENTS.md": {
       "category": "user",
       "originalHash": "sha256:bf130ffcf9c8d2d8de86482c61f57613741d08251ce28155226a347713c54535",
-      "status": "unchanged"
+      "status": "modified"
     },
     ".pi/extensions/curator.ts": {
       "category": "framework",
@@ -203,7 +203,7 @@
     },
     ".pi/github/agents/architecture-coordinator.agent.md": {
       "category": "framework",
-      "originalHash": "sha256:ee4dd79da9d51ea5bb82d21ff512f18dae2a5d2a1730923ddc25eebb2befadcb",
+      "originalHash": "sha256:9e376f5ba69f3fc30672b83e9792bb2cb961abc61d6fddda057a5df2ce398e0e",
       "status": "unchanged"
     },
     ".pi/github/agents/epic-planner.agent.md": {
@@ -219,7 +219,7 @@
     ".pi/INDEX.md": {
       "category": "framework",
       "originalHash": "sha256:e166bc3e698236cbe4ef3fcca2f866c8ac2a28cd4ea293ca74c598a0dfea44ed",
-      "status": "unchanged"
+      "status": "modified"
     },
     ".pi/scripts/validate-operations.sh": {
       "category": "generated",
@@ -563,7 +563,7 @@
     },
     ".pi/prompts/epic-plan.md": {
       "category": "framework",
-      "originalHash": "sha256:2cf685e9e3dcb656e9336c3a81b347f8a81adf3ff155e06202a829f80dc6be5a",
+      "originalHash": "sha256:3633e445bb94ecdd41567490c3c31086784d6597e99ef3e86677628e00feb4b6",
       "status": "unchanged"
     },
     ".pi/prompts/sync-check.md": {
@@ -967,12 +967,12 @@
       "status": "unchanged"
     },
     ".pi/domain/ubiquitous-language.md": {
-      "category": "framework",
+      "category": "user",
       "originalHash": "sha256:43c081b91a96492161b54d3df45dae0b5d38d19f3a38fa18f3757987958dd7ca",
       "status": "unchanged"
     },
     ".pi/domain/exploration.md": {
-      "category": "framework",
+      "category": "user",
       "originalHash": "sha256:a7071bb598f75a08551a84cab8e9935d728672b835ef2f92c97239d0b41af482",
       "status": "unchanged"
     },
@@ -980,6 +980,111 @@
       "category": "framework",
       "originalHash": "sha256:d0dd4ddeb736cb45a785b92b8c912e5dfd54254756f1e67202e56934c8b1a751",
       "status": "unchanged"
+    },
+    ".pi/context/domain-workflow.md": {
+      "category": "framework",
+      "originalHash": "sha256:97dd59742baf08d935f2967f2a99257c23763a122f88f05d5f79a4b429b3fe5d",
+      "status": "configured"
+    },
+    ".pi/agents/issue-factory.md": {
+      "category": "framework",
+      "originalHash": "sha256:8e1d2a8211e7634736c51f6fe5af2ae48d3263a39d54ddc7cb23c9183537ae06",
+      "status": "configured"
+    },
+    ".pi/agents/architecture-coordinator.md": {
+      "category": "framework",
+      "originalHash": "sha256:0449f8b3d33b1d479e0699303eea0e6c6d512f38972e99cb1b8c0da0f7b37f8c",
+      "status": "configured"
+    },
+    ".pi/agents/bootstrap-implementer.md": {
+      "category": "framework",
+      "originalHash": "sha256:77662fa88c70fe139f7ff526c8763a3226d7dff6c249081a7a63d02e1ac72041",
+      "status": "configured"
+    },
+    ".pi/agents/operations-validator.md": {
+      "category": "framework",
+      "originalHash": "sha256:e64c119a9f0fc7c9fcebf813f47bd43b091c8049a6fd32a2789da69ec1c1fbde",
+      "status": "configured"
+    },
+    ".pi/agents/security-validator.md": {
+      "category": "framework",
+      "originalHash": "sha256:6cd0cd853582cb8f60d27c7bb9e339977928a07f3b4fb8fb66bf894bd6fad728",
+      "status": "configured"
+    },
+    ".pi/agents/architecture-validator.md": {
+      "category": "framework",
+      "originalHash": "sha256:3fbae65130cbb256e5be0c0e3b784de9fd681a9a54629bb270617e29886fcc9c",
+      "status": "configured"
+    },
+    ".pi/extensions/architect-lib/helpers.ts": {
+      "category": "framework",
+      "originalHash": "sha256:f465a65307fe72a48da7ad2f3afe6f2821970131655240b2da3722308d8df6aa",
+      "status": "configured"
+    },
+    ".pi/extensions/architect-lib/generators.ts": {
+      "category": "framework",
+      "originalHash": "sha256:942c1b7061dfbfb0443484cb853b7f38641bdf4acf6f414a358d2d15ff03fe96",
+      "status": "configured"
+    },
+    ".pi/extensions/architect-lib/types.ts": {
+      "category": "framework",
+      "originalHash": "sha256:d4c9206f10fd179d7e312039ee3a7b4b51363d90d7a6f9c1b9898a306082f535",
+      "status": "configured"
+    },
+    ".pi/github/workflows/01-planning-workflow.md": {
+      "category": "framework",
+      "originalHash": "sha256:b7c13edf0d75fe2cc2a8784461637ec91a2bc894682768b6b208795f60a5d404",
+      "status": "configured"
+    },
+    ".pi/github/workflows/03-implementation-workflow.md": {
+      "category": "framework",
+      "originalHash": "sha256:3b067bd1df93bb8de1eb26873825f2d5a330c46c619cb3209db127d33fde3ebb",
+      "status": "configured"
+    },
+    ".pi/github/workflows/04-validation-workflow.md": {
+      "category": "framework",
+      "originalHash": "sha256:513bb31dd54f5961e221f71e5216fd1acde8ad0158f5523985bdad97a2bff8c8",
+      "status": "configured"
+    },
+    ".pi/github/workflows/02-issue-generation-workflow.md": {
+      "category": "framework",
+      "originalHash": "sha256:41205400814e6d4b77ddbcf351d8e1f0701d11c618225eabf6ed3d3b630d56dd",
+      "status": "configured"
+    },
+    ".pi/github/agents/architecture-validator.agent.md": {
+      "category": "framework",
+      "originalHash": "sha256:04e7cb86758e135b55abc556b9d043d6f68cd5566dd5b0a882cedc615fbde065",
+      "status": "configured"
+    },
+    ".pi/github/agents/issue-factory.agent.md": {
+      "category": "framework",
+      "originalHash": "sha256:ef97de04d6f99a3b2edd04182ab8cf73a7da564b99d091f5c3d2056175fd686b",
+      "status": "configured"
+    },
+    ".pi/github/agents/bootstrap-implementer.agent.md": {
+      "category": "framework",
+      "originalHash": "sha256:2a0b8f2d37ab6c9112d0fa0101429ad5afe3d2c39328b3d132eee1eeb454a3ee",
+      "status": "configured"
+    },
+    ".pi/github/agents/security-validator.agent.md": {
+      "category": "framework",
+      "originalHash": "sha256:e9081be418d7f432fbd9b4a63d8181b44e797c93a8b6065ec330e2a5fa4b6109",
+      "status": "configured"
+    },
+    ".pi/github/agents/operations-validator.agent.md": {
+      "category": "framework",
+      "originalHash": "sha256:464860fa7eabcad393471c8dc434268d2f55e72eda0889386abee02f88315ec3",
+      "status": "configured"
+    },
+    ".pi/scripts/ci/check_planning_packet.py": {
+      "category": "framework",
+      "originalHash": "sha256:214e1ce18ed2226f344f25687fde9dd586b061f1af8efd6f54c27bd09dabae67",
+      "status": "configured"
+    },
+    ".pi/scripts/ci/validate_agent_output.py": {
+      "category": "framework",
+      "originalHash": "sha256:51cbdbed1921620608a25c2f4db67dbfd088a3d43cb96a03ec425c181d6ce4c9",
+      "status": "configured"
     }
   },
   "exports": {},
