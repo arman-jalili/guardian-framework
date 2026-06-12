@@ -184,6 +184,36 @@ export function linkRemoteIssue(
 
 // ── Architecture Discovery ──
 
+export function readGroupId(cwd: string): string {
+    // Try pom.xml
+    const pomPath = join(cwd, "pom.xml");
+    try {
+        const pom = readFileSync(pomPath, "utf-8");
+        const match = pom.match(/<groupId>([^<]+)<\/groupId>/);
+        if (match && match[1] !== "com.example") return match[1];
+    } catch {}
+    // Try build.gradle
+    const gradlePath = join(cwd, "build.gradle");
+    try {
+        const gradle = readFileSync(gradlePath, "utf-8");
+        const match = gradle.match(/group\s*=\s*['"]([^'"]+)['"]/);
+        if (match) return match[1];
+    } catch {}
+    return "com.example";
+}
+
+export function findModuleByName(cwd: string, name: string): string | null {
+    const files = discoverModules(cwd);
+    const nameLower = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (const f of files) {
+        const key = f.replace(".md", "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (key === nameLower || nameLower.includes(key) || key.includes(nameLower)) {
+            return f;
+        }
+    }
+    return null;
+}
+
 export function discoverModules(cwd: string): string[] {
 	const dir = join(cwd, ARCH_MODULES_DIR);
 	if (!existsSync(dir)) return [];

@@ -8,16 +8,19 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "
 import { dirname, join } from "node:path";
 import type { ArchitectureSlice, EpicState, ExtensionAPI, ExtensionContext, ModuleComponent } from "./architect-lib/types.ts";
 import {
+	ARCH_MODULES_DIR,
+	commandExists,
 	createRemoteIssue,
 	discoverModules,
 	ensureRemoteRepo,
+	findModuleByName,
 	findNextLogicalSlice,
 	linkRemoteIssue,
 	parseModuleFile,
+	readGroupId,
 	readRepository,
 	readRepoTool,
 	runScript,
-	commandExists,
 } from "./architect-lib/helpers.ts";
 import {
 	generateArchitectureReadinessMarkdown,
@@ -86,7 +89,20 @@ class EpicManager {
 			throw new Error("No architecture modules found in .pi/architecture/modules/.");
 		}
 
-		const slice = findNextLogicalSlice(this.cwd, moduleFiles);
+		// Try to match epic name to a module doc
+		const matchedModule = findModuleByName(this.cwd, name);
+		let slice: ArchitectureSlice | null = null;
+		if (matchedModule) {
+			const components = parseModuleFile(join(this.cwd, ARCH_MODULES_DIR, matchedModule));
+			const planned = components.filter((c: ModuleComponent) => c.status === "planned");
+			if (planned.length > 0) {
+				slice = { module: matchedModule.replace(".md", ""), components, nextLogicalSlice: planned };
+			}
+		}
+		// Fallback: first module with planned components
+		if (!slice) {
+			slice = findNextLogicalSlice(this.cwd, moduleFiles);
+		}
 		if (!slice) {
 			throw new Error("All architecture components are implemented. No next slice found.");
 		}

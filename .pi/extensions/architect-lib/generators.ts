@@ -245,18 +245,19 @@ ${slice.nextLogicalSlice.map((c: { name: string }) => `- ${c.name}`).join("\n")}
 
 | # | Criterion | How to Verify |
 |---|-----------|---------------|
-| 1 | All component interfaces defined | Check src/${moduleId}/contracts/ |
+| 1 | All component interfaces defined | Check src/<group>/<module>/domain/ and application/ |
 | 2 | Contracts reviewed and frozen | PR approval |
 | 3 | DTO schemas documented | OpenAPI / TypeSpec / equivalent |
 | 4 | Implementation depends on contracts | No implementation without interface |
 
 ## Implementation
 
-> **Agent:** Create interface-only files. No implementation. Focus on:
-> 1. Reading the architecture module to understand each component's role
-> 2. Defining clean TypeScript/Java/Python interfaces
-> 3. DTOs with proper validation decorators
-> 4. Event schemas with required fields
+> **Agent:** Create interface-only files. No implementation. Use Clean Architecture layers:
+> 1. Read the architecture module to understand each component's role
+> 2. Place domain interfaces in domain/, service interfaces in application/, API contracts in interfaces/http/
+> 3. DTOs with proper validation decorators go in application/
+> 4. Event schemas go in domain/event/
+> 5. Repository interfaces go in infrastructure/repository/
 >
 > The goal is a reviewed, frozen contract that implementation issues can depend on.
 `;
