@@ -170,6 +170,12 @@ function analyzeChanges(
 			continue;
 		}
 
+		// User-content files → always preserve (domain exploration, glossary, etc.)
+		if (record.category === "user") {
+			changes.push({ path: filePath, action: "preserve", reason: "User content — never overwritten by update" });
+			continue;
+		}
+
 		if (!fs.existsSync(fullPath)) {
 			changes.push({ path: filePath, action: "update", reason: "File missing" });
 			continue;

@@ -382,7 +382,7 @@ export function getFileCategory(manifest: GuardianManifest, filePath: string): F
  */
 export function categorizeFile(relativePath: string): FileCategory {
 	// User-editable files
-	const userEditable = ["agent/AGENTS.md", "context/project.md", "context/patterns.md"];
+	const userEditable = ["agent/AGENTS.md", "context/project.md", "context/patterns.md", "domain/"];
 
 	if (userEditable.some((p) => relativePath.includes(p))) {
 		return "user";
