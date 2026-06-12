@@ -93,9 +93,9 @@ type ExtensionContext = {
 		notify(message: string, level?: string): void;
 		setStatus(key: string, message: string | null): void;
 		confirm(title: string, message: string): Promise<boolean>;
-	
-	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> 
-
+	};
+	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
+};
 
 type ExtensionAPI = {
 	on(event: string, handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
