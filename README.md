@@ -514,8 +514,10 @@ Guardian provides complete workflow templates for the entire SDLC:
 A single repository with separate backend and frontend directories (e.g., Java + TypeScript) works out of the box. Run `guardian-framework init` in each subdirectory with the same repository URL:
 
 ```bash
-mkdir -p my-project/backend my-project/frontend
-cd my-project
+mkdir my-project && cd my-project
+git init                                # single .git at repo root
+
+mkdir backend frontend
 
 # Backend (Java Spring Boot)
 cd backend
