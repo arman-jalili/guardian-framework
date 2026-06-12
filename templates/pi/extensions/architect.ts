@@ -2,16 +2,15 @@
  * Architect Extension — Full Architecture-to-Implementation Pipeline
  *
  * Entry point. Imports from submodules and registers the extension.
- * Split into: architect-types.ts, architect-helpers.ts, architect-generators.ts
+ * Split into: architect-lib/types.ts, architect-lib/helpers.ts, architect-lib/generators.ts
  */
 
-import type { ExtensionAPI } from "./architect-types.ts";
-import type { ExtensionContext } from "./architect-types.ts";
-import type { EpicState, ModuleComponent, ArchitectureSlice } from "./architect-types.ts";
+import type { ExtensionAPI } from "./architect-lib/types.ts";
+import type { ExtensionContext } from "./architect-lib/types.ts";
+import type { EpicState, ModuleComponent, ArchitectureSlice } from "./architect-lib/types.ts";
 
 // Import helpers and generators (they register themselves in the module scope)
-import "./architect-helpers.ts";
-import "./architect-generators.ts";
+
 
 // ── Epic State Persistence ──
 
@@ -71,8 +70,8 @@ class EpicManager {
 		name: string,
 		trackingIssueId?: string,
 	): Promise<EpicState> {
-		const { discoverModules, findNextLogicalSlice, readRepoTool, readRepository, commandExists, runScript, ensureRemoteRepo, createRemoteIssue, linkRemoteIssue } = await import("./architect-helpers.ts");
-		const { generateIssueMarkdown, generateContractFreezeMarkdown, generateProofingMarkdown, generateArchitectureReadinessMarkdown } = await import("./architect-generators.ts");
+		const { discoverModules, findNextLogicalSlice, readRepoTool, readRepository, commandExists, runScript, ensureRemoteRepo, createRemoteIssue, linkRemoteIssue } = await import("./architect-lib/helpers.ts");
+		const { generateIssueMarkdown, generateContractFreezeMarkdown, generateProofingMarkdown, generateArchitectureReadinessMarkdown } = await import("./architect-lib/generators.ts");
 
 		const moduleFiles = discoverModules(this.cwd);
 		if (moduleFiles.length === 0) {
@@ -243,7 +242,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (action === "next-epic") {
-				const { discoverModules, findNextLogicalSlice } = await import("./architect-helpers.ts");
+				const { discoverModules, findNextLogicalSlice } = await import("./architect-lib/helpers.ts");
 				const moduleFiles = discoverModules(ctx.cwd);
 				const slice = findNextLogicalSlice(ctx.cwd, moduleFiles);
 				if (!slice) {
@@ -291,7 +290,7 @@ export default function (pi: ExtensionAPI) {
 
 				let gitInitMessage = "";
 				try {
-					const { runScript } = await import("./architect-helpers.ts");
+					const { runScript } = await import("./architect-lib/helpers.ts");
 					const gitCheck = runScript(ctx.cwd, "git rev-parse --git-dir 2>/dev/null");
 					if (gitCheck.exitCode !== 0) {
 						runScript(ctx.cwd, "git init");
@@ -309,7 +308,7 @@ export default function (pi: ExtensionAPI) {
 				let issueContent = "";
 				let issueSource = "";
 				const remoteId = firstIssue?.remoteIssueId;
-				const { readRepository, runScript } = await import("./architect-helpers.ts");
+				const { readRepository, runScript } = await import("./architect-lib/helpers.ts");
 				const repository = readRepository(ctx.cwd) || "";
 				if (remoteId && repository) {
 					try {
@@ -382,7 +381,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Discover architecture modules and find the next logical slice.",
 		parameters: { type: "object", properties: {} },
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-			const { discoverModules, findNextLogicalSlice, parseModuleFile } = await import("./architect-helpers.ts");
+			const { discoverModules, findNextLogicalSlice, parseModuleFile } = await import("./architect-lib/helpers.ts");
 			const moduleFiles = discoverModules(ctx.cwd);
 			if (moduleFiles.length === 0) {
 				return { content: [{ type: "text", text: "No architecture modules found in .pi/architecture/modules/." }] };
