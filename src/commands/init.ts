@@ -181,6 +181,15 @@ async function scaffoldFramework(
 			scaffoldedFiles[filePath] = record;
 		}
 
+		// Generate .gitignore at project root
+		const gitignorePath = path.join(targetDir, ".gitignore");
+		const gitignoreTemplatePath = path.join(TEMPLATE_DIR, ".gitignore");
+		if (fs.existsSync(gitignoreTemplatePath)) {
+			const gitignoreContent = fs.readFileSync(gitignoreTemplatePath, "utf-8");
+			await fs.promises.writeFile(gitignorePath, gitignoreContent);
+			scaffoldedFiles[".gitignore"] = { category: "framework", content: gitignoreContent };
+		}
+
 		// Generate WORKFLOW.md at project root
 		const workflowPath = path.join(targetDir, "WORKFLOW.md");
 		const workflowTemplatePath = path.join(TEMPLATE_DIR, "workflow.md");
@@ -211,6 +220,7 @@ async function scaffoldFramework(
 Scaffolded Guardian framework:
   .pi/         (source of truth)
   ${exportPaths.join("\n  ")}
+  .gitignore   (comprehensive language-agnostic defaults)
   WORKFLOW.md  (entry point for agents + humans)
 
 Next steps:

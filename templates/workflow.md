@@ -7,8 +7,9 @@ Architecture-first: every change traces back to canonical architecture docs.
 
 ## Quick Start
 
-1. Fill in project context in `.pi/agent/AGENTS.md` (replace `[bracketed]` placeholders)
-2. Run `npx guardian-framework generate` to create `.agents/`, `.claude/`, etc.
+1. Ensure `git init` has been run and `.gitignore` is in place (Guardian scaffolds a comprehensive `.gitignore`)
+2. Fill in project context in `.pi/agent/AGENTS.md` (replace `[bracketed]` placeholders)
+3. Run `npx guardian-framework generate` to create `.agents/`, `.claude/`, etc.
 
 > **Multi-techstack repos:** If your repository has both backend and frontend (e.g., Java + TypeScript), run `guardian-framework init` in each directory with the same repository URL. Each gets its own `.pi/`, manifest, build config, and CI pipeline. Scope CI path triggers to avoid collisions (`backend/**`, `frontend/**`).
 
@@ -97,6 +98,7 @@ Phase D: Validation     → Architecture + Security + Operations → merge decis
 
 ## For Humans
 
+- **`.gitignore` is pre-scaffolded** with language-agnostic defaults — extend for Python, Rust, Go, etc.
 - **Edit `.pi/` files** to customize workflows, prompts, and skills
 - **Run `npx guardian-framework update`** to pull framework updates
 - **Run `npx guardian-framework generate`** after editing `.pi/`
