@@ -127,6 +127,7 @@ type ExtensionAPI = {
 		content: string,
 		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
+};
 
 
 type ModuleComponent = {
