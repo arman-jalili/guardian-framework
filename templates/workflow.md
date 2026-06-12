@@ -10,6 +10,8 @@ Architecture-first: every change traces back to canonical architecture docs.
 1. Fill in project context in `.pi/agent/AGENTS.md` (replace `[bracketed]` placeholders)
 2. Run `npx guardian-framework generate` to create `.agents/`, `.claude/`, etc.
 
+> **Multi-techstack repos:** If your repository has both backend and frontend (e.g., Java + TypeScript), run `guardian-framework init` in each directory with the same repository URL. Each gets its own `.pi/`, manifest, build config, and CI pipeline. Scope CI path triggers to avoid collisions (`backend/**`, `frontend/**`).
+
 ---
 
 ## Full Delivery Pipeline

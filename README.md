@@ -509,6 +509,29 @@ Guardian provides complete workflow templates for the entire SDLC:
 
 ---
 
+## Multi-Techstack Projects
+
+A single repository with separate backend and frontend directories (e.g., Java + TypeScript) works out of the box. Run `guardian-framework init` in each subdirectory with the same repository URL:
+
+```bash
+mkdir -p my-project/backend my-project/frontend
+cd my-project
+
+# Backend (Java Spring Boot)
+cd backend
+npx guardian-framework init            # repo: my-org/my-project, lang: java
+cd ..
+
+# Frontend (TypeScript/React)
+cd frontend
+npx guardian-framework init            # repo: my-org/my-project, lang: typescript
+cd ..
+```
+
+Each subdirectory gets its own `.pi/`, `guardian-manifest.json`, build configuration, and CI pipeline. The optional `WORKFLOW.md` at each level documents that sub-project's delivery pipeline.
+
+When generating CI pipelines, scope them with path triggers (`backend/**` / `frontend/**`) so they don't collide at the repository root. See [CI Generator](#project-create--architecture-driven-scaffolding) for details.
+
 ## Token Optimization
 
 While Guardian's scope has grown far beyond token optimization, it remains highly token-efficient:
