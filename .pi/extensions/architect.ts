@@ -594,10 +594,58 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 `;
 // ── Contract Freeze Generator ──
 
-function generateContractFreezeMarkdown(
-	slice: ArchitectureSlice,
-	epicName: string,
-): string {
+
+
+// ── Epic State Persistence ──
+
+function loadEpicState(cwd: string): EpicState | null {
+	const p = join(cwd, EPIC_STATE_KEY);
+	if (!existsSync(p)) return null;
+	try {
+		return JSON.parse(readFileSync(p, "utf-8")) as EpicState;
+	} catch {
+		return null;
+	}
+}
+
+function saveEpicState(cwd: string, state: EpicState): void {
+	const p = join(cwd, EPIC_STATE_KEY);
+	const dir = dirname(p);
+	if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+	writeFileSync(p, JSON.stringify(state, null, 2));
+}
+
+function formatEpicStatus(state: EpicState | null): string {
+	if (!state) return 'No active epic. Start one with /architect --epic "Name"';
+	const lines = [
+		`## Epic: ${state.name}`,
+		`**Status:** ${state.status}`,
+		`**Tracking Issue:** ${state.trackingIssueId || "not created"}`,
+		`**Created:** ${state.createdAt}`,
+	];
+	if (state.issues.length > 0) {
+		lines.push(`\n### Issues (${state.issues.length} total)`);
+		for (const issue of state.issues) {
+			const emoji =
+				issue.status === "done"
+					? "✓"
+					: issue.status === "failed"
+						? "✗"
+						: issue.status === "in-progress"
+							? "▶"
+							: "○";
+			lines.push(`  ${emoji} ${issue.id}: ${issue.title}`);
+		}
+	}
+	return lines.join("\n");
+}
+
+// ── Epic Issue Generators (helper object to ensure reference availability) ──
+const EpicIssueGenerators = {
+	generateContractFreezeMarkdown(
+		slice: ArchitectureSlice,
+		epicName: string,
+	): string {
 	const moduleId = slice.module.replace(/^module-/, "");
 
 	return `---
@@ -703,14 +751,14 @@ ${slice.nextLogicalSlice.map((c: { name: string }) => `- ${c.name}`).join("\n")}
 >
 > The goal is a reviewed, frozen contract that implementation issues can depend on.
 `;
-}
+},
 
 // ── Proofing Issue Generator ──
 
-function generateProofingMarkdown(
-	slice: ArchitectureSlice,
-	epicName: string,
-): string {
+	generateProofingMarkdown(
+		slice: ArchitectureSlice,
+		epicName: string,
+	): string {
 	const moduleId = slice.module.replace(/^module-/, "");
 
 	return `---
@@ -831,14 +879,14 @@ run_stage "11" "${moduleId}_proofing" \\
 > End by running the full CI pipeline to verify integration:
 > \`bash .pi/scripts/ci/run_hardening_stages.sh\`
 `;
-}
+},
 
 // ── Architecture Readiness Generator (expanded) ──
 
-function generateArchitectureReadinessMarkdown(
-	slice: ArchitectureSlice,
-	epicName: string,
-): string {
+	generateArchitectureReadinessMarkdown(
+		slice: ArchitectureSlice,
+		epicName: string,
+	): string {
 	const moduleId = slice.module.replace(/^module-/, "");
 
 	return `---
@@ -968,50 +1016,7 @@ Verify that:
 `;
 }
 }
-
-// ── Epic State Persistence ──
-
-function loadEpicState(cwd: string): EpicState | null {
-	const p = join(cwd, EPIC_STATE_KEY);
-	if (!existsSync(p)) return null;
-	try {
-		return JSON.parse(readFileSync(p, "utf-8")) as EpicState;
-	} catch {
-		return null;
-	}
-}
-
-function saveEpicState(cwd: string, state: EpicState): void {
-	const p = join(cwd, EPIC_STATE_KEY);
-	const dir = dirname(p);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-	writeFileSync(p, JSON.stringify(state, null, 2));
-}
-
-function formatEpicStatus(state: EpicState | null): string {
-	if (!state) return 'No active epic. Start one with /architect --epic "Name"';
-	const lines = [
-		`## Epic: ${state.name}`,
-		`**Status:** ${state.status}`,
-		`**Tracking Issue:** ${state.trackingIssueId || "not created"}`,
-		`**Created:** ${state.createdAt}`,
-	];
-	if (state.issues.length > 0) {
-		lines.push(`\n### Issues (${state.issues.length} total)`);
-		for (const issue of state.issues) {
-			const emoji =
-				issue.status === "done"
-					? "✓"
-					: issue.status === "failed"
-						? "✗"
-						: issue.status === "in-progress"
-							? "▶"
-							: "○";
-			lines.push(`  ${emoji} ${issue.id}: ${issue.title}`);
-		}
-	}
-	return lines.join("\n");
-}
+};
 
 // ── Epic Manager ──
 
@@ -1076,7 +1081,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const freezeMarkdown = generateContractFreezeMarkdown(slice, name);
+		const freezeMarkdown = EpicIssueGenerators.generateContractFreezeMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${freezeId}.md`), freezeMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, freezeEntry.title, join(issuesDir, `${freezeId}.md`), "epic,contract", remoteRepo);
@@ -1138,7 +1143,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const proofingMarkdown = generateProofingMarkdown(slice, name);
+		const proofingMarkdown = EpicIssueGenerators.generateProofingMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${proofingId}.md`), proofingMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, proofingEntry.title, join(issuesDir, `${proofingId}.md`), "epic,proofing", remoteRepo);
@@ -1157,7 +1162,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const readinessMarkdown = generateArchitectureReadinessMarkdown(slice, name);
+		const readinessMarkdown = EpicIssueGenerators.generateArchitectureReadinessMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
 
 		// Create remote readiness issue if available
