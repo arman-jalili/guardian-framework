@@ -19,6 +19,43 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Type } from "typebox";
 
+// ── Tech stack resolution ──
+
+interface ManifestInfo {
+	language: string;
+	buildTool?: string;
+	groupId: string;
+}
+
+function readManifest(cwd: string): ManifestInfo | null {
+	const manifestPath = path.join(cwd, "guardian-manifest.json");
+	if (!fs.existsSync(manifestPath)) return null;
+	try {
+		const raw = fs.readFileSync(manifestPath, "utf-8");
+		const m = JSON.parse(raw);
+		return {
+			language: m.language || "unknown",
+			buildTool: m.buildTool || undefined,
+			groupId: m.groupId || "com.example",
+		};
+	} catch {
+		return null;
+	}
+}
+
+function describeTechStack(m: ManifestInfo): string {
+	const base = LANG_LABELS[m.language] || m.language;
+	return m.buildTool ? `${base} (${m.buildTool})` : base;
+}
+
+const LANG_LABELS: Record<string, string> = {
+	typescript: "TypeScript (Bun/Node)",
+	rust: "Rust",
+	python: "Python",
+	go: "Go",
+	java: "Java / Spring Boot",
+};
+
 // ── Minimal pi ExtensionAPI types (same pattern as coordinator.ts) ──
 
 type ShellResult = {
@@ -82,11 +119,14 @@ function sanitizeContext(context: string): string {
 		.slice(0, 5000);
 }
 
-function buildExplorationPrompt(context: string): string {
+function buildExplorationPrompt(context: string, techStack?: string): string {
+	const techLine = techStack
+		? ["", "## Project Tech Stack", "", `This project uses **${techStack}**.`, "Frame your domain analysis with patterns and terminology appropriate for this stack.", ""]
+		: [];
 	return [
 		"You are a Domain-Driven Design expert. Analyze the following business",
 		"description and extract a structured domain model. Respond with valid JSON only.",
-		"",
+		...techLine,
 		"## Business Context",
 		"",
 		context,
@@ -447,11 +487,20 @@ export default function (pi: ExtensionAPI) {
 					);
 					return "(domain command handled)";
 				}
+				const manifest = readManifest(ctx.cwd);
+				const techStack = manifest ? describeTechStack(manifest) : undefined;
 				const sanitized = sanitizeContext(context);
-				const prompt = buildExplorationPrompt(sanitized);
+				const prompt = buildExplorationPrompt(sanitized, techStack);
 				const sessionId = crypto.randomUUID();
 				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
 				fs.mkdirSync(explorationDir, { recursive: true });
+
+				// Build tech stack front matter
+				const techStackYaml = manifest
+					? "language: " + manifest.language + "\n" +
+					  (manifest.buildTool ? "build_tool: " + manifest.buildTool + "\n" : "") +
+					  "group_id: " + manifest.groupId
+					: "";
 
 				// Create session file with business context
 				const sessionPath = path.join(explorationDir, sessionId + ".md");
@@ -460,6 +509,7 @@ export default function (pi: ExtensionAPI) {
 					"session_id: " + sessionId,
 					"created: " + new Date().toISOString().split("T")[0],
 					'business_context: "' + sanitized.replace(/"/g, '\\"') + '"',
+					techStackYaml,
 					"status: draft",
 					"---",
 					"",
@@ -475,20 +525,30 @@ export default function (pi: ExtensionAPI) {
 				].join("\n");
 				fs.writeFileSync(sessionPath, initialContent, "utf-8");
 
-				// Write stub exploration.md with business context filled in
+				// Write stub exploration.md with business context + tech stack filled in
+				const techStackSection = techStack ? [
+					"",
+					"---",
+					"",
+					"## Tech Stack",
+					"",
+					"**" + techStack + "** — this project MUST be implemented with this technology.",
+					"Frame all architecture decisions, module designs, and code patterns accordingly.",
+				] : [];
 				const explorationMdPath = path.join(ctx.cwd, ".pi", "domain", "exploration.md");
 				const stubContent = [
 					"---",
 					"session_id: " + sessionId,
 					"created: " + new Date().toISOString().split("T")[0],
 					'business_context: "' + sanitized.replace(/"/g, '\\"') + '"',
+					techStackYaml,
 					"status: draft",
 					"---",
 					"",
 					"# Domain Exploration: " + sessionId,
 					"",
 					"> **Status:** draft — agent needs to fill in the analysis below.",
-					"",
+					...techStackSection,
 					"---",
 					"",
 					"## Business Context",
@@ -600,10 +660,18 @@ export default function (pi: ExtensionAPI) {
 				// Inject the DDD analysis prompt as a follow-up message to the agent.
 				// Using sendMessage with triggerTurn=true causes the agent to process
 				// this as a new conversation turn, not as a command response.
+				const techStackNote = techStack ? [
+					"",
+					"Project Tech Stack: **" + techStack + "**",
+					"IMPORTANT: This project uses the tech stack above. Frame your architecture",
+					"analysis, patterns, and terminology accordingly. Do not suggest alternative",
+					"stacks unless the domain explicitly requires it.",
+					"",
+				] : [];
 				const analysisPrompt = [
 					"I need you to analyze the following business domain using Domain-Driven Design.",
 					"I have created stub files in .pi/domain/exploration.md and .pi/domain/ubiquitous-language.md.",
-					"",
+					...techStackNote,
 					"Your task:",
 					"1. READ .pi/domain/exploration.md — it has the business context and empty tables",
 					"2. ANALYZE the domain: actors, FR/NFR, assumptions, bounded contexts, entities, events , glossary",
@@ -642,7 +710,6 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// /domain --architect-scaffold <session-id>
-			// /domain --architect-scaffold <session-id>
 			if (trimmed.startsWith("--architect-scaffold")) {
 				const sessionId = trimmed.slice("--architect-scaffold".length).trim();
 				if (!sessionId) {
@@ -652,6 +719,9 @@ export default function (pi: ExtensionAPI) {
 					);
 					return "(domain command handled)";
 				}
+
+				const techManifest = readManifest(ctx.cwd);
+				const techStack = techManifest ? describeTechStack(techManifest) : undefined;
 
 				const explorationDir = path.join(ctx.cwd, ".pi", "domain", "exploration");
 				const sessionPath = path.join(explorationDir, sessionId + ".md");
@@ -749,13 +819,18 @@ export default function (pi: ExtensionAPI) {
 				? bcNames.map(n => "  - " + n).join("\n")
 				: "  - (to be defined during architecture planning)";
 
+				const techStackLine = techStack
+				? "\n**Tech Stack:** " + techStack + "\n\nImplementation language is **" + techManifest.language + "**" +
+				  (techManifest.buildTool ? " with **" + techManifest.buildTool + "**" : "") + ".\n"
+				: "";
+
 				const adrContent = [
 				"# ADR-001: Domain-Driven Design with Bounded Contexts",
 				"",
 				"**Status:** Proposed",
 				"**Date:** " + timestamp,
 				"**Session:** " + sessionId,
-				"",
+				techStackLine,
 				"## Context",
 				"",
 				"The domain exploration identified bounded contexts that must be",
@@ -887,7 +962,9 @@ export default function (pi: ExtensionAPI) {
 				resultLines.push("Or run through the full delivery pipeline:");
 				resultLines.push("  1. /domain --validate " + sessionId + "    (validate exploration)");
 				resultLines.push("  2. (architecture scaffold just completed)");
-				resultLines.push("  3. guardian project create --lang <lang>   (Epic 0 - greenfield only)");
+				const lang = techManifest?.language || "<lang>";
+				const btFlag = techManifest?.buildTool ? " --buildTool " + techManifest.buildTool : "";
+				resultLines.push("  3. guardian project create --lang " + lang + btFlag + "   (Epic 0 - greenfield only)");
 				resultLines.push("  4. /epic-plan --module <module>    (plan each module)");
 
 				// Send the results as a follow-up message so the agent sees them
