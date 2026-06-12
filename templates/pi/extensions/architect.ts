@@ -1027,6 +1027,11 @@ function formatEpicStatus(state: EpicState | null): string {
 // ── Epic Issue Generators (helper object to ensure reference availability) ──
 
 
+// globalThis bridge for Bun module scoping (function declarations not always hoisted across class boundaries)
+(globalThis as any).__loadEpicState = loadEpicState;
+(globalThis as any).__saveEpicState = saveEpicState;
+(globalThis as any).__formatEpicStatus = formatEpicStatus;
+
 class EpicManager {
 	private state: EpicState | null;
 
