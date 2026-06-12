@@ -101,7 +101,6 @@ guardian domain scaffold <session-id>
 **Or inside the pi agent (consistent with `/architect`):**
 ```
 /domain --explore "We build a fintech payment platform..."
-/domain --answer <session-id> response.json
 /domain --architect-scaffold <session-id>
 /domain --validate <session-id>
 ```
@@ -227,6 +226,20 @@ guardian project create --lang java --buildTool gradle --force
 ```
 
 Consistent with `/domain` and `/architect` — this is **Epic 0**, run after domain exploration.
+
+### `architect` — Epic Orchestration
+
+**Inside pi agent (slash command):**
+```
+/architect --epic "Name" [--tracking-issue N]    Start new epic from architecture modules
+/architect status                                  Show current epic state and progress
+/architect next-epic                               Find next logical slice to implement
+/architect abort                                   Cancel current epic
+```
+
+Starts a new epic from the architecture in `.pi/architecture/modules/`. Optionally link a GitHub/GitLab tracking issue with `--tracking-issue`.
+
+Consistent with `/domain` and `/project` — plan epics after architecture is scaffolded, then drill into modules with `/epic-plan`.
 
 Reads architecture modules from `.pi/architecture/modules/` and generates:
 - **Source directory tree** matching module boundaries and layer decisions
@@ -608,6 +621,9 @@ Guardian extensions use `pi.sendMessage()` with `triggerTurn: true` to get the a
 | `/domain --explore` | Extension writes stub files, sends DDD prompt as new turn → agent fills in analysis |
 | `/domain --architect-scaffold` | Extension generates modules/ADRs/diagrams, sends results as new turn → agent reviews |
 | `/domain --validate` | Extension validates structure, sends results as new turn → agent reports |
+| `/architect --epic "Name"` | Extension creates epic state, prompts agent to plan implementation across modules |
+| `/architect status` | Extension returns current epic state and component progress as new turn |
+| `/architect next-epic` | Extension analyzes modules to find the next unstarted slice, sends results as new turn |
 
 This pattern works because `pi.sendMessage()` injects a message as a **user conversation turn**, not as a command response. The agent processes it naturally — calling tools, writing files, and continuing the workflow.
 
@@ -617,11 +633,12 @@ Without this pattern, the agent sees command output as "finished" and waits for 
 
 ```
 1. guardian-framework init     → scaffold framework in project
-2. /domain --explore "..."     → discover domain, fill exploration.md + glossary  
+2. /domain --explore "..."     → discover domain, fill exploration.md + glossary
 3. /domain --architect-scaffold <id>  → generate modules, ADR-001, diagrams
 4. guardian project create     → Epic 0: project scaffolding (greenfield)
-5. /epic-plan --module <name>  → per-module planning (4-phase pipeline)
-6. /implement-series           → implement issues
+5. /architect --epic "Name"    → start epic from architecture modules
+6. /epic-plan --module <name>  → per-module planning (4-phase pipeline)
+7. /implement-series           → implement issues
 ```
 
 See `.pi/context/domain-workflow.md` for detailed step-by-step.
