@@ -598,49 +598,6 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 
 // ── Epic State Persistence ──
 
-function loadEpicState(cwd: string): EpicState | null {
-	const p = join(cwd, EPIC_STATE_KEY);
-	if (!existsSync(p)) return null;
-	try {
-		return JSON.parse(readFileSync(p, "utf-8")) as EpicState;
-	} catch {
-		return null;
-	}
-}
-
-function saveEpicState(cwd: string, state: EpicState): void {
-	const p = join(cwd, EPIC_STATE_KEY);
-	const dir = dirname(p);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-	writeFileSync(p, JSON.stringify(state, null, 2));
-}
-
-function formatEpicStatus(state: EpicState | null): string {
-	if (!state) return 'No active epic. Start one with /architect --epic "Name"';
-	const lines = [
-		`## Epic: ${state.name}`,
-		`**Status:** ${state.status}`,
-		`**Tracking Issue:** ${state.trackingIssueId || "not created"}`,
-		`**Created:** ${state.createdAt}`,
-	];
-	if (state.issues.length > 0) {
-		lines.push(`\n### Issues (${state.issues.length} total)`);
-		for (const issue of state.issues) {
-			const emoji =
-				issue.status === "done"
-					? "✓"
-					: issue.status === "failed"
-						? "✗"
-						: issue.status === "in-progress"
-							? "▶"
-							: "○";
-			lines.push(`  ${emoji} ${issue.id}: ${issue.title}`);
-		}
-	}
-	return lines.join("\n");
-}
-
-// ── Epic Issue Generators (helper object to ensure reference availability) ──
 const EpicIssueGenerators = {
 	generateContractFreezeMarkdown(
 		slice: ArchitectureSlice,
@@ -1019,6 +976,51 @@ Verify that:
 };
 
 // ── Epic Manager ──
+
+function loadEpicState(cwd: string): EpicState | null {
+	const p = join(cwd, EPIC_STATE_KEY);
+	if (!existsSync(p)) return null;
+	try {
+		return JSON.parse(readFileSync(p, "utf-8")) as EpicState;
+	} catch {
+		return null;
+	}
+}
+
+function saveEpicState(cwd: string, state: EpicState): void {
+	const p = join(cwd, EPIC_STATE_KEY);
+	const dir = dirname(p);
+	if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+	writeFileSync(p, JSON.stringify(state, null, 2));
+}
+
+function formatEpicStatus(state: EpicState | null): string {
+	if (!state) return 'No active epic. Start one with /architect --epic "Name"';
+	const lines = [
+		`## Epic: ${state.name}`,
+		`**Status:** ${state.status}`,
+		`**Tracking Issue:** ${state.trackingIssueId || "not created"}`,
+		`**Created:** ${state.createdAt}`,
+	];
+	if (state.issues.length > 0) {
+		lines.push(`\n### Issues (${state.issues.length} total)`);
+		for (const issue of state.issues) {
+			const emoji =
+				issue.status === "done"
+					? "✓"
+					: issue.status === "failed"
+						? "✗"
+						: issue.status === "in-progress"
+							? "▶"
+							: "○";
+			lines.push(`  ${emoji} ${issue.id}: ${issue.title}`);
+		}
+	}
+	return lines.join("\n");
+}
+
+// ── Epic Issue Generators (helper object to ensure reference availability) ──
+
 
 class EpicManager {
 	private state: EpicState | null;
