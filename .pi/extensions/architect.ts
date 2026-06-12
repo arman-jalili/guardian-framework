@@ -84,6 +84,7 @@
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+};
 
 // ── Types ──
 
@@ -135,12 +136,14 @@ type ModuleComponent = {
 	status: "planned" | "in-progress" | "implemented" | "deprecated";
 	description: string;
 	dependencies: string[];
+};
 
 
 type ArchitectureSlice = {
 	module: string;
 	components: ModuleComponent[];
 	nextLogicalSlice: ModuleComponent[];
+};
 
 
 type EpicState = {
