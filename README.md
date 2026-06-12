@@ -114,12 +114,13 @@ cd your-project
 npx guardian-framework init
 ```
 
-Interactive prompts guide you through project name, language, AI tools, validators, and workflows.
+Interactive prompts guide you through project name, language, AI tools, group/package prefix, and an optional business domain description. All validators and workflow templates are scaffolded by default.
 
 ### 3. Scaffold a project from architecture
 
 ```bash
 # Generates source tree, build config, CI pipeline FROM architecture decisions
+# --groupId is optional: reads from guardian-manifest.json if not specified
 guardian project create --lang java --buildTool maven --groupId com.mycompany
 ```
 
@@ -216,6 +217,8 @@ guardian project create --lang java --buildTool maven --groupId com.mycompany
 guardian project create --lang typescript --validators ci,tests,security --dry-run
 guardian project create --lang java --buildTool gradle --force
 ```
+
+`--groupId` is optional when a `guardian-manifest.json` exists (set during `init`).
 
 **Inside pi agent (slash command):**
 ```

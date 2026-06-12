@@ -61,6 +61,7 @@ describe("Java E2E: Init lifecycle", () => {
 			language: "java",
 			buildTool: "maven",
 			repoTool: "gh",
+			groupId: "com.e2etest",
 			validators: ["ci", "tests"],
 			workflows: ["feature"],
 			templateContext: context,

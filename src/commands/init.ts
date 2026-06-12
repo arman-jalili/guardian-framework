@@ -36,10 +36,8 @@ import {
 	TEMPLATE_DIR,
 	type TemplateContext,
 	type Tool,
-	type Validator,
-	type Workflow,
-	filterValidators,
-	filterWorkflows,
+	AVAILABLE_VALIDATORS,
+	AVAILABLE_WORKFLOWS,
 	getDefaultContext,
 	getPiTemplateFiles,
 	getValidatorScripts,
@@ -122,35 +120,42 @@ async function scaffoldFramework(
 		language: Language;
 		buildTool?: "maven" | "gradle";
 		repoTool: RepoTool;
-		validators: Validator[];
-		workflows: Workflow[];
 		projectName: string;
 		projectVersion: string;
-		projectType: string;
 		repository: string;
+		groupId: string;
+		domainDescription: string;
 	},
 ): Promise<void> {
 	const s = startSpinner("Scaffolding framework...");
 
 	try {
+		// Scaffold all validators and workflows by default
+		const validators = [...AVAILABLE_VALIDATORS];
+		const workflows = [...AVAILABLE_WORKFLOWS];
+
 		// Get template context with language defaults and repo tool
 		const context: TemplateContext = {
-			...getDefaultContext(options.language, options.projectName, options.repoTool, options.buildTool),
+			...getDefaultContext(
+				options.language,
+				options.projectName,
+				options.repoTool,
+				options.buildTool,
+				options.groupId,
+			),
 			projectVersion: options.projectVersion,
-			projectType: options.projectType,
 			repository: options.repository,
 			repoTool: options.repoTool,
+			groupId: options.groupId,
+			domainDescription: options.domainDescription,
 		};
-
-		// Filter validators and workflows
-		const validators = filterValidators(options.validators);
-		const workflows = filterWorkflows(options.workflows);
 
 		// Create manifest
 		const manifest = createManifest({
 			tools: options.tools,
 			language: options.language,
 			repoTool: options.repoTool,
+			groupId: options.groupId,
 			validators,
 			workflows,
 			templateContext: context,
@@ -161,13 +166,7 @@ async function scaffoldFramework(
 
 		// Scaffold .pi/ directory (always, as source of truth)
 		const piDir = path.join(targetDir, PI_DIR);
-		const scaffoldErrors = scaffoldPiDirectory(
-			piDir,
-			context,
-			validators,
-			workflows,
-			scaffoldedFiles,
-		);
+		const scaffoldErrors = scaffoldPiDirectory(piDir, context, scaffoldedFiles);
 
 		// Generate exports for selected tools by delegating to generateExport
 		const generatedFiles: Record<string, { category: FileCategory; content: string }> = {};
@@ -236,8 +235,6 @@ Next steps:
 function scaffoldPiDirectory(
 	piDir: string,
 	context: TemplateContext,
-	validators: Validator[],
-	workflows: Workflow[],
 	scaffoldedFiles: Record<string, { category: FileCategory; content: string }>,
 ): string[] {
 	const errors: string[] = [];
@@ -265,7 +262,7 @@ function scaffoldPiDirectory(
 		const targetPath = path.join(piDir, relativePath);
 
 		// Skip if it's a template file that should be filtered
-		if (shouldSkipFile(relativePath, validators, workflows, context.language)) {
+		if (shouldSkipFile(relativePath, context.language)) {
 			continue;
 		}
 
@@ -308,16 +305,19 @@ function scaffoldPiDirectory(
 		fs.mkdirSync(domainDir, { recursive: true });
 	}
 	if (!fs.existsSync(explorationPath)) {
+		const businessContextLine = context.domainDescription
+			? context.domainDescription
+			: "_Describe the business domain here after running /domain --explore_";
 		const placeholder = [
 			"# Domain Exploration",
 			"",
-			"> **Status:** awaiting-analysis — Run `/domain --explore \"business context\"` to begin.",
+			'> **Status:** awaiting-analysis — Run `/domain --explore "business context"` to begin.',
 			"",
 			"---",
 			"",
 			"## Business Context",
 			"",
-			"_Describe the business domain here after running /domain --explore_",
+			businessContextLine,
 			"",
 			"---",
 			"",
@@ -430,29 +430,8 @@ function scaffoldPiDirectory(
 
  * Check if file should be skipped based on validator/workflow selection
  */
-function shouldSkipFile(
-	relativePath: string,
-	validators: Validator[],
-	workflows: Workflow[],
-	language?: Language,
-): boolean {
-	// Filter scripts based on validators
-	if (relativePath.startsWith("scripts/validate-")) {
-		const validatorName = relativePath.replace("scripts/validate-", "").replace(".sh", "");
-		if (!validators.includes(validatorName as Validator)) {
-			return true;
-		}
-	}
-
-	// Filter workflow prompts
-	if (relativePath.startsWith("prompts/")) {
-		const workflowName = relativePath.replace("prompts/", "").replace(".md", "");
-		if (!workflows.includes(workflowName as Workflow)) {
-			return true;
-		}
-	}
-
-	// Filter domain exploration template (internal render template, not user-facing)
+function shouldSkipFile(relativePath: string, language?: Language): boolean {
+	// Filter domain exploration template (generated inline, not from template)
 	if (relativePath.endsWith("/exploration.md")) {
 		return true;
 	}

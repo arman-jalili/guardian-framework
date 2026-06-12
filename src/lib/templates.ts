@@ -153,9 +153,10 @@ export interface TemplateContext {
 	projectVersion: string;
 	language: Language;
 	buildTool?: "maven" | "gradle";
-	projectType: string;
 	repository: string;
 	repoTool: RepoTool;
+	groupId: string;
+	domainDescription?: string;
 	buildCommand: string;
 	testCommand: string;
 	lintCommand: string;
@@ -403,6 +404,7 @@ export function getDefaultContext(
 	projectName: string,
 	repoTool: RepoTool = "gh",
 	buildTool?: "maven" | "gradle",
+	groupId?: string,
 ): TemplateContext {
 	const defaults = LANGUAGE_DEFAULTS[language];
 
@@ -414,9 +416,9 @@ export function getDefaultContext(
 		projectVersion: "0.1.0",
 		language,
 		buildTool: buildTool ?? (language === "java" ? "maven" : undefined),
-		projectType: "Library",
 		repository: "owner/repo",
 		repoTool,
+		groupId: groupId ?? `com.${projectName}`,
 		buildCommand: commandOverrides.buildCommand ?? defaults.buildCommand,
 		testCommand: commandOverrides.testCommand ?? defaults.testCommand,
 		lintCommand: commandOverrides.lintCommand ?? defaults.lintCommand,

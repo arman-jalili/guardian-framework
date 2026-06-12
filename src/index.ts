@@ -18,6 +18,7 @@ import { runUpdate } from "./commands/update.js";
 import { runUpgrade } from "./commands/upgrade.js";
 import { runProjectCreate } from "./commands/project.js";
 import { runTrust, runValidate, runVerify } from "./commands/validate.js";
+import { readManifest } from "./lib/manifest.js";
 
 const VERSION = "0.1.0";
 
@@ -75,7 +76,7 @@ Init options:
   -t, --tool <name>          AI tool (pi, claude, opencode, agents, github)
   -l, --lang <name>          Language (typescript, rust, python, go, java)
   --buildTool <name>         Build tool (maven, gradle) — only for Java
-  --validators <list>        Validators (comma-separated, ci always included)
+  --groupId <name>           Group/package prefix (default: com.<project-name>)
 
 Project options:
   Project scaffolding from architecture decisions
@@ -83,7 +84,7 @@ Project options:
 
   -l, --lang <name>          Language (required)
   --buildTool <name>         Build tool (maven, gradle)
-  --groupId <name>           Maven group / package prefix (default: com.example)
+  --groupId <name>           Group/package prefix (reads from manifest if not specified)
   --validators <list>        Validators for CI pipeline
   --dryRun                   Show plan without writing files
   --force                    Override existing project guard
@@ -192,10 +193,15 @@ async function runCommand(
 			break;
 		case "project":
 			if (args.positionals[1] === "create") {
+				// Read groupId from manifest if not passed via CLI
+				const manifest = readManifest(targetDir);
+				const resolvedGroupId =
+					(args.values.groupId as string) || manifest?.groupId || "com.example";
+
 				await runProjectCreate(targetDir, {
 					language: args.values.lang as Language,
 					buildTool: args.values.buildTool as "maven" | "gradle" | undefined,
-					groupId: (args.values.groupId as string) || "com.example",
+					groupId: resolvedGroupId,
 					repoTool: "gh",
 					validators: (args.values.validators as string)?.split(",") || ["ci", "tests"],
 					dryRun: args.values.dryRun as boolean | undefined,

@@ -13,25 +13,19 @@ import {
 	spinner,
 	text,
 } from "@clack/prompts";
-import type { Language, RepoTool, Tool, Validator, Workflow } from "./templates.js";
-import {
-	AVAILABLE_VALIDATORS,
-	AVAILABLE_WORKFLOWS,
-	REPOSITORY_TOOLS,
-	SUPPORTED_LANGUAGES,
-	SUPPORTED_TOOLS,
-} from "./templates.js";
+import type { Language, RepoTool, Tool } from "./templates.js";
+import { REPOSITORY_TOOLS, SUPPORTED_LANGUAGES, SUPPORTED_TOOLS } from "./templates.js";
 
 export interface InitOptions {
 	tools: Tool[];
 	language: Language;
+	buildTool?: "maven" | "gradle";
 	repoTool: RepoTool;
-	validators: Validator[];
-	workflows: Workflow[];
 	projectName: string;
 	projectVersion: string;
-	projectType: string;
 	repository: string;
+	groupId: string;
+	domainDescription: string;
 }
 
 /**
@@ -68,24 +62,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 3: Project type
-	const projectType = await select({
-		message: "Project type?",
-		options: [
-			{ value: "CLI", label: "CLI application" },
-			{ value: "Web App", label: "Web application" },
-			{ value: "Library", label: "Library/Package" },
-			{ value: "API", label: "API/Backend" },
-			{ value: "Other", label: "Other" },
-		],
-	});
-
-	if (isCancel(projectType)) {
-		cancel("Cancelled");
-		return null;
-	}
-
-	// Step 4: Repository
+	// Step 3: Repository
 	const repository = await text({
 		message: "Repository (owner/repo)?",
 		placeholder: "my-org/my-project",
@@ -96,7 +73,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 5: Repository tool selection (gh or glab)
+	// Step 4: Repository tool selection (gh or glab)
 	const repoTool = await select({
 		message: "Which Git repository tool do you use?",
 		options: [
@@ -118,7 +95,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 6: AI Tool selection (multi-select, pi recommended)
+	// Step 5: AI Tool selection (multi-select, pi recommended)
 	const tools = await multiselect({
 		message: "Select AI tools to scaffold (pi is recommended for full features)",
 		options: [
@@ -161,7 +138,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 7: Language selection
+	// Step 6: Language selection
 	const language = await select({
 		message: "Select programming language",
 		options: [
@@ -178,191 +155,56 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		return null;
 	}
 
-	// Step 7b: Build tool selection (only for Java)
+	// Step 6b: Build tool selection (only for Java)
 	let buildTool: "maven" | "gradle" | undefined;
 	if (language === "java") {
-		buildTool = await select({
+		buildTool = (await select({
 			message: "Select Java build tool",
 			options: [
 				{ value: "maven", label: "Maven", hint: "mvn (Recommended)" },
 				{ value: "gradle", label: "Gradle", hint: "gradle" },
 			],
-		});
+		})) as "maven" | "gradle";
 
 		if (isCancel(buildTool)) {
 			cancel("Cancelled");
 			return null;
 		}
+		buildTool = buildTool as "maven" | "gradle";
 	}
 
-	// Step 8: Validator selection (CI pre-selected and locked)
-	const validators = await multiselect({
-		message: "Select validators (CI is always required)",
-		options: [
-			{
-				value: "ci",
-				label: "CI validation",
-				hint: "Required - build, lint, format check",
-			},
-			{
-				value: "tests",
-				label: "Test validation",
-				hint: "Unit and integration tests",
-			},
-			{
-				value: "security",
-				label: "Security validation",
-				hint: "Secrets, injection, path traversal checks",
-			},
-			{
-				value: "operations",
-				label: "Operations validation",
-				hint: "Tracing, cancellation, atomic writes",
-			},
-			{
-				value: "integration",
-				label: "Integration validation",
-				hint: "Component integration checks",
-			},
-			{
-				value: "architecture",
-				label: "Architecture validation",
-				hint: "Architecture compliance and design checks",
-			},
-			{
-				value: "canonical",
-				label: "Canonical sync validation",
-				hint: ".pi source/export integrity checks",
-			},
-		],
-		initialValues: ["ci", "tests", "architecture", "canonical"],
+	// Step 7: Group/package prefix
+	const groupId = await text({
+		message: "Group/package prefix? (e.g., com.yourcompany)",
+		placeholder: `com.${projectName}`,
+		initialValue: `com.${projectName}`,
 	});
 
-	if (isCancel(validators)) {
+	if (isCancel(groupId)) {
 		cancel("Cancelled");
 		return null;
 	}
 
-	// Step 9: Workflow selection (grouped by category)
-	const workflows = await multiselect({
-		message: "Select workflow prompts",
-		options: [
-			// Standard workflows
-			{
-				value: "feature-development",
-				label: "Feature Development",
-				hint: "New features workflow",
-			},
-			{
-				value: "bug-fix",
-				label: "Bug Fix",
-				hint: "Bug fixing workflow",
-			},
-			{
-				value: "hotfix",
-				label: "Emergency Hotfix",
-				hint: "Production fixes workflow",
-			},
-			{
-				value: "refactoring",
-				label: "Refactoring",
-				hint: "Code improvement workflow",
-			},
-			{
-				value: "issue-implementation-series",
-				label: "Issue Implementation Series",
-				hint: "Batch implementation workflow",
-			},
-			// Epic/Issue management workflows
-			{
-				value: "epic-plan",
-				label: "Epic Plan",
-				hint: "Architecture analysis + epic slicing",
-			},
-			{
-				value: "issue-draft",
-				label: "Issue Draft",
-				hint: "Create draft issues from epic",
-			},
-			{
-				value: "git-issues",
-				label: "Git Issues",
-				hint: "Create epics/issues in GitHub/GitLab",
-			},
-			{
-				value: "issue-closeout",
-				label: "Issue Closeout",
-				hint: "Validate + create compliance MR",
-			},
-			{
-				value: "issue-merge",
-				label: "Issue Merge",
-				hint: "Merge MR + close issue + update tracking",
-			},
-			// Plan conversion workflows
-			{
-				value: "plan-to-issues",
-				label: "Plan to Issues",
-				hint: "Convert superpowers plan to GitHub/GitLab issues",
-			},
-			// Blueprint management workflows
-			{
-				value: "blueprint-validate",
-				label: "Blueprint Validate",
-				hint: "Validate .pi/ integrity",
-			},
-			{
-				value: "sync-check",
-				label: "Sync Check",
-				hint: "Verify exports match blueprint",
-			},
-			{
-				value: "context-refresh",
-				label: "Context Refresh",
-				hint: "Update context from codebase",
-			},
-			{
-				value: "scope-analyzer",
-				label: "Scope Analyzer",
-				hint: "Auto-determine scope + validators",
-			},
-			{
-				value: "pattern-extract",
-				label: "Pattern Extract",
-				hint: "Extract patterns to blueprint",
-			},
-			{
-				value: "blueprint-update",
-				label: "Blueprint Update",
-				hint: "Reverse-sync to blueprint",
-			},
-		],
-		initialValues: [
-			"epic-plan",
-			"issue-draft",
-			"git-issues",
-			"issue-closeout",
-			"issue-merge",
-			"blueprint-validate",
-			"sync-check",
-			"scope-analyzer",
-		],
+	// Step 8: Business domain description (optional)
+	const domainDescription = await text({
+		message: "Briefly describe your business domain (optional, seeds domain exploration)",
+		placeholder: "e.g., A fintech platform for payment processing and fraud detection",
 	});
 
-	if (isCancel(workflows)) {
+	if (isCancel(domainDescription)) {
 		cancel("Cancelled");
 		return null;
 	}
 
-	// Step 10: Confirmation
+	// Step 9: Confirmation
 	const confirmed = await confirm({
 		message: `Ready to scaffold?
   Project: ${projectName} v${projectVersion}
   Repository: ${repository} (${repoTool})
   Tools: ${tools.join(", ")}
   Language: ${language}${buildTool ? `\n  Build Tool: ${buildTool}` : ""}
-  Validators: ${validators.join(", ")}
-  Workflows: ${workflows.length > 0 ? workflows.join(", ") : "none"}`,
+  Group ID: ${groupId}
+  Domain: ${domainDescription || "(none)"}`,
 	});
 
 	if (isCancel(confirmed) || !confirmed) {
@@ -375,12 +217,11 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		language: language as Language,
 		buildTool: buildTool as "maven" | "gradle" | undefined,
 		repoTool: repoTool as RepoTool,
-		validators: validators as Validator[],
-		workflows: workflows as Workflow[],
 		projectName: projectName as string,
 		projectVersion: projectVersion as string,
-		projectType: projectType as string,
 		repository: repository as string,
+		groupId: groupId as string,
+		domainDescription: domainDescription as string,
 	};
 }
 

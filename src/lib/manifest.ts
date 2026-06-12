@@ -83,6 +83,7 @@ export interface GuardianManifest {
 	tools: string[];
 	language: string;
 	repoTool: string; // "gh" or "glab"
+	groupId: string;
 	validators: string[];
 	workflows: string[];
 	files: Record<string, FileRecord>;
@@ -100,7 +101,6 @@ export interface TokenStats {
 	byFile: Record<string, number>;
 	lastCalculatedAt: string;
 }
-
 
 /**
  * Canonical Reference: .pi/architecture/modules/manifest-system.md#manifest-read-write
@@ -231,6 +231,7 @@ export function createManifest(options: {
 	language: string;
 	buildTool?: "maven" | "gradle";
 	repoTool: string;
+	groupId: string;
 	validators: string[];
 	workflows: string[];
 	templateContext?: TemplateContext;
@@ -244,6 +245,7 @@ export function createManifest(options: {
 		tools: options.tools,
 		language: options.language,
 		repoTool: options.repoTool,
+		groupId: options.groupId,
 		validators: options.validators,
 		workflows: options.workflows,
 		files: {},
