@@ -93,9 +93,9 @@ type ExtensionContext = {
 		notify(message: string, level?: string): void;
 		setStatus(key: string, message: string | null): void;
 		confirm(title: string, message: string): Promise<boolean>;
-	};
-	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> };
-};
+	
+	tools: { execute(name: string, params: Record<string, unknown>): Promise<unknown> 
+
 
 type ExtensionAPI = {
 	on(event: string, handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
@@ -127,20 +127,20 @@ type ExtensionAPI = {
 		content: string,
 		options?: { deliverAs?: "steer" | "followUp" },
 	): void;
-};
+
 
 type ModuleComponent = {
 	name: string;
 	status: "planned" | "in-progress" | "implemented" | "deprecated";
 	description: string;
 	dependencies: string[];
-};
+
 
 type ArchitectureSlice = {
 	module: string;
 	components: ModuleComponent[];
 	nextLogicalSlice: ModuleComponent[];
-};
+
 
 type EpicState = {
 	name: string;
@@ -151,7 +151,7 @@ type EpicState = {
 	issues: { id: string; title: string; status: string; remoteIssueId?: string | null }[];
 	currentIssueIndex: number;
 	createdAt: string;
-};
+
 
 // ── Constants ──
 
@@ -168,10 +168,10 @@ function log(ctx: ExtensionContext, message: string, level = "info") {
 function runScript(cwd: string, script: string): { exitCode: number; stdout: string } {
 	try {
 		const stdout = execSync(`bash -c "${script}"`, { cwd, timeout: 120_000, encoding: "utf-8" });
-		return { exitCode: 0, stdout };
+		return { exitCode: 0, stdout 
 	} catch (e: unknown) {
-		const err = e as { status?: number; stdout?: string; message?: string };
-		return { exitCode: err.status ?? 1, stdout: err.stdout ?? err.message ?? "" };
+		const err = e as { status?: number; stdout?: string; message?: string 
+		return { exitCode: err.status ?? 1, stdout: err.stdout ?? err.message ?? "" 
 	}
 }
 
@@ -181,7 +181,7 @@ function readRepoTool(cwd: string): string {
 		const manifestPath = join(cwd, "guardian-manifest.json");
 		if (existsSync(manifestPath)) {
 			const raw = readFileSync(manifestPath, "utf-8");
-			const manifest = JSON.parse(raw) as { repoTool?: string };
+			const manifest = JSON.parse(raw) as { repoTool?: string 
 			if (manifest.repoTool === "glab") return "glab";
 		}
 	} catch {
@@ -198,8 +198,8 @@ function readRepository(cwd: string): string | null {
 			const raw = readFileSync(manifestPath, "utf-8");
 			const manifest = JSON.parse(raw) as {
 				repository?: string;
-				templateContext?: { repository?: string };
-			};
+				templateContext?: { repository?: string 
+			
 			if (manifest.repository) return manifest.repository;
 			if (manifest.templateContext?.repository)
 				return manifest.templateContext.repository;
@@ -230,7 +230,7 @@ function createRemoteIssue(
 ): { success: boolean; issueNumber: string | null; error?: string } {
 	const createScript = join(cwd, ".pi/scripts/git/create-tracking-issue.sh");
 	if (!existsSync(createScript)) {
-		return { success: false, issueNumber: null, error: "create-tracking-issue.sh not found" };
+		return { success: false, issueNumber: null, error: "create-tracking-issue.sh not found" 
 	}
 
 	const args: string[] = [
@@ -253,24 +253,24 @@ function createRemoteIssue(
 			encoding: "utf-8",
 		});
 	} catch (e: unknown) {
-		const err = e as { status?: number; stdout?: string; message?: string };
+		const err = e as { status?: number; stdout?: string; message?: string 
 		exitCode = err.status ?? 1;
 		stdout = err.stdout ?? err.message ?? "";
 	}
 
 	if (exitCode !== 0) {
-		return { success: false, issueNumber: null, error: stdout };
+		return { success: false, issueNumber: null, error: stdout 
 	}
 
 	const numberMatch = stdout.match(/TRACKING_ID=(\d+)/);
 	if (numberMatch) {
-		return { success: true, issueNumber: numberMatch[1] };
+		return { success: true, issueNumber: numberMatch[1] 
 	}
 	const urlMatch = stdout.match(/#(\d+)/);
 	if (urlMatch) {
-		return { success: true, issueNumber: urlMatch[1] };
+		return { success: true, issueNumber: urlMatch[1] 
 	}
-	return { success: false, issueNumber: null, error: "Could not parse issue number" };
+	return { success: false, issueNumber: null, error: "Could not parse issue number" 
 }
 
 // Ensure the GitHub/GitLab repository exists and local git remote is configured.
@@ -319,7 +319,7 @@ function linkRemoteIssue(
 ): { success: boolean; error?: string } {
 	const linkScript = join(cwd, ".pi/scripts/git/link-issue-to-epic.sh");
 	if (!existsSync(linkScript)) {
-		return { success: false, error: "link-issue-to-epic.sh not found" };
+		return { success: false, error: "link-issue-to-epic.sh not found" 
 	}
 
 	const safeIssue = issueId.replace(/[^a-zA-Z0-9 _\-.]/g, "");
@@ -328,9 +328,9 @@ function linkRemoteIssue(
 	const cmd = `bash "${linkScript}" --issue-id "${safeIssue}" --epic-id "${safeEpic}"`;
 	const result = runScript(cwd, cmd);
 	if (result.exitCode !== 0) {
-		return { success: false, error: result.stdout };
+		return { success: false, error: result.stdout 
 	}
-	return { success: true };
+	return { success: true 
 }
 
 // ── Architecture Discovery ──
@@ -438,7 +438,7 @@ function findNextLogicalSlice(cwd: string, moduleFiles: string[]): ArchitectureS
 				module: moduleFile.replace(".md", ""),
 				components,
 				nextLogicalSlice: planned,
-			};
+			
 		}
 	}
 	return null;
@@ -600,7 +600,8 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 
 // Global references for Bun hoisting compatibility (used via class scope)
 // Use var for Bun hoisting compatibility (const can be in TDZ)
-var EpicIssueGenerators = {
+// Direct globalThis assignment (avoids Bun module scoping issues with var/const)
+(globalThis as any).__generateContractFreezeMarkdown = 
 	generateContractFreezeMarkdown(
 		slice: ArchitectureSlice,
 		epicName: string,
@@ -714,7 +715,8 @@ ${slice.nextLogicalSlice.map((c: { name: string }) => `- ${c.name}`).join("\n")}
 
 // ── Proofing Issue Generator ──
 
-	generateProofingMarkdown(
+;
+(globalThis as any).__generateProofingMarkdown = function(
 		slice: ArchitectureSlice,
 		epicName: string,
 	): string {
@@ -842,7 +844,8 @@ run_stage "11" "${moduleId}_proofing" \\
 
 // ── Architecture Readiness Generator (expanded) ──
 
-	generateArchitectureReadinessMarkdown(
+;
+(globalThis as any).__generateArchitectureReadinessMarkdown = function(
 		slice: ArchitectureSlice,
 		epicName: string,
 	): string {
@@ -975,7 +978,7 @@ Verify that:
 `;
 }
 }
-};
+
 
 // ── Epic Manager ──
 
@@ -1023,14 +1026,6 @@ function formatEpicStatus(state: EpicState | null): string {
 
 // ── Epic Issue Generators (helper object to ensure reference availability) ──
 
-
-// ── Bun hoisting bridge: expose module-level helpers to globalThis ──
-// Bun doesn't always close over module-level function declarations from
-// inside class methods. These assignments ensure they're accessible.
-(globalThis as any).__loadEpicState = loadEpicState;
-(globalThis as any).__saveEpicState = saveEpicState;
-(globalThis as any).__formatEpicStatus = formatEpicStatus;
-(globalThis as any).__EpicIssueGenerators = EpicIssueGenerators;
 
 class EpicManager {
 	private state: EpicState | null;
@@ -1092,8 +1087,8 @@ class EpicManager {
 			title: "Contract Freeze: Define interfaces and contracts",
 			status: "planned",
 			remoteIssueId: null as string | null,
-		};
-		const freezeMarkdown = (globalThis as any).__EpicIssueGenerators.generateContractFreezeMarkdown(slice, name);
+		
+		const freezeMarkdown = (globalThis as any).__generateContractFreezeMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${freezeId}.md`), freezeMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, freezeEntry.title, join(issuesDir, `${freezeId}.md`), "epic,contract", remoteRepo);
@@ -1113,7 +1108,7 @@ class EpicManager {
 				title: `Implement: ${component.name}`,
 				status: "planned",
 				remoteIssueId: null as string | null,
-			};
+			
 
 			// Generate issue markdown file
 			const issueMarkdown = generateIssueMarkdown(
@@ -1154,8 +1149,8 @@ class EpicManager {
 			title: "Proofing & CI Enforcement: Validation scripts + CI integration",
 			status: "planned",
 			remoteIssueId: null as string | null,
-		};
-		const proofingMarkdown = (globalThis as any).__EpicIssueGenerators.generateProofingMarkdown(slice, name);
+		
+		const proofingMarkdown = (globalThis as any).__generateProofingMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${proofingId}.md`), proofingMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, proofingEntry.title, join(issuesDir, `${proofingId}.md`), "epic,proofing", remoteRepo);
@@ -1173,8 +1168,8 @@ class EpicManager {
 			title: "Architecture Readiness: Runbook, DR, Docs, Observability, CI Enforcement",
 			status: "planned",
 			remoteIssueId: null as string | null,
-		};
-		const readinessMarkdown = (globalThis as any).__EpicIssueGenerators.generateArchitectureReadinessMarkdown(slice, name);
+		
+		const readinessMarkdown = (globalThis as any).__generateArchitectureReadinessMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
 
 		// Create remote readiness issue if available
@@ -1206,7 +1201,7 @@ class EpicManager {
 			issues,
 			currentIssueIndex: 0,
 			createdAt: new Date().toISOString(),
-		};
+		
 		(globalThis as any).__saveEpicState(this.cwd, this.state);
 		return this.state;
 	}
@@ -1268,7 +1263,7 @@ export default function (pi: ExtensionAPI) {
 					currentStepIndex: number;
 					status: string;
 					updatedAt?: string;
-				};
+				
 
 				if (
 					pipelineState.status === "running" ||
@@ -1509,7 +1504,7 @@ export default function (pi: ExtensionAPI) {
 					mergeOnValid: true,
 					createdAt: new Date().toISOString(),
 					updatedAt: new Date().toISOString(),
-				};
+				
 				const pipelineStatePath = join(ctx.cwd, ".pi/.guardian-pipeline-state.json");
 				writeFileSync(pipelineStatePath, JSON.stringify(pipelineState, null, 2));
 
@@ -1534,7 +1529,7 @@ export default function (pi: ExtensionAPI) {
 							const parsed = JSON.parse(ghOutput.stdout) as {
 								title?: string;
 								body?: string;
-							};
+							
 							issueContent = parsed.body || "";
 						}
 					} catch {
@@ -1604,7 +1599,7 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new EpicManager(ctx.cwd);
 			const state = manager.getState();
-			return { content: [{ type: "text", text: (globalThis as any).__formatEpicStatus(state) }] };
+			return { content: [{ type: "text", text: (globalThis as any).__formatEpicStatus(state) }] 
 		},
 	});
 
@@ -1621,7 +1616,7 @@ export default function (pi: ExtensionAPI) {
 					content: [
 						{ type: "text", text: "No architecture modules found in .pi/architecture/modules/." },
 					],
-				};
+				
 			}
 
 			const lines = ["## Architecture Modules\n"];
@@ -1645,7 +1640,7 @@ export default function (pi: ExtensionAPI) {
 				lines.push(`Components: ${slice.nextLogicalSlice.map((c) => c.name).join(", ")}`);
 			}
 
-			return { content: [{ type: "text", text: lines.join("\n") }] };
+			return { content: [{ type: "text", text: lines.join("\n") }] 
 		},
 	});
 }
