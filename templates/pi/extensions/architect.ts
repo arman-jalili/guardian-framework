@@ -598,6 +598,8 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 
 // ── Epic State Persistence ──
 
+// Global references for Bun hoisting compatibility (used via class scope)
+const __EpicIssueGeneratorsRef: any = {};
 const EpicIssueGenerators = {
 	generateContractFreezeMarkdown(
 		slice: ArchitectureSlice,
@@ -1022,11 +1024,19 @@ function formatEpicStatus(state: EpicState | null): string {
 // ── Epic Issue Generators (helper object to ensure reference availability) ──
 
 
+// ── Bun hoisting bridge: expose module-level helpers to globalThis ──
+// Bun doesn't always close over module-level function declarations from
+// inside class methods. These assignments ensure they're accessible.
+(globalThis as any).__loadEpicState = loadEpicState;
+(globalThis as any).__saveEpicState = saveEpicState;
+(globalThis as any).__formatEpicStatus = formatEpicStatus;
+(globalThis as any).__EpicIssueGenerators = EpicIssueGenerators;
+
 class EpicManager {
 	private state: EpicState | null;
 
 	constructor(private cwd: string) {
-		this.state = loadEpicState(cwd);
+		this.state = (globalThis as any).__loadEpicState(cwd);
 	}
 
 	getState(): EpicState | null {
@@ -1083,7 +1093,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const freezeMarkdown = EpicIssueGenerators.generateContractFreezeMarkdown(slice, name);
+		const freezeMarkdown = (globalThis as any).__EpicIssueGenerators.generateContractFreezeMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${freezeId}.md`), freezeMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, freezeEntry.title, join(issuesDir, `${freezeId}.md`), "epic,contract", remoteRepo);
@@ -1145,7 +1155,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const proofingMarkdown = EpicIssueGenerators.generateProofingMarkdown(slice, name);
+		const proofingMarkdown = (globalThis as any).__EpicIssueGenerators.generateProofingMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${proofingId}.md`), proofingMarkdown);
 		if (hasRemote && remoteRepo) {
 			const result = createRemoteIssue(this.cwd, proofingEntry.title, join(issuesDir, `${proofingId}.md`), "epic,proofing", remoteRepo);
@@ -1164,7 +1174,7 @@ class EpicManager {
 			status: "planned",
 			remoteIssueId: null as string | null,
 		};
-		const readinessMarkdown = EpicIssueGenerators.generateArchitectureReadinessMarkdown(slice, name);
+		const readinessMarkdown = (globalThis as any).__EpicIssueGenerators.generateArchitectureReadinessMarkdown(slice, name);
 		writeFileSync(join(issuesDir, `${readinessId}.md`), readinessMarkdown);
 
 		// Create remote readiness issue if available
@@ -1197,14 +1207,14 @@ class EpicManager {
 			currentIssueIndex: 0,
 			createdAt: new Date().toISOString(),
 		};
-		saveEpicState(this.cwd, this.state);
+		(globalThis as any).__saveEpicState(this.cwd, this.state);
 		return this.state;
 	}
 
 	async abortEpic(): Promise<void> {
 		if (!this.state) return;
 		this.state.status = "aborted";
-		saveEpicState(this.cwd, this.state);
+		(globalThis as any).__saveEpicState(this.cwd, this.state);
 	}
 }
 
@@ -1347,7 +1357,7 @@ export default function (pi: ExtensionAPI) {
 
 			if (action === "status" || action === "") {
 				const state = manager.getState();
-				ctx.ui.notify(formatEpicStatus(state), "info");
+				ctx.ui.notify((globalThis as any).__formatEpicStatus(state), "info");
 				return;
 			}
 
@@ -1594,7 +1604,7 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (!manager) manager = new EpicManager(ctx.cwd);
 			const state = manager.getState();
-			return { content: [{ type: "text", text: formatEpicStatus(state) }] };
+			return { content: [{ type: "text", text: (globalThis as any).__formatEpicStatus(state) }] };
 		},
 	});
 
