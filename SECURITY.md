@@ -11,7 +11,7 @@
 Guardian scaffolds files into user projects and executes validator commands. If you discover a security vulnerability, please report it responsibly:
 
 1. **Do not** open a public issue for security vulnerabilities.
-2. Email [your-email] or open a [GitHub Security Advisory](https://github.com/arman-jalili/guardian-framework/security/advisories/new).
+2. Email [arman.jalili.dev@gmail.com](mailto:arman.jalili.dev@gmail.com) or open a [GitHub Security Advisory](https://github.com/arman-jalili/guardian-framework/security/advisories/new).
 3. Include:
    - A description of the vulnerability
    - Steps to reproduce

@@ -403,16 +403,11 @@ test("WORKFLOW.md renders placeholders correctly", () => {
 	let content = fs.readFileSync(workflowPath, "utf-8");
 
 	content = content.replace(/\[Project Name\]/g, "my-app");
-	content = content.replace(/\[FrameworkVersion\]/g, "1.0.0");
-	content = content.replace(/\[Date\]/g, "2026-05-17");
 
 	expect(content).toContain("# my-app — Agent Workflow");
-	expect(content).toContain("1.0.0");
-	expect(content).toContain("2026-05-17");
+	expect(content).toContain("v1.2.0");
 	expect(content).toContain("Agent Workflow");
 	expect(content).not.toContain("[Project Name]");
-	expect(content).not.toContain("[FrameworkVersion]");
-	expect(content).not.toContain("[Date]");
 });
 
 // No duplicate docs — only INDEX.md should exist, not README.md

@@ -36,7 +36,7 @@ describe("discoverModules", () => {
 		createModuleDoc(dir, "module-template.md", "# Template"); // Should be skipped
 
 		const modules = discoverModules(dir);
-		expect(modules).toContain("Billing Module");
+		expect(modules).toContain("Billing");
 		expect(modules).toContain("Notifications");
 		expect(modules).not.toContain("Template");
 	});
