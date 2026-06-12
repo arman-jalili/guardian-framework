@@ -599,8 +599,8 @@ ${component.dependencies.map((d) => `  └── ${d}`).join("\n") || "  └─�
 // ── Epic State Persistence ──
 
 // Global references for Bun hoisting compatibility (used via class scope)
-const __EpicIssueGeneratorsRef: any = {};
-const EpicIssueGenerators = {
+// Use var for Bun hoisting compatibility (const can be in TDZ)
+var EpicIssueGenerators = {
 	generateContractFreezeMarkdown(
 		slice: ArchitectureSlice,
 		epicName: string,
