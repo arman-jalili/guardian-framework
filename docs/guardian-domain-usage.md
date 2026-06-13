@@ -223,9 +223,22 @@ Saves an LLM response file to complete an exploration session. Requires:
 /domain --architect-scaffold <session-id>
 ```
 
-Creates architecture directories (modules, decisions, diagrams) from a completed exploration. Requires a session that has been answered (`.md` file exists).
+Creates architecture directories from a completed exploration. Requires a session that has been answered (`.md` file exists).
 
-**Output:** Creates directories and returns instructions for creating architecture module docs and using `/architect`.
+**What is generated:**
+
+| Path | Contents |
+|------|----------|
+| `.pi/architecture/modules/<context>.md` | One module doc per bounded context (stub with placeholder sections) |
+| `.pi/architecture/decisions/ADR-001.md` | A single starter ADR (DDD with bounded contexts pattern) |
+| `.pi/architecture/diagrams/system-context.md` | Mermaid bounded context flow diagram |
+
+**What is NOT generated (agent responsibility):**
+
+- **Additional ADRs** — only `ADR-001` is created. The agent should generate remaining ADRs based on architecture decisions.
+- **Module doc ADR references** — module docs contain `## ADRs\n\nNone yet`. The agent fills these in.
+- **CHANGELOG** — remains as placeholder. The agent updates it when asked.
+- **Key Files** — module docs contain `## Key Files\n\nNone yet`. The agent fills these in during implementation.
 
 ### `/domain --validate`
 
