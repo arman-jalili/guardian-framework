@@ -14,6 +14,7 @@
  * No LLM SDKs. No API keys. The prompt IS the interface — the agent reads it and acts.
  */
 
+import * as child_process from "node:child_process";
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -75,6 +76,30 @@ type ExtensionContext = {
 		execute(name: string, params: Record<string, unknown>): Promise<unknown>;
 	};
 };
+
+/**
+ * Execute a shell command, preferring ctx.shell if available,
+ * falling back to child_process.execSync otherwise.
+ */
+function shellExec(
+	ctx: ExtensionContext,
+	command: string,
+): { exitCode: number; stdout: string; stderr?: string } {
+	if (ctx.shell?.execute) {
+		return ctx.shell.execute(command) as unknown as { exitCode: number; stdout: string; stderr?: string };
+	}
+	try {
+		const stdout = child_process.execSync(command, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+		return { exitCode: 0, stdout };
+	} catch (err: unknown) {
+		const execErr = err as { stdout?: string; stderr?: string; status?: number };
+		return {
+			exitCode: execErr.status ?? 1,
+			stdout: execErr.stdout?.toString() ?? "",
+			stderr: execErr.stderr?.toString() ?? "",
+		};
+	}
+}
 
 type ExtensionAPI = {
 	on(event: string, handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
@@ -454,7 +479,7 @@ export default function (pi: ExtensionAPI) {
 			const scriptPath = path.join(ctx.cwd, ".pi", "scripts", "validate-ubiquitous-language.sh");
 			if (fs.existsSync(scriptPath)) {
 				try {
-					const result = await ctx.shell.execute("bash " + scriptPath, {});
+					const result = await shellExec(ctx, "bash " + scriptPath);
 					addCheck("Source drift", result.exitCode === 0, result.stdout.slice(-80).trim());
 				} catch (err) {
 					addCheck("Source drift", false, "Error: " + String(err));
@@ -791,7 +816,7 @@ export default function (pi: ExtensionAPI) {
 
 				try {
 					const cmd = "guardian-framework domain scaffold " + sessionId + " 2>&1";
-					const shellResult = await ctx.shell.execute(cmd);
+					const shellResult = await shellExec(ctx, cmd);
 					if (shellResult.exitCode === 0) {
 						const outputLines = shellResult.stdout.split("\n");
 						for (const line of outputLines) {
