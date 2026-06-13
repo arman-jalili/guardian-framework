@@ -33,7 +33,7 @@ if [ "$TOTAL_PY_FILES" -gt 0 ]; then
     if [ "$FILES_WITH_REFS" -gt 0 ]; then
         pass "Canonical references detected in $FILES_WITH_REFS/$TOTAL_PY_FILES files (${PCT}%)"
     else
-        warn "No canonical reference comments found in source files"
+        fail "No canonical reference comments found in source files"
     fi
 else
     warn "No source files found to check"

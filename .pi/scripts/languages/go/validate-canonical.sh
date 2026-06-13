@@ -27,7 +27,7 @@ if [ -f "go.mod" ]; then
             PCT=$((CANONICAL_REFS * 100 / GO_FILES))
             pass "Canonical references found in ${CANONICAL_REFS}/${GO_FILES} Go files (${PCT}%)"
         else
-            warn "No canonical reference comments (// Canonical: or // @canonical) found"
+            fail "No canonical reference comments (// Canonical: or // @canonical) found"
         fi
     else
         pass "No Go source files to check"

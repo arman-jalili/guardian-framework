@@ -51,7 +51,7 @@ if [ "$TOTAL_RS" -gt 0 ]; then
         PCT=$((CANONICAL_REFS * 100 / TOTAL_RS))
         pass "Canonical references found: ${CANONICAL_REFS} files (${PCT}% of ${TOTAL_RS} Rust files)"
     else
-        warn "No canonical references found in Rust doc comments"
+        fail "No canonical references found in Rust doc comments"
     fi
 else
     warn "No Rust source files in src/"

@@ -30,7 +30,7 @@ if [ -d "$SRC_DIR" ]; then
         PCT=$((CANONICAL_REFS * 100 / TOTAL_TS_FILES))
         pass "Canonical references found: $CANONICAL_REFS / $TOTAL_TS_FILES files ($PCT%)"
     elif [ "$TOTAL_TS_FILES" -gt 0 ]; then
-        warn "No canonical references found in $TOTAL_TS_FILES TypeScript files"
+        fail "No canonical references found in $TOTAL_TS_FILES TypeScript files"
     else
         warn "No TypeScript source files found"
     fi

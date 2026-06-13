@@ -51,7 +51,7 @@ if [ -d "$SRC_DIR" ]; then
         if [ "$WITH_REFS" -gt 0 ]; then
             pass "$WITH_REFS of $JAVA_FILES Java files have canonical reference headers"
         else
-            warn "No canonical reference headers found in Java source files"
+            fail "No canonical reference headers found in Java source files"
         fi
     else
         pass "No Java source files found"
