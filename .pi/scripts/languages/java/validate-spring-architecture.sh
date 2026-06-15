@@ -11,6 +11,10 @@
 #
 # Convention: com.{project}.{layer}.{component}
 #   Example: com.myapp.domain.model, com.myapp.application.usecase
+#
+# Architecture mode: reads archMode from guardian-manifest.json
+#   strict     — domain/ must have zero external deps (default)
+#   simplified — domain/ may contain concrete providers (downgraded to warnings)
 # ============================================================================
 set -euo pipefail
 
@@ -23,6 +27,14 @@ warn() { echo -e "${YELLOW}⚠️  WARN${NC} $1"; WARNINGS+=("$1"); }
 echo "============================================"
 echo "  Spring Architecture Ring Validation"
 echo "============================================"
+echo ""
+
+ARCH_MODE="strict"
+if [ -f "guardian-manifest.json" ]; then
+	ARCH_MODE=$(jq -r '.archMode // "strict"' guardian-manifest.json 2>/dev/null || echo "strict")
+fi
+
+echo "Architecture mode: ${ARCH_MODE}"
 echo ""
 
 SRC_DIR="${1:-src/main/java}"
@@ -84,7 +96,11 @@ if [ -n "$DOMAIN_DIR" ]; then
                         if echo "$IMPORT_PKG" | grep -qE "^(java\.|javax\.|org\.springframework\.|org\.slf4j\.|com\.fasterxml\.)"; then
                             continue
                         fi
-                        fail "Domain layer import from '$IMPORT_LAYER': ${f#./}"
+                        if [ "$ARCH_MODE" = "strict" ]; then
+                            fail "Domain layer import from '$IMPORT_LAYER': ${f#./}"
+                        else
+                            warn "Domain layer import from '$IMPORT_LAYER': ${f#./} (allowed in simplified mode)"
+                        fi
                         BAD_IMPORTS=$((BAD_IMPORTS + 1))
                     fi
                 fi

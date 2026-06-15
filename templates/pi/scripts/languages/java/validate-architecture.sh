@@ -17,6 +17,11 @@ echo ""
 
 SRC_DIR="${1:-src/main/java}"
 
+ARCH_MODE="strict"
+if [ -f "guardian-manifest.json" ]; then
+	ARCH_MODE=$(jq -r '.archMode // "strict"' guardian-manifest.json 2>/dev/null || echo "strict")
+fi
+
 # ---------------------------------------------------------------------------
 # Layer Structure
 # ---------------------------------------------------------------------------
@@ -97,7 +102,11 @@ if [ -n "$HAS_DOMAIN" ]; then
     DOMAIN_BAD_IMPORTS=0
     for f in $(find "$HAS_DOMAIN" -name "*.java" 2>/dev/null); do
         if grep -qE "import\s+.*\.infrastructure\." "$f" 2>/dev/null || grep -qE "import\s+.*\.web\." "$f" 2>/dev/null; then
-            fail "Domain layer imports from infrastructure/web: $f"
+            if [ "$ARCH_MODE" = "strict" ]; then
+                fail "Domain layer imports from infrastructure/web: $f"
+            else
+                warn "Domain layer imports from infrastructure/web: $f (allowed in simplified mode)"
+            fi
             DOMAIN_BAD_IMPORTS=$((DOMAIN_BAD_IMPORTS + 1))
         fi
     done

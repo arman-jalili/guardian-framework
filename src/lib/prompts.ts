@@ -25,6 +25,7 @@ export interface InitOptions {
 	projectVersion: string;
 	repository: string;
 	groupId: string;
+	archMode: "strict" | "simplified";
 	domainDescription: string;
 }
 
@@ -173,6 +174,28 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		buildTool = buildTool as "maven" | "gradle";
 	}
 
+	// Step 6c: Architecture mode selection
+	const archMode = await select({
+		message: "Architecture mode?",
+		options: [
+			{
+				value: "strict",
+				label: "Strict Hexagonal (Recommended)",
+				hint: "domain/ = pure business logic & interfaces only; concrete providers in infrastructure/",
+			},
+			{
+				value: "simplified",
+				label: "Simplified",
+				hint: "domain/ may contain concrete providers; relaxed validation",
+			},
+		],
+	});
+
+	if (isCancel(archMode)) {
+		cancel("Cancelled");
+		return null;
+	}
+
 	// Step 7: Group/package prefix
 	const groupId = await text({
 		message: "Group/package prefix? (e.g., com.yourcompany)",
@@ -203,6 +226,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
   Repository: ${repository} (${repoTool})
   Tools: ${tools.join(", ")}
   Language: ${language}${buildTool ? `\n  Build Tool: ${buildTool}` : ""}
+  Architecture: ${archMode}
   Group ID: ${groupId}
   Domain: ${domainDescription || "(none)"}`,
 	});
@@ -221,6 +245,7 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 		projectVersion: projectVersion as string,
 		repository: repository as string,
 		groupId: groupId as string,
+		archMode: archMode as "strict" | "simplified",
 		domainDescription: domainDescription as string,
 	};
 }

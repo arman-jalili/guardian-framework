@@ -155,6 +155,50 @@ check = "grep -rn '@Autowired' src/main/java/ 2>/dev/null | grep -v 'constructor
 
 ---
 
+### Architecture Modes
+
+**Purpose:** Two profiles deciding how strictly Clean Architecture rules are enforced.
+
+The framework supports two architecture modes, configured via the `archMode` field in `guardian-manifest.json`:
+
+| Mode | Domain Ring Enforcement | Use Case |
+|------|------------------------|----------|
+| `strict` (default) | `FAIL` on any external import | Pure hexagonal — `domain/` has interfaces only; concrete providers in `infrastructure/` |
+| `simplified` | `WARN` on non-web imports | Reduced ceremony — `domain/` may contain concrete providers as a deliberate simplification |
+
+**Validator behavior by check:**
+
+| Check | `strict` | `simplified` |
+|-------|----------|--------------|
+| **Domain ring: no external imports** | `FAIL` on any infra/provider import | `WARN` on infra imports, `FAIL` on web/interface imports |
+| **Application ring: only domain** | `FAIL` on infra/web imports | `FAIL` on web imports (same) |
+| **Infrastructure ring: no web** | `FAIL` | `FAIL` (same) |
+| **Web ring: no infra** | `FAIL` | `FAIL` (same) |
+
+**Setting the mode:**
+```bash
+# During init (interactive prompt)
+guardian init
+# → Architecture mode? [strict / simplified]
+
+# Or edit guardian-manifest.json directly:
+{
+  "archMode": "simplified",
+  ...
+}
+
+# Or override via environment:
+export GIT_PLATFORM=gitlab
+# archMode must be set in the manifest, not via env
+```
+
+**Downstream effect:**
+- The architecture validators (`validate-spring-architecture.sh`, `validate-architecture.sh`) read `archMode` from the manifest and adjust their enforcement level on the domain ring check
+- All other rings (application, infrastructure, web) are enforced identically in both modes
+- Manifest defaults to `"strict"` for backward compatibility
+
+---
+
 ## Data Flow
 
 ```

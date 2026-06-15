@@ -83,6 +83,7 @@ export interface GuardianManifest {
 	tools: string[];
 	language: string;
 	repoTool: string; // "gh" or "glab"
+	archMode: "strict" | "simplified"; // Clean Architecture enforcement level
 	groupId: string;
 	validators: string[];
 	workflows: string[];
@@ -231,6 +232,7 @@ export function createManifest(options: {
 	language: string;
 	buildTool?: "maven" | "gradle";
 	repoTool: string;
+	archMode?: "strict" | "simplified";
 	groupId: string;
 	validators: string[];
 	workflows: string[];
@@ -245,6 +247,7 @@ export function createManifest(options: {
 		tools: options.tools,
 		language: options.language,
 		repoTool: options.repoTool,
+		archMode: options.archMode ?? "strict",
 		groupId: options.groupId,
 		validators: options.validators,
 		workflows: options.workflows,

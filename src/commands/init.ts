@@ -155,6 +155,7 @@ async function scaffoldFramework(
 			tools: options.tools,
 			language: options.language,
 			repoTool: options.repoTool,
+			archMode: options.archMode,
 			groupId: options.groupId,
 			validators,
 			workflows,
