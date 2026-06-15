@@ -824,22 +824,24 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				// Build mermaid diagram from bounded contexts
+				// Labels are double-quoted to handle special chars like (), [], {}
 				let bcDiagram = "";
 				if (bcNames.length > 0) {
+					const escLabel = (s: string) => s.replace(/"/g, "'");
 					const nodeLines = bcNames.map((n, i) =>
-						"    " + String.fromCharCode(65 + i) + "[" + n + "]"
+						"    " + String.fromCharCode(65 + i) + "[\"" + escLabel(n) + "\"]"
 					).join("\n");
 					const edgeLines = bcNames.slice(0, -1).map((n, i) =>
 						"    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events"
 					).join("\n");
 					const lastNode = bcNames.length > 1
-						? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[Consumers]"
+						? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[\"Consumers\"]"
 						: bcNames.length === 1
-							? "    A[" + bcNames[0] + "] --> Downstream[Consumers]"
+							? "    A[\"" + escLabel(bcNames[0]) + "\"] --> Downstream[\"Consumers\"]"
 							: "";
 					bcDiagram = nodeLines + "\n\n" + edgeLines + (lastNode ? "\n" + lastNode : "");
 				} else {
-					bcDiagram = "    A[Module 1] --> B[Module 2] : events";
+					bcDiagram = "    A[\"Bounded Context 1\"] --> B[\"Bounded Context 2\"] : events";
 				}
 
 				const diagramContent = [
