@@ -63,26 +63,78 @@ function readRepository(cwd: string): string | null {
 	return null;
 }
 
-// Fetch issue content from GitHub (if remote ID available) or fallback to local file
+function readRepoTool(cwd: string): string {
+	try {
+		const manifestPath = join(cwd, "guardian-manifest.json");
+		if (existsSync(manifestPath)) {
+			const raw = readFileSync(manifestPath, "utf-8");
+			const manifest = JSON.parse(raw) as { repoTool?: string };
+			if (manifest.repoTool === "glab") return "glab";
+		}
+	} catch {
+		// fall through to default
+	}
+	return "gh";
+}
+
+function getGitBaseUrl(repoTool: string): string {
+	if (repoTool === "glab") {
+		try {
+			const uri = execSync("glab config get gitlab_uri 2>/dev/null", {
+				encoding: "utf-8",
+			}).trim();
+			if (uri) return uri.replace(/\/+$/, "");
+		} catch {
+			// fall through to default
+		}
+		return "https://gitlab.com";
+	}
+	return "https://github.com";
+}
+
+// Fetch issue content from remote (gh or glab) or fallback to local file
 function fetchIssueContent(
 	cwd: string,
 	issueId: string,
 	remoteIssueId?: string | null,
 ): { content: string; source: string } {
 	const repository = readRepository(cwd);
+	const repoTool = readRepoTool(cwd);
+	const baseUrl = getGitBaseUrl(repoTool);
+
 	if (remoteIssueId && repository) {
 		try {
-			const result = runScript(
-				cwd,
-				`gh issue view ${remoteIssueId} --repo ${repository} --json title,body`,
-			);
-			if (result.exitCode === 0 && result.stdout) {
-				const parsed = JSON.parse(result.stdout) as { title?: string; body?: string };
-				if (parsed.body) {
-					return {
-						content: parsed.body,
-						source: `Remote issue: https://github.com/${repository}/issues/${remoteIssueId}`,
+			let result;
+			if (repoTool === "glab") {
+				result = runScript(
+					cwd,
+					`glab issue view ${remoteIssueId} --repo ${repository} --output json`,
+				);
+				if (result.exitCode === 0 && result.stdout) {
+					const parsed = JSON.parse(result.stdout) as {
+						title?: string;
+						description?: string;
 					};
+					if (parsed.description) {
+						return {
+							content: parsed.description,
+							source: `Remote issue: ${baseUrl}/${repository}/issues/${remoteIssueId}`,
+						};
+					}
+				}
+			} else {
+				result = runScript(
+					cwd,
+					`gh issue view ${remoteIssueId} --repo ${repository} --json title,body`,
+				);
+				if (result.exitCode === 0 && result.stdout) {
+					const parsed = JSON.parse(result.stdout) as { title?: string; body?: string };
+					if (parsed.body) {
+						return {
+							content: parsed.body,
+							source: `Remote issue: ${baseUrl}/${repository}/issues/${remoteIssueId}`,
+						};
+					}
 				}
 			}
 		} catch {

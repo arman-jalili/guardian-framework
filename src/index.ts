@@ -40,6 +40,7 @@ async function main() {
 			force: { type: "boolean" },
 			regenerate: { type: "boolean" },
 			verbose: { type: "boolean" },
+			repoTool: { type: "string" },
 			context: { type: "string" },
 			session: { type: "string" },
 		},
@@ -84,6 +85,7 @@ Project options:
 
   -l, --lang <name>          Language (required)
   --buildTool <name>         Build tool (maven, gradle)
+  --repoTool <name>          Git CLI tool (gh, glab) — reads from manifest if not specified
   --groupId <name>           Group/package prefix (reads from manifest if not specified)
   --validators <list>        Validators for CI pipeline
   --dryRun                   Show plan without writing files
@@ -197,12 +199,14 @@ async function runCommand(
 				const manifest = readManifest(targetDir);
 				const resolvedGroupId =
 					(args.values.groupId as string) || manifest?.groupId || "com.example";
+				const resolvedRepoTool =
+					(args.values.repoTool as "gh" | "glab") || manifest?.repoTool || "gh";
 
 				await runProjectCreate(targetDir, {
 					language: args.values.lang as Language,
 					buildTool: args.values.buildTool as "maven" | "gradle" | undefined,
 					groupId: resolvedGroupId,
-					repoTool: "gh",
+					repoTool: resolvedRepoTool,
 					validators: (args.values.validators as string)?.split(",") || ["ci", "tests"],
 					dryRun: args.values.dryRun as boolean | undefined,
 					force: args.values.force as boolean | undefined,

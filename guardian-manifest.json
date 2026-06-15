@@ -6,7 +6,7 @@
     "pi"
   ],
   "language": "typescript",
-  "repoTool": "gh",
+  "repoTool": "glab",
   "validators": [
     "ci",
     "tests",
@@ -1094,7 +1094,7 @@
     "language": "typescript",
     "projectType": "CLI",
     "repository": "arman-jalili/guardian-framework",
-    "repoTool": "gh",
+    "repoTool": "glab",
     "buildCommand": "bun build ./src/index.ts --outdir ./dist",
     "testCommand": "bun test",
     "lintCommand": "biome check .",

@@ -59,6 +59,24 @@ export function readRepository(cwd: string): string | null {
 	return null;
 }
 
+/**
+ * Get Git platform base URL. For GitLab, tries to detect self-hosted instances.
+ */
+export function getGitBaseUrl(repoTool: string): string {
+	if (repoTool === "glab") {
+		try {
+			const uri = execSync("glab config get gitlab_uri 2>/dev/null", {
+				encoding: "utf-8",
+			}).trim();
+			if (uri) return uri.replace(/\/+$/, "");
+		} catch {
+			// fall through to default
+		}
+		return "https://gitlab.com";
+	}
+	return "https://github.com";
+}
+
 export function commandExists(cmd: string): boolean {
 	try {
 		execSync(`command -v ${cmd}`, { stdio: "ignore" });
@@ -149,13 +167,14 @@ export function ensureRemoteRepo(
 		return repository;
 	}
 
-	// GitLab path
+	// GitLab path — detect self-hosted base URL from glab config
+	const glabBaseUrl = getGitBaseUrl("glab");
 	runScript(
 		cwd,
 		`glab repo create "${repository}" --private --description "Epic: ${epicName}" 2>&1`,
 	);
 	runScript(cwd, "git remote remove origin 2>/dev/null");
-	const httpsUrl = `https://gitlab.com/${repository}.git`;
+	const httpsUrl = `${glabBaseUrl}/${repository}.git`;
 	runScript(cwd, `git remote add origin "${httpsUrl}"`);
 	return repository;
 }

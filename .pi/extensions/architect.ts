@@ -15,6 +15,7 @@ import {
 	ensureRemoteRepo,
 	findModuleByName,
 	findNextLogicalSlice,
+	getGitBaseUrl,
 	linkRemoteIssue,
 	parseModuleFile,
 	readGroupId,
@@ -402,8 +403,9 @@ export default function (pi: ExtensionAPI) {
 				writeFileSync(join(ctx.cwd, ".pi/.guardian-pipeline-state.json"), JSON.stringify(pipelineState, null, 2));
 
 				const repository = readRepository(ctx.cwd) || "";
+				const baseUrl = getGitBaseUrl(readRepoTool(ctx.cwd));
 				const trackingUrl = state.trackingIssueId && repository
-					? `\n**Tracking issue:** https://github.com/${repository}/issues/${state.trackingIssueId}`
+					? `\n**Tracking issue:** ${baseUrl}/${repository}/issues/${state.trackingIssueId}`
 					: "";
 
 				const firstItem = items[0];

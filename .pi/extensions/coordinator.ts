@@ -114,7 +114,17 @@ export default function (pi: ExtensionAPI) {
 				return toolError("Scope classification aborted");
 			}
 
-			const diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
+			// Try diff against HEAD, fall back to unstaged diff if HEAD doesn't exist (fresh repo)
+			let diff;
+			try {
+				diff = await ctx.shell.execute("git diff --numstat HEAD", { signal });
+			} catch {
+				try {
+					diff = await ctx.shell.execute("git diff --numstat", { signal });
+				} catch {
+					return toolResult("Scope: unknown (fresh repo, no commit history yet)");
+				}
+			}
 			const rows = diff.stdout.split("\n").filter((line) => line.trim());
 			const fileCount = rows.length;
 			const lineChanges = rows.reduce((sum, row) => {
