@@ -120,6 +120,7 @@ async function scaffoldFramework(
 		language: Language;
 		buildTool?: "maven" | "gradle";
 		repoTool: RepoTool;
+		archMode: "strict" | "simplified";
 		projectName: string;
 		projectVersion: string;
 		repository: string;
