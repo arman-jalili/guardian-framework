@@ -824,25 +824,27 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				// Build mermaid diagram from bounded contexts
-				// Labels are double-quoted to handle special chars like (), [], {}
-				let bcDiagram = "";
+				// Each line is a separate array element to guarantee newline separation
+				const escLabel = (s: string) => s.replace(/"/g, "'");
+				const diagramLines: string[] = [];
 				if (bcNames.length > 0) {
-					const escLabel = (s: string) => s.replace(/"/g, "'");
-					const nodeLines = bcNames.map((n, i) =>
-						"    " + String.fromCharCode(65 + i) + "[\"" + escLabel(n) + "\"]"
-					).join("\n");
-					const edgeLines = bcNames.slice(0, -1).map((n, i) =>
-						"    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events"
-					).join("\n");
-					const lastNode = bcNames.length > 1
-						? "    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[\"Consumers\"]"
-						: bcNames.length === 1
-							? "    A[\"" + escLabel(bcNames[0]) + "\"] --> Downstream[\"Consumers\"]"
-							: "";
-					bcDiagram = nodeLines + "\n\n" + edgeLines + (lastNode ? "\n" + lastNode : "");
+					for (let i = 0; i < bcNames.length; i++) {
+						diagramLines.push("    " + String.fromCharCode(65 + i) + "[\"" + escLabel(bcNames[i]) + "\"]");
+					}
+					// blank line separator between nodes and edges
+					diagramLines.push("");
+					for (let i = 0; i < bcNames.length - 1; i++) {
+						diagramLines.push("    " + String.fromCharCode(65 + i) + " --> " + String.fromCharCode(66 + i) + " : events");
+					}
+					if (bcNames.length > 1) {
+						diagramLines.push("    " + String.fromCharCode(64 + bcNames.length) + " --> Downstream[\"Consumers\"]");
+					} else {
+						diagramLines.push("    A[\"" + escLabel(bcNames[0]) + "\"] --> Downstream[\"Consumers\"]");
+					}
 				} else {
-					bcDiagram = "    A[\"Bounded Context 1\"] --> B[\"Bounded Context 2\"] : events";
+					diagramLines.push("    A[\"Bounded Context 1\"] --> B[\"Bounded Context 2\"] : events");
 				}
+				const bcDiagram = diagramLines.join("\n");
 
 				const diagramContent = [
 					"# System Context Diagram",
