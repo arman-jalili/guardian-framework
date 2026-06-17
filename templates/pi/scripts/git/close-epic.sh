@@ -11,6 +11,11 @@
 set -euo pipefail
 
 detect_platform() {
+    if [ -f "guardian-manifest.json" ]; then
+        local tool=$(jq -r '.repoTool // ""' guardian-manifest.json 2>/dev/null || echo "")
+        if [[ "$tool" == "glab" ]]; then echo "gitlab"; return; fi
+        if [[ "$tool" == "gh" ]]; then echo "github"; return; fi
+    fi
     if [[ -n "${GIT_PLATFORM:-}" ]]; then echo "$GIT_PLATFORM"
     elif command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then echo "github"
     elif command -v glab &>/dev/null && glab auth status &>/dev/null 2>&1; then echo "gitlab"

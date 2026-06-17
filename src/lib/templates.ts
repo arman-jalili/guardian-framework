@@ -402,7 +402,7 @@ const GRADLE_COMMANDS: Record<string, string> = {
 export function getDefaultContext(
 	language: Language,
 	projectName: string,
-	repoTool: RepoTool = "gh",
+	repoTool: RepoTool,
 	buildTool?: "maven" | "gradle",
 	groupId?: string,
 ): TemplateContext {
