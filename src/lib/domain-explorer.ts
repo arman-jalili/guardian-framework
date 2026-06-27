@@ -91,7 +91,14 @@ export interface FunctionalRequirement {
 export interface NonFunctionalRequirement {
 	id: string;
 	requirement: string;
-	category: "performance" | "security" | "scalability" | "availability" | "maintainability" | "usability" | "other";
+	category:
+		| "performance"
+		| "security"
+		| "scalability"
+		| "availability"
+		| "maintainability"
+		| "usability"
+		| "other";
 	target: string;
 }
 
@@ -141,6 +148,7 @@ export function sanitizeBusinessContext(context: string): string {
 	if (!context) return "";
 
 	// Strip control characters except \n, \r, \t
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: Required for sanitizing LLM input
 	let sanitized = context.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
 	// Normalize \r\n to \n
@@ -321,7 +329,7 @@ export function parseExplorationResponse(
 				? parsed.assumptions.map((a: Record<string, unknown>) => ({
 						assumption: coerceString(a.assumption, ""),
 						impactIfWrong: coerceString(a.impactIfWrong, ""),
-						method: coerceString(a.mitigation, ""),
+						mitigation: coerceString(a.mitigation, ""),
 					}))
 				: [],
 			ubiquitousLanguage: Array.isArray(parsed.ubiquitousLanguage)
@@ -681,13 +689,56 @@ export function readExplorationSession(
 	const arMatch = body.match(/Aggregate Roots\n+([\s\S]*?)(?:\n##|$)/);
 	const aggregateRoots = arMatch ? arMatch[1].trim() : "";
 
+	// Extract actors, functional requirements, non-functional requirements, assumptions
+	const actorTable = extractTable(body, "Actors & Roles");
+	const actors = actorTable
+		.filter((row) => row.length >= 3 && row[0] !== "Actor")
+		.map((row) => ({
+			name: (row[0] || "").trim(),
+			description: (row[1] || "").trim(),
+			interactions: (row[2] || "").trim(),
+		}));
+
+	const frTable = extractTable(body, "Functional Requirements");
+	const functionalRequirements = frTable
+		.filter((row) => row.length >= 4 && row[0] !== "ID")
+		.map((row) => ({
+			id: (row[0] || "").trim(),
+			requirement: (row[1] || "").trim(),
+			priority: coerceFrPriority((row[2] || "").trim()),
+			boundedContext: (row[3] || "").trim(),
+		}));
+
+	const nfrTable = extractTable(body, "Non-Functional Requirements");
+	const nonFunctionalRequirements = nfrTable
+		.filter((row) => row.length >= 4 && row[0] !== "ID")
+		.map((row) => ({
+			id: (row[0] || "").trim(),
+			requirement: (row[1] || "").trim(),
+			category: coerceNfrCategory((row[2] || "").trim()),
+			target: (row[3] || "").trim(),
+		}));
+
+	const assumptionTable = extractTable(body, "Assumptions");
+	const assumptions = assumptionTable
+		.filter((row) => row.length >= 3 && row[0] !== "Assumption")
+		.map((row) => ({
+			assumption: (row[0] || "").trim(),
+			impactIfWrong: (row[1] || "").trim(),
+			mitigation: (row[2] || "").trim(),
+		}));
+
 	return {
 		sessionId: getField("session_id") || sessionId,
 		businessContext: getField("business_context") || "",
 		status: (getField("status") as "draft" | "validated") || "draft",
+		actors,
 		boundedContexts,
 		entities,
 		domainEvents,
+		functionalRequirements,
+		nonFunctionalRequirements,
+		assumptions,
 		ubiquitousLanguage,
 		openQuestions,
 		aggregateRoots,
@@ -730,10 +781,11 @@ export function scaffoldFromExploration(
 	const projectDir = options?.projectDir ?? process.cwd();
 	const dryRun = options?.dryRun ?? false;
 
-	const result = readExplorationSession(sessionId, projectDir);
-	if (!result) {
+	const sessionResult = readExplorationSession(sessionId, projectDir);
+	if (!sessionResult) {
 		throw new Error(`Exploration session not found: ${sessionId}`);
 	}
+	const result: ExplorationResult = sessionResult;
 
 	const modulesDir = path.join(projectDir, ".pi", "architecture", "modules");
 	const modules: string[] = [];
@@ -755,7 +807,10 @@ export function scaffoldFromExploration(
 	}
 
 	function contextToModule(name: string): string {
-		return name.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase();
+		return name
+			.replace(/([a-z])([A-Z])/g, "$1-$2")
+			.replace(/[\s_]+/g, "-")
+			.toLowerCase();
 	}
 
 	// Infer cross-context dependencies
@@ -796,7 +851,7 @@ export function scaffoldFromExploration(
 
 	for (const bc of result.boundedContexts) {
 		const moduleName = contextToModule(bc.name);
-		const fileName = moduleName + ".md";
+		const fileName = `${moduleName}.md`;
 		const filePath = path.join(modulesDir, fileName);
 
 		const contextEntities = entitiesByContext[bc.name] || [];
@@ -804,7 +859,7 @@ export function scaffoldFromExploration(
 		const contextTerms = result.ubiquitousLanguage.filter((t) => t.boundedContext === bc.name);
 
 		if (!dryRun && fs.existsSync(filePath)) {
-			warnings.push("Module already exists, will be overwritten: " + fileName);
+			warnings.push(`Module already exists, will be overwritten: ${fileName}`);
 		}
 
 		const aggregateRoots = contextEntities.filter((e) => e.type === "aggregate-root");
@@ -815,32 +870,32 @@ export function scaffoldFromExploration(
 		let componentsSection = "";
 
 		for (const ar of aggregateRoots) {
-			componentsSection += "## Component: " + ar.name + "\n";
+			componentsSection += `## Component: ${ar.name}\n`;
 			componentsSection += "status: planned\n";
-			componentsSection += "description: " + ar.description + "\n";
+			componentsSection += `description: ${ar.description}\n`;
 			componentsSection += "depends: none\n\n";
 		}
 
 		for (const entity of regularEntities) {
-			const parentRoot = aggregateRoots.find((ar) =>
-				entity.description.includes(ar.name) || ar.description.includes(entity.name)
+			const parentRoot = aggregateRoots.find(
+				(ar) => entity.description.includes(ar.name) || ar.description.includes(entity.name),
 			);
 			const dependsOn = parentRoot ? parentRoot.name : "none";
-			componentsSection += "## Component: " + entity.name + "\n";
+			componentsSection += `## Component: ${entity.name}\n`;
 			componentsSection += "status: planned\n";
-			componentsSection += "description: " + entity.description + "\n";
-			componentsSection += "depends: " + dependsOn + "\n\n";
+			componentsSection += `description: ${entity.description}\n`;
+			componentsSection += `depends: ${dependsOn}\n\n`;
 		}
 
 		for (const vo of valueObjects) {
-			const parentEntity = [...aggregateRoots, ...regularEntities].find((e) =>
-				vo.description.includes(e.name) || e.description.includes(vo.name)
+			const parentEntity = [...aggregateRoots, ...regularEntities].find(
+				(e) => vo.description.includes(e.name) || e.description.includes(vo.name),
 			);
 			const dependsOn = parentEntity ? parentEntity.name : "none";
-			componentsSection += "## Component: " + vo.name + "\n";
+			componentsSection += `## Component: ${vo.name}\n`;
 			componentsSection += "status: planned\n";
-			componentsSection += "description: " + vo.description + "\n";
-			componentsSection += "depends: " + dependsOn + "\n\n";
+			componentsSection += `description: ${vo.description}\n`;
+			componentsSection += `depends: ${dependsOn}\n\n`;
 		}
 
 		if (!componentsSection) {
@@ -854,25 +909,25 @@ export function scaffoldFromExploration(
 			depsSection = "None identified yet.\n";
 		} else {
 			for (const dep of deps) {
-				depsSection += "- " + contextToModule(dep) + ".md (" + dep + ")\n";
+				depsSection += `- ${contextToModule(dep)}.md (${dep})\n`;
 			}
 		}
 
 		// Build content
-		let content = "# " + bc.name + "\n\n";
+		let content = `# ${bc.name}\n\n`;
 		content += "## Module Status\n\n";
 		content += "**Status:** Planned\n";
-		content += "**Last reviewed:** " + timestamp + "\n";
-		content += "**Source session:** " + sessionId + "\n\n";
-		content += "## Description\n\n" + bc.description + "\n\n";
-		content += "## Components\n\n" + componentsSection + "\n";
+		content += `**Last reviewed:** ${timestamp}\n`;
+		content += `**Source session:** ${sessionId}\n\n`;
+		content += `## Description\n\n${bc.description}\n\n`;
+		content += `## Components\n\n${componentsSection}\n`;
 		content += "## Domain Events\n\n";
 
 		if (contextEvents.length === 0) {
 			content += "None defined yet.\n\n";
 		} else {
 			for (const ev of contextEvents) {
-				content += "- **" + ev.name + "** - " + ev.description + " (triggered by: " + ev.triggeredBy + ")\n";
+				content += `- **${ev.name}** - ${ev.description} (triggered by: ${ev.triggeredBy})\n`;
 			}
 			content += "\n";
 		}
@@ -884,18 +939,18 @@ export function scaffoldFromExploration(
 			content += "| Term | Definition | Aliases |\n";
 			content += "|------|-----------|---------|\n";
 			for (const t of contextTerms) {
-				content += "| " + t.term + " | " + t.definition + " | " + t.aliases.join(", ") + " |\n";
+				content += `| ${t.term} | ${t.definition} | ${t.aliases.join(", ")} |\n`;
 			}
 			content += "\n";
 		}
 
-		content += "## Dependencies\n\n" + depsSection + "\n";
+		content += `## Dependencies\n\n${depsSection}\n`;
 		content += "## Key Files\n\nNone yet\n\n";
 		content += "## ADRs\n\nNone yet\n\n";
 
 		if (!dryRun) {
 			fs.mkdirSync(modulesDir, { recursive: true });
-			const tempPath = filePath + ".tmp";
+			const tempPath = `${filePath}.tmp`;
 			fs.writeFileSync(tempPath, content, "utf-8");
 			fs.renameSync(tempPath, filePath);
 		}
@@ -998,15 +1053,15 @@ export function renderExplorationTemplate(result: ExplorationResult): string {
 
 	// Build tables
 	const actorsTable = result.actors
-		.map((a) => `| \${a.name} | \${a.description} | \${a.interactions} |`)
+		.map((a) => "| ${a.name} | ${a.description} | ${a.interactions} |")
 		.join("\n");
 
 	const functionalRequirementsTable = result.functionalRequirements
-		.map((fr) => `| \${fr.id} | \${fr.requirement} | \${fr.priority} | \${fr.boundedContext} |`)
+		.map((fr) => "| ${fr.id} | ${fr.requirement} | ${fr.priority} | ${fr.boundedContext} |")
 		.join("\n");
 
 	const nonFunctionalRequirementsTable = result.nonFunctionalRequirements
-		.map((nfr) => `| \${nfr.id} | \${nfr.requirement} | \${nfr.category} | \${nfr.target} |`)
+		.map((nfr) => "| ${nfr.id} | ${nfr.requirement} | ${nfr.category} | ${nfr.target} |")
 		.join("\n");
 
 	const assumptionsTable = result.assumptions
@@ -1040,8 +1095,14 @@ export function renderExplorationTemplate(result: ExplorationResult): string {
 		.replaceAll("{{BUSINESS_CONTEXT}}", escapePlaceholder(result.businessContext))
 		.replaceAll("{{STATUS}}", result.status)
 		.replaceAll("{{ACTORS_TABLE}}", actorsTable || "None identified yet.")
-		.replaceAll("{{FUNCTIONAL_REQUIREMENTS_TABLE}}", functionalRequirementsTable || "None identified yet.")
-		.replaceAll("{{NON_FUNCTIONAL_REQUIREMENTS_TABLE}}", nonFunctionalRequirementsTable || "None identified yet.")
+		.replaceAll(
+			"{{FUNCTIONAL_REQUIREMENTS_TABLE}}",
+			functionalRequirementsTable || "None identified yet.",
+		)
+		.replaceAll(
+			"{{NON_FUNCTIONAL_REQUIREMENTS_TABLE}}",
+			nonFunctionalRequirementsTable || "None identified yet.",
+		)
 		.replaceAll("{{ASSUMPTIONS_TABLE}}", assumptionsTable || "None identified yet.")
 		.replaceAll("{{BOUNDED_CONTEXTS_TABLE}}", boundedContextsTable || "None identified yet.")
 		.replaceAll("{{ENTITIES_TABLE}}", entitiesTable || "None identified yet.")

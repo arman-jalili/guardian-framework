@@ -18,11 +18,15 @@ import { type Result, tryCatch } from "./result.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Well-known package root marker for path containment validation.
+// In a published npm package, __dirname resolves to dist/. The package root is two levels up.
+const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
+
 // When bundled, we need to find the package root
 // Try multiple paths to handle both dev and linked/published scenarios
 export function findTemplateDir(): string {
 	const possiblePaths = [
-		// From dist/index.js -> project root
+		// From dist/cli.js -> project root
 		path.join(__dirname, "..", "..", "templates"),
 		// From src/lib/templates.ts -> project root (dev mode)
 		path.join(__dirname, "..", "..", "..", "templates"),
@@ -31,7 +35,7 @@ export function findTemplateDir(): string {
 	];
 
 	for (const p of possiblePaths) {
-		if (fs.existsSync(p)) {
+		if (fs.existsSync(p) && isPathInPackage(p)) {
 			return p;
 		}
 	}
@@ -40,16 +44,34 @@ export function findTemplateDir(): string {
 	try {
 		// @ts-ignore - bun specific
 		const pkgPath = require.resolve("guardian-framework/package.json");
-		return path.join(path.dirname(pkgPath), "templates");
-	} catch {
-		// Last resort - check common locations
-		const cwdTemplates = path.join(process.cwd(), "templates");
-		if (fs.existsSync(cwdTemplates)) {
-			return cwdTemplates;
+		const resolved = path.join(path.dirname(pkgPath), "templates");
+		if (isPathInPackage(resolved)) {
+			return resolved;
 		}
+	} catch {
+		// Fall through to error
 	}
 
-	throw new Error("Templates not found. Ensure templates/pi/ exists in package.");
+	throw new Error(
+		"Templates not found. Ensure the guardian-framework package is correctly installed.",
+	);
+}
+
+/**
+ * Validate that a resolved path is contained within the package root.
+ * This prevents path traversal attacks from malicious fallback resolutions.
+ *
+ * In dev mode, the package root is the project root.
+ * In production (published npm package), it's the package installation directory.
+ */
+function isPathInPackage(resolvedPath: string): boolean {
+	try {
+		const resolved = path.resolve(resolvedPath);
+		const root = path.resolve(PACKAGE_ROOT);
+		return resolved.startsWith(root + path.sep) || resolved === root;
+	} catch {
+		return false;
+	}
 }
 
 export const TEMPLATE_DIR = findTemplateDir();

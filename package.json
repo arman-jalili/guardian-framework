@@ -3,21 +3,30 @@
 	"version": "0.1.0",
 	"description": "Token-optimized agentic framework scaffolder with pi-first architecture",
 	"type": "module",
-	"main": "dist/index.js",
+	"main": "dist/exports.js",
+	"exports": {
+		".": {
+			"import": "./dist/exports.js",
+			"types": "./dist/exports.d.ts"
+		}
+	},
+	"types": "dist/exports.d.ts",
 	"bin": {
-		"guardian-framework": "./dist/index.js"
+		"guardian-framework": "./dist/cli.js"
 	},
 	"files": ["dist/", "templates/"],
 	"engines": {
 		"bun": ">=1.0.0"
 	},
 	"scripts": {
-		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
+		"build": "bun build ./src/exports.ts --outfile ./dist/exports.js --target node --format esm && bun build ./src/cli.ts --outfile ./dist/cli.js --target node --format esm",
+		"build:types": "tsc --emitDeclarationOnly --outDir dist || true",
+		"prepublishOnly": "bun run build && bun test",
 		"test": "bun test",
 		"lint": "biome check .",
 		"format": "biome format . --write",
 		"typecheck": "tsc --noEmit",
-		"dev": "bun run src/index.ts"
+		"dev": "bun run src/cli.ts"
 	},
 	"repository": {
 		"type": "git",

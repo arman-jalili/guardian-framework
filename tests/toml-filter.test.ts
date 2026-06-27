@@ -157,9 +157,7 @@ describe("applyFilter", () => {
 		const filter = {
 			name: "match",
 			command: "echo",
-			match_output: [
-				{ pattern: "BUILD SUCCESSFUL", message: "✅ Build passed", unless: "ERROR" },
-			],
+			match_output: [{ pattern: "BUILD SUCCESSFUL", message: "✅ Build passed", unless: "ERROR" }],
 		};
 		// Unless clause matches — should NOT short-circuit
 		const input = "BUILD SUCCESSFUL\nERROR: something failed";
@@ -224,7 +222,7 @@ describe("applyFilter", () => {
 			name: "tail",
 			command: "echo",
 			tail_lines: 2,
-        }
+		};
 		const input = "line1\nline2\nline3\nline4";
 		const result = applyFilter(filter, input);
 		expect(result).toContain("line3");
@@ -279,7 +277,8 @@ describe("applyFilter", () => {
 			head_lines: 3,
 			max_lines: 5,
 		};
-		const input = "\x1b[32m[INFO] Step 1 done\x1b[0m\n[INFO] Step 2 done\n[INFO] Step 3 done\n[INFO] Step 4 done\n[INFO] Step 5 done";
+		const input =
+			"\x1b[32m[INFO] Step 1 done\x1b[0m\n[INFO] Step 2 done\n[INFO] Step 3 done\n[INFO] Step 4 done\n[INFO] Step 5 done";
 		const result = applyFilter(filter, input);
 		expect(result).toContain("Step 1 done");
 		expect(result).not.toContain("[INFO]");

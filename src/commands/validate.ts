@@ -172,6 +172,13 @@ export async function runValidate(
 		? filters.filter((f) => f.name.includes(options.filter as string))
 		: filters;
 
+	// Warn about shell command execution (all TOML validators run via bash -lc)
+	if (targetFilters.length > 0) {
+		console.log(
+			"  ⚠️  Validators execute shell commands defined in TOML config. Review .pi/validators/*.toml before trusting.\n",
+		);
+	}
+
 	if (targetFilters.length === 0) {
 		s.stop(`No validators matching "${options.filter}"`);
 		return;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getDefaultContext, SUPPORTED_LANGUAGES, renderTemplate } from "../src/lib/templates";
+import { SUPPORTED_LANGUAGES, getDefaultContext, renderTemplate } from "../src/lib/templates";
 
 describe("Java language registration", () => {
 	test("Java is in SUPPORTED_LANGUAGES", () => {

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { runProjectGenerator } from "../../src/lib/project-generator";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { generateBuildConfig } from "../../src/lib/build-config";
 import { generateCiPipeline } from "../../src/lib/ci-generator";
+import { runProjectGenerator } from "../../src/lib/project-generator";
 
 function tempDir(): string {
 	const dir = join(tmpdir(), `proj-int-test-${randomUUID()}`);
@@ -20,7 +20,15 @@ describe("Project create integration", () => {
 		mkdirSync(join(archDir, "modules"), { recursive: true });
 		writeFileSync(join(archDir, "modules/billing.md"), "# Billing\n\nBilling module", "utf-8");
 
-		const defaults = { layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/messaging"] };
+		const defaults = {
+			layers: [
+				"domain",
+				"application",
+				"infrastructure",
+				"interfaces/http",
+				"interfaces/messaging",
+			],
+		};
 
 		// Step 1: Structure
 		const structure = runProjectGenerator(dir, archDir, {
@@ -63,7 +71,7 @@ describe("Project create integration", () => {
 
 		const ciYml = ci.files.find((f) => f.path.includes("ci.yml"));
 		expect(ciYml).toBeDefined();
-		expect(ciYml!.content).toContain("maven:3.9-eclipse-temurin-21");
+		expect(ciYml?.content).toContain("maven:3.9-eclipse-temurin-21");
 
 		// Verify stage scripts
 		const stageScripts = ci.files.filter((f) => f.path.includes("stage_"));
@@ -76,7 +84,9 @@ describe("Project create integration", () => {
 		mkdirSync(join(archDir, "modules"), { recursive: true });
 		writeFileSync(join(archDir, "modules/api.md"), "# API Gateway\n\nAPI module", "utf-8");
 
-		const defaults = { layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/graphql"] };
+		const defaults = {
+			layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/graphql"],
+		};
 
 		// Structure
 		const structure = runProjectGenerator(dir, archDir, {
@@ -96,7 +106,7 @@ describe("Project create integration", () => {
 		});
 
 		const pkg = buildConfig.files.find((f) => f.path.endsWith("package.json"));
-		expect(pkg!.content).toContain("graphql-yoga");
+		expect(pkg?.content).toContain("graphql-yoga");
 
 		// CI
 		const ci = generateCiPipeline(dir, {

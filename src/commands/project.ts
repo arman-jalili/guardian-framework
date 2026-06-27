@@ -10,12 +10,12 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Language } from "../lib/templates.js";
-import { PROJECT_DEFAULTS, SUPPORTED_LANGUAGES } from "../lib/templates.js";
-import { runProjectGenerator } from "../lib/project-generator.js";
 import { generateBuildConfig } from "../lib/build-config.js";
 import { generateCiPipeline } from "../lib/ci-generator.js";
+import { runProjectGenerator } from "../lib/project-generator.js";
 import { showError, showSuccess } from "../lib/prompts.js";
+import type { Language } from "../lib/templates.js";
+import { PROJECT_DEFAULTS, SUPPORTED_LANGUAGES } from "../lib/templates.js";
 
 export interface ProjectCreateOptions {
 	language: Language;
@@ -55,14 +55,16 @@ export async function runProjectCreate(
 	// Check for existing project (Issue #30)
 	if (!force && existingProjectDetected(targetDir)) {
 		console.log(`\n⚠️  Existing project source detected at ${targetDir}/src/.`);
-		console.log("   Use --force to scaffold alongside existing code, or run in a different directory.\n");
+		console.log(
+			"   Use --force to scaffold alongside existing code, or run in a different directory.\n",
+		);
 		return;
 	}
 
 	const archDir = path.join(targetDir, PI_DIR, "architecture");
 
 	if (!fs.existsSync(archDir)) {
-		console.log(`\nℹ️  No .pi/architecture/ directory found. Using defaults.\n`);
+		console.log("\nℹ️  No .pi/architecture/ directory found. Using defaults.\n");
 	}
 
 	// Resolve defaults
@@ -79,7 +81,9 @@ export async function runProjectCreate(
 	}
 
 	// Step 1: Generate source directory structure
-	console.log(dryRun ? "📋 [DRY-RUN] Generating project structure..." : "📁 Generating project structure...");
+	console.log(
+		dryRun ? "📋 [DRY-RUN] Generating project structure..." : "📁 Generating project structure...",
+	);
 	const structurePlan = runProjectGenerator(targetDir, archDir, {
 		language,
 		groupId,
@@ -99,11 +103,17 @@ export async function runProjectCreate(
 		}
 		console.log(`  Files to create: ${structurePlan.files.length}\n`);
 	} else {
-		console.log(`  ✅ ${structurePlan.files.length} files created (${structurePlan.modules.length} modules × ${structurePlan.layers.length} layers)\n`);
+		console.log(
+			`  ✅ ${structurePlan.files.length} files created (${structurePlan.modules.length} modules × ${structurePlan.layers.length} layers)\n`,
+		);
 	}
 
 	// Step 2: Generate build configuration
-	console.log(dryRun ? "📋 [DRY-RUN] Generating build configuration..." : "📄 Generating build configuration...");
+	console.log(
+		dryRun
+			? "📋 [DRY-RUN] Generating build configuration..."
+			: "📄 Generating build configuration...",
+	);
 	const buildPlan = generateBuildConfig(targetDir, {
 		language,
 		buildTool: buildTool ?? "maven",

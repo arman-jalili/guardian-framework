@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { generateCiPipeline } from "../../src/lib/ci-generator";
 
 function tempDir(): string {
@@ -23,8 +23,8 @@ describe("generateCiPipeline — GitHub Actions", () => {
 
 		const ciFile = result.files.find((f) => f.path.includes("ci.yml"));
 		expect(ciFile).toBeDefined();
-		expect(ciFile!.content).toContain("maven:3.9-eclipse-temurin-21");
-		expect(ciFile!.content).toContain("run_hardening_stages.sh");
+		expect(ciFile?.content).toContain("maven:3.9-eclipse-temurin-21");
+		expect(ciFile?.content).toContain("run_hardening_stages.sh");
 	});
 
 	test("generates .github/workflows/ci.yml for TypeScript", () => {
@@ -37,7 +37,7 @@ describe("generateCiPipeline — GitHub Actions", () => {
 
 		const ciFile = result.files.find((f) => f.path.includes("ci.yml"));
 		expect(ciFile).toBeDefined();
-		expect(ciFile!.content).toContain("oven/bun:1");
+		expect(ciFile?.content).toContain("oven/bun:1");
 	});
 
 	test("generates stage scripts for active validators", () => {
@@ -77,6 +77,6 @@ describe("generateCiPipeline — GitLab CI", () => {
 
 		const ciFile = result.files.find((f) => f.path.endsWith(".gitlab-ci.yml"));
 		expect(ciFile).toBeDefined();
-		expect(ciFile!.content).toContain("gradle:8.5-jdk21");
+		expect(ciFile?.content).toContain("gradle:8.5-jdk21");
 	});
 });

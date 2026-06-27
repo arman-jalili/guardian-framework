@@ -59,16 +59,34 @@ const SAMPLE_EXPLORATION_RESULT: ExplorationResult = {
 	businessContext: "A system for managing orders",
 	status: "draft",
 	actors: [
-		{ name: "Customer", description: "Places orders", interactions: "Browse catalog, place orders" },
+		{
+			name: "Customer",
+			description: "Places orders",
+			interactions: "Browse catalog, place orders",
+		},
 	],
 	functionalRequirements: [
-		{ id: "FR-001", requirement: "System shall process orders", priority: "critical" as const, boundedContext: "Orders" },
+		{
+			id: "FR-001",
+			requirement: "System shall process orders",
+			priority: "critical" as const,
+			boundedContext: "Orders",
+		},
 	],
 	nonFunctionalRequirements: [
-		{ id: "NFR-001", requirement: "Orders processed within 5s", category: "performance" as const, target: "<5s p95" },
+		{
+			id: "NFR-001",
+			requirement: "Orders processed within 5s",
+			category: "performance" as const,
+			target: "<5s p95",
+		},
 	],
 	assumptions: [
-		{ assumption: "Customers have internet access", impactIfWrong: "Cant place orders", mitigation: "Offline fallback" },
+		{
+			assumption: "Customers have internet access",
+			impactIfWrong: "Cant place orders",
+			mitigation: "Offline fallback",
+		},
 	],
 	boundedContexts: [
 		{ name: "Orders", description: "Order processing", entities: ["Order"] },
@@ -109,17 +127,29 @@ const SAMPLE_EXPLORATION_RESULT: ExplorationResult = {
 const VALID_LLM_RESPONSE = JSON.stringify({
 	sessionId: "llm-001",
 	businessContext: "A payment processing system",
-	actors: [
-		{ name: "Customer", description: "Pays for things", interactions: "Make payments" },
-	],
+	actors: [{ name: "Customer", description: "Pays for things", interactions: "Make payments" }],
 	functionalRequirements: [
-		{ id: "FR-001", requirement: "Process payments", priority: "critical" as const, boundedContext: "Payments" },
+		{
+			id: "FR-001",
+			requirement: "Process payments",
+			priority: "critical" as const,
+			boundedContext: "Payments",
+		},
 	],
 	nonFunctionalRequirements: [
-		{ id: "NFR-001", requirement: "Payments under 2s", category: "performance" as const, target: "<2s p95" },
+		{
+			id: "NFR-001",
+			requirement: "Payments under 2s",
+			category: "performance" as const,
+			target: "<2s p95",
+		},
 	],
 	assumptions: [
-		{ assumption: "Payment gateway available", impactIfWrong: "Cannot process", mitigation: "Queue for retry" },
+		{
+			assumption: "Payment gateway available",
+			impactIfWrong: "Cannot process",
+			mitigation: "Queue for retry",
+		},
 	],
 	boundedContexts: [
 		{ name: "Payments", description: "Process payments", entities: ["Payment", "Refund"] },

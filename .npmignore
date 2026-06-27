@@ -1,0 +1,52 @@
+# .npmignore — defense-in-depth alongside "files" whitelist in package.json
+#
+# The "files" field (["dist/", "templates/"]) is the primary publish whitelist.
+# This file provides additional safety if "files" is ever removed.
+#
+# Format: gitignore-style patterns
+
+# Dependencies
+node_modules/
+
+# Build intermediates
+src/
+tsconfig.json
+
+# Tests
+tests/
+coverage/
+
+# Development & CI
+.github/
+.git/
+.gitnexus/
+.gitignore
+.changeset/
+
+# IDE
+.idea/
+.vscode/
+
+# Local runtime artifacts
+.pi/
+.agents/
+.claude/
+.graphify/
+graphify-out/
+
+# Guardian runtime state
+.guardian/
+guardian-manifest.json
+guardian-sessions.json
+
+# Docs (not needed at runtime)
+docs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.temp
+*.log

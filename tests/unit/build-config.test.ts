@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { generateBuildConfig } from "../../src/lib/build-config";
 
 function tempDir(): string {
@@ -25,7 +25,7 @@ describe("generateBuildConfig — Java Maven", () => {
 
 		const pom = result.files.find((f) => f.path.endsWith("pom.xml"));
 		expect(pom).toBeDefined();
-		expect(pom!.content).toContain("spring-boot-starter-web");
+		expect(pom?.content).toContain("spring-boot-starter-web");
 	});
 
 	test("generates pom.xml with messaging dep when interfaces/messaging in layers", () => {
@@ -40,7 +40,7 @@ describe("generateBuildConfig — Java Maven", () => {
 		});
 
 		const pom = result.files.find((f) => f.path.endsWith("pom.xml"));
-		expect(pom!.content).toContain("spring-boot-starter-amqp");
+		expect(pom?.content).toContain("spring-boot-starter-amqp");
 	});
 
 	test("does not include messaging dep when not in layers", () => {
@@ -55,7 +55,7 @@ describe("generateBuildConfig — Java Maven", () => {
 		});
 
 		const pom = result.files.find((f) => f.path.endsWith("pom.xml"));
-		expect(pom!.content).not.toContain("spring-boot-starter-amqp");
+		expect(pom?.content).not.toContain("spring-boot-starter-amqp");
 	});
 
 	test("dryRun does not write files", () => {
@@ -87,7 +87,7 @@ describe("generateBuildConfig — Java Gradle", () => {
 
 		const gradle = result.files.find((f) => f.path.endsWith("build.gradle"));
 		expect(gradle).toBeDefined();
-		expect(gradle!.content).toContain("com.example");
+		expect(gradle?.content).toContain("com.example");
 	});
 });
 
@@ -104,7 +104,7 @@ describe("generateBuildConfig — TypeScript", () => {
 
 		const pkg = result.files.find((f) => f.path.endsWith("package.json"));
 		expect(pkg).toBeDefined();
-		expect(pkg!.content).toContain("graphql-yoga");
+		expect(pkg?.content).toContain("graphql-yoga");
 	});
 
 	test("does not include graphql-yoga when graphql not in layers", () => {
@@ -118,6 +118,6 @@ describe("generateBuildConfig — TypeScript", () => {
 		});
 
 		const pkg = result.files.find((f) => f.path.endsWith("package.json"));
-		expect(pkg!.content).not.toContain("graphql-yoga");
+		expect(pkg?.content).not.toContain("graphql-yoga");
 	});
 });

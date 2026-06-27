@@ -5,15 +5,15 @@
  * Tests verify scaffolding outputs, not the full CLI execution.
  */
 
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-// Import the actual modules being tested
-import { getDefaultContext, SUPPORTED_LANGUAGES, readLanguagePatterns } from "../src/lib/templates";
 import { createManifest } from "../src/lib/manifest";
+// Import the actual modules being tested
+import { SUPPORTED_LANGUAGES, getDefaultContext, readLanguagePatterns } from "../src/lib/templates";
 
 const TEST_DIR = join(tmpdir(), `java-e2e-test-${randomUUID()}`);
 const PI_DIR = join(TEST_DIR, ".pi");

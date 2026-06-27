@@ -8,21 +8,21 @@
 import { parseArgs } from "node:util";
 import { intro, isCancel, outro } from "@clack/prompts";
 import { runDomain } from "./commands/domain.js";
-import type { Language } from "./lib/templates.js";
 import { runGenerate } from "./commands/generate.js";
 import { runInfo } from "./commands/info.js";
 import { runInit } from "./commands/init.js";
+import { runProjectCreate } from "./commands/project.js";
 import { runStats } from "./commands/stats.js";
 import { runUninstall } from "./commands/uninstall.js";
 import { runUpdate } from "./commands/update.js";
 import { runUpgrade } from "./commands/upgrade.js";
-import { runProjectCreate } from "./commands/project.js";
 import { runTrust, runValidate, runVerify } from "./commands/validate.js";
 import { readManifest } from "./lib/manifest.js";
+import type { Language } from "./lib/templates.js";
 
 const VERSION = "0.1.0";
 
-async function main() {
+async function runCli() {
 	const args = parseArgs({
 		allowPositionals: true,
 		options: {
@@ -228,4 +228,4 @@ async function runCommand(
 	}
 }
 
-main().catch(console.error);
+export { runCli };

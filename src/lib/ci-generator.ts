@@ -33,9 +33,12 @@ export function generateCiPipeline(
 	const files: { path: string; content: string }[] = [];
 
 	// Determine runner image based on language
-	const runnerImage = language === "java"
-		? (buildTool === "gradle" ? "gradle:8.5-jdk21" : "maven:3.9-eclipse-temurin-21")
-		: "oven/bun:1";
+	const runnerImage =
+		language === "java"
+			? buildTool === "gradle"
+				? "gradle:8.5-jdk21"
+				: "maven:3.9-eclipse-temurin-21"
+			: "oven/bun:1";
 
 	// Generate CI pipeline config
 	if (repoTool === "gh") {
@@ -85,15 +88,24 @@ validate:
 /**
  * Generate stage_*.sh scaffolding scripts for each active validator.
  */
-function generateStageScripts(language: Language, validators: string[]): { path: string; content: string }[] {
+function generateStageScripts(
+	language: Language,
+	validators: string[],
+): { path: string; content: string }[] {
 	const scripts: { path: string; content: string }[] = [];
 
 	const stageMap: Record<string, { name: string; command: string }> = {
 		ci: { name: "build", command: language === "java" ? "mvn clean compile -q" : "bun run build" },
 		tests: { name: "test", command: language === "java" ? "mvn test -q" : "bun test" },
 		architecture: { name: "architecture", command: "bash .pi/scripts/validate-architecture.sh" },
-		security: { name: "security", command: language === "java" ? "mvn dependency-check:check -q" : "bun audit" },
-		integration: { name: "integration", command: language === "java" ? "mvn verify -q" : "bun test --coverage" },
+		security: {
+			name: "security",
+			command: language === "java" ? "mvn dependency-check:check -q" : "bun audit",
+		},
+		integration: {
+			name: "integration",
+			command: language === "java" ? "mvn verify -q" : "bun test --coverage",
+		},
 	};
 
 	for (const validator of validators) {

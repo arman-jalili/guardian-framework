@@ -1,8 +1,8 @@
-import { describe, expect, test, beforeAll } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // We test the detection logic directly from project.ts
 // The existingProjectDetected function is not exported, so we test the behavior

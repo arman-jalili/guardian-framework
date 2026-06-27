@@ -10,8 +10,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Language, ProjectCreateOptions } from "./templates.js";
 import { tryCatch } from "./result.js";
+import type { Language, ProjectCreateOptions } from "./templates.js";
 
 export interface GeneratedFile {
 	path: string;
@@ -73,7 +73,10 @@ export function resolveLayers(
 				const content = fs.readFileSync(path.join(modulesDir, file), "utf-8");
 				const layersMatch = content.match(/^layers:\s*\[(.*?)\]/m);
 				if (layersMatch) {
-					return layersMatch[1].split(",").map((s) => s.trim().replace(/['"]/g, "")).filter(Boolean);
+					return layersMatch[1]
+						.split(",")
+						.map((s) => s.trim().replace(/['"]/g, ""))
+						.filter(Boolean);
 				}
 			}
 		} catch {
@@ -100,10 +103,19 @@ export function resolveLayers(
 				if (content.includes("graphql")) {
 					adrLayers.add("interfaces/graphql");
 				}
-				if (content.includes("messaging") || content.includes("event") || content.includes("pub/sub") || content.includes("queue")) {
+				if (
+					content.includes("messaging") ||
+					content.includes("event") ||
+					content.includes("pub/sub") ||
+					content.includes("queue")
+				) {
 					adrLayers.add("interfaces/messaging");
 				}
-				if (content.includes("cli") || content.includes("scheduled") || content.includes("command")) {
+				if (
+					content.includes("cli") ||
+					content.includes("scheduled") ||
+					content.includes("command")
+				) {
 					adrLayers.add("interfaces/cli");
 				}
 			}

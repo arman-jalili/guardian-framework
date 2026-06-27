@@ -172,7 +172,11 @@ function analyzeChanges(
 
 		// User-content files → always preserve (domain exploration, glossary, etc.)
 		if (record.category === "user") {
-			changes.push({ path: filePath, action: "preserve", reason: "User content — never overwritten by update" });
+			changes.push({
+				path: filePath,
+				action: "preserve",
+				reason: "User content — never overwritten by update",
+			});
 			continue;
 		}
 

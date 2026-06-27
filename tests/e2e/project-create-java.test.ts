@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { runProjectGenerator } from "../../src/lib/project-generator";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { generateBuildConfig } from "../../src/lib/build-config";
 import { generateCiPipeline } from "../../src/lib/ci-generator";
+import { runProjectGenerator } from "../../src/lib/project-generator";
 
 function tempDir(): string {
 	const dir = join(tmpdir(), `proj-e2e-${randomUUID()}`);
@@ -21,29 +21,52 @@ describe("E2E: Java Maven project create", () => {
 		writeFileSync(join(archDir, "modules/billing.md"), "# Billing\n\nBilling module", "utf-8");
 		writeFileSync(join(archDir, "modules/shared.md"), "# Shared\n\nShared module", "utf-8");
 
-		const defaults = { layers: ["domain", "application", "infrastructure", "interfaces/http", "interfaces/messaging"] };
+		const defaults = {
+			layers: [
+				"domain",
+				"application",
+				"infrastructure",
+				"interfaces/http",
+				"interfaces/messaging",
+			],
+		};
 
 		// Run all generators
 		const structure = runProjectGenerator(dir, archDir, {
-			language: "java", groupId: "com.myapp", dryRun: false, defaults,
+			language: "java",
+			groupId: "com.myapp",
+			dryRun: false,
+			defaults,
 		});
 
 		generateBuildConfig(dir, {
-			language: "java", buildTool: "maven", groupId: "com.myapp",
-			projectName: "myapp", version: "0.1.0", layers: structure.layers,
+			language: "java",
+			buildTool: "maven",
+			groupId: "com.myapp",
+			projectName: "myapp",
+			version: "0.1.0",
+			layers: structure.layers,
 		});
 
 		generateCiPipeline(dir, {
-			language: "java", buildTool: "maven", repoTool: "gh",
+			language: "java",
+			buildTool: "maven",
+			repoTool: "gh",
 			validators: ["ci", "tests", "security"],
 		});
 
 		// Verify directory structure
 		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/domain/.gitkeep"))).toBe(true);
-		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/http/.gitkeep"))).toBe(true);
-		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/messaging/.gitkeep"))).toBe(true);
+		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/http/.gitkeep"))).toBe(
+			true,
+		);
+		expect(
+			existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/messaging/.gitkeep")),
+		).toBe(true);
 		expect(existsSync(join(dir, "src/main/java/com/myapp/Shared/domain/.gitkeep"))).toBe(true);
-		expect(existsSync(join(dir, "src/main/java/com/myapp/Shared/interfaces/http/.gitkeep"))).toBe(true);
+		expect(existsSync(join(dir, "src/main/java/com/myapp/Shared/interfaces/http/.gitkeep"))).toBe(
+			true,
+		);
 
 		// Verify build config
 		const pomContent = readFileSync(join(dir, "pom.xml"), "utf-8");
@@ -58,7 +81,8 @@ describe("E2E: Java Maven project create", () => {
 
 		// Verify placeholder file has canonical reference
 		const placeholder = readFileSync(
-			join(dir, "src/main/java/com/myapp/billing/domain/Billing_domain.java"), "utf-8"
+			join(dir, "src/main/java/com/myapp/billing/domain/Billing_domain.java"),
+			"utf-8",
 		);
 		expect(placeholder).toContain("Canonical Reference");
 	});

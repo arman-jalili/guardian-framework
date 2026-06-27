@@ -1,12 +1,25 @@
-# Guardian
+<div align="center">
+  <h1>🛡 Guardian</h1>
+  <p><strong>Architecture-First SDLC Framework for AI-Assisted Development</strong></p>
 
-**Architecture-First SDLC Framework**
+  <!-- Badges -->
+  <a href="https://www.npmjs.com/package/guardian-framework"><img src="https://img.shields.io/npm/v/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="npm version"/></a>
+  <a href="https://github.com/arman-jalili/guardian-framework/actions"><img src="https://img.shields.io/github/actions/workflow/status/arman-jalili/guardian-framework/ci.yml?style=flat&colorA=222&colorB=00bcd4" alt="CI status"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="license"/></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?style=flat&colorA=222" alt="Bun"/></a>
 
-Guardian is a complete **architecture-first software development lifecycle framework** — from domain exploration to production. It scaffolds, validates, and orchestrates AI-assisted development workflows with deterministic quality gates at every stage.
+  <br/><br/>
 
-> **From domain discovery → architecture decisions → project generation → epic planning → implementation → validation → merge → closeout.**
->
-> All traceable, all validated, all in one framework.
+  <p><b>From domain discovery → architecture → implementation → validation → merge.</b></p>
+  <p>Traceable, validated, architecture-first. For developers who want AI to<br/>respect their architecture — not guess it.</p>
+
+  <br/>
+
+  <!-- Quick install -->
+  <pre>npx guardian-framework init</pre>
+
+  <br/>
+</div>
 
 ---
 
@@ -24,6 +37,8 @@ Most AI coding tools operate in isolation: you prompt, they generate, you pray. 
 | **🤖 Pi Extensions** | 20 TypeScript extensions: bash-guard, kanban, pipeline, architect, goal-loop, plan-mode, curator, domain-explorer, project-scaffolder |
 | **📤 Multi-Tool Export** | Single `.pi/` source → Claude Code, OpenCode, GitHub Copilot, `.agents/`, oh-my-pi |
 | **🔋 Token Optimization** | DRY context, snippet expansion, context compaction, tiered prompts — 50–70% savings |
+
+> 💡 **Looking for the standalone agent?** [guardian-pi](https://github.com/arman-jalili/guardian-pi) is a ready-to-use coding agent with Guardian built in — no setup required.
 
 **Result:** Every line of code traces to a validated architecture decision. No orphaned code. No drift. No surprises.
 

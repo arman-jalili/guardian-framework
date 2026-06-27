@@ -44,7 +44,10 @@ function generateJavaMavenPom(
 ): string {
 	const extraDeps = getSubLayerDeps(layers, "java");
 	const depXml = extraDeps
-		.map((dep) => `        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>${dep}</artifactId>\n        </dependency>`)
+		.map(
+			(dep) =>
+				`        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>${dep}</artifactId>\n        </dependency>`,
+		)
 		.join("\n\n");
 
 	return `<?xml version="1.0" encoding="UTF-8"?>
@@ -144,40 +147,40 @@ ${depXml ? `\n${depXml}` : ""}
 /**
  * Generate TypeScript package.json.
  */
-function generateTypeScriptPackageJson(
-	name: string,
-	version: string,
-	layers: string[],
-): string {
+function generateTypeScriptPackageJson(name: string, version: string, layers: string[]): string {
 	const deps: Record<string, string> = {
-		"hono": "^4.0.0",
-		"zod": "^3.22.0",
+		hono: "^4.0.0",
+		zod: "^3.22.0",
 	};
 	const devDeps: Record<string, string> = {
 		"@types/bun": "latest",
-		"vitest": "^1.0.0",
+		vitest: "^1.0.0",
 		"@biomejs/biome": "^1.5.0",
 	};
 
 	if (layers.includes("interfaces/graphql")) {
 		deps["graphql-yoga"] = "^5.0.0";
-		deps["graphql"] = "^16.0.0";
+		deps.graphql = "^16.0.0";
 	}
 
-	return JSON.stringify({
-		name,
-		version,
-		type: "module",
-		scripts: {
-			build: LANGUAGE_DEFAULTS.typescript.buildCommand,
-			test: LANGUAGE_DEFAULTS.typescript.testCommand,
-			lint: LANGUAGE_DEFAULTS.typescript.lintCommand,
-			format: LANGUAGE_DEFAULTS.typescript.formatCommand,
-			"format:check": LANGUAGE_DEFAULTS.typescript.formatCheckCommand,
+	return `${JSON.stringify(
+		{
+			name,
+			version,
+			type: "module",
+			scripts: {
+				build: LANGUAGE_DEFAULTS.typescript.buildCommand,
+				test: LANGUAGE_DEFAULTS.typescript.testCommand,
+				lint: LANGUAGE_DEFAULTS.typescript.lintCommand,
+				format: LANGUAGE_DEFAULTS.typescript.formatCommand,
+				"format:check": LANGUAGE_DEFAULTS.typescript.formatCheckCommand,
+			},
+			dependencies: deps,
+			devDependencies: devDeps,
 		},
-		dependencies: deps,
-		devDependencies: devDeps,
-	}, null, 2) + "\n";
+		null,
+		2,
+	)}\n`;
 }
 
 /**

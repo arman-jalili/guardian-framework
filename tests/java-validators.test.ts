@@ -65,18 +65,27 @@ describe("validate-spring-architecture.sh exists", () => {
 	});
 
 	test("validate-spring-architecture.sh has domain ring check", () => {
-		const content = readFileSync(join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"), "utf-8");
+		const content = readFileSync(
+			join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"),
+			"utf-8",
+		);
 		expect(content).toContain("Domain");
 		expect(content).toContain("ring");
 	});
 
 	test("validate-spring-architecture.sh has application ring check", () => {
-		const content = readFileSync(join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"), "utf-8");
+		const content = readFileSync(
+			join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"),
+			"utf-8",
+		);
 		expect(content).toContain("Application ring");
 	});
 
 	test("validate-spring-architecture.sh has web ring check", () => {
-		const content = readFileSync(join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"), "utf-8");
+		const content = readFileSync(
+			join(JAVA_VALIDATORS_DIR, "validate-spring-architecture.sh"),
+			"utf-8",
+		);
 		expect(content).toContain("Web ring");
 	});
 });

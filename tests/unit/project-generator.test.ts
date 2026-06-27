@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	discoverModules,
-	resolveLayers,
 	generateProjectStructure,
+	resolveLayers,
 	runProjectGenerator,
 } from "../../src/lib/project-generator";
 
@@ -87,7 +87,11 @@ describe("resolveLayers", () => {
 
 	test("explicit module doc layers field overrides ADR detection", () => {
 		const dir = tempDir();
-		createModuleDoc(dir, "billing.md", "# Billing\nlayers: [\"domain\", \"application\", \"infrastructure\", \"interfaces/http\"]");
+		createModuleDoc(
+			dir,
+			"billing.md",
+			'# Billing\nlayers: ["domain", "application", "infrastructure", "interfaces/http"]',
+		);
 		createAdr(dir, "adr-001.md", "# ADR-001\n\nGraphQL API"); // Should be ignored
 		const layers = resolveLayers(dir, "java", defaults);
 		expect(layers).toContain("interfaces/http");

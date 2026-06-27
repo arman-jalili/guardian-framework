@@ -5,7 +5,21 @@
 		"moduleResolution": "bundler",
 		"strict": true,
 		"skipLibCheck": true,
+		/*
+		 * noEmit is intentional: this project uses bun build for actual compilation
+		 * (see package.json scripts.build). tsc runs only for type checking via
+		 * "bun run typecheck" (tsc --noEmit).
+		 *
+		 * outDir is declared for editor integration (IDE language servers expect it)
+		 * but is not used by the build pipeline.
+		 */
 		"noEmit": true,
+		/*
+		 * allowImportingTsExtensions is required because src/exports.ts uses .ts
+		 * extensions for re-exports. This is needed for bun build to resolve
+		 * imports correctly. It works because noEmit: true is set.
+		 */
+		"allowImportingTsExtensions": true,
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
