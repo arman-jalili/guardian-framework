@@ -19,7 +19,7 @@
 		"bun": ">=1.0.0"
 	},
 	"scripts": {
-		"build": "bun build ./src/exports.ts --outfile ./dist/exports.js --target node --format esm && bun build ./src/cli.ts --outfile ./dist/cli.js --target node --format esm",
+		"build": "bun build ./src/exports.ts --outfile ./dist/exports.js --target node --format esm && bun build ./src/cli.ts --outfile ./dist/cli.js --target bun --format esm",
 		"build:types": "tsc --emitDeclarationOnly --outDir dist || true",
 		"prepublishOnly": "bun run build && bun test",
 		"test": "bun test",
