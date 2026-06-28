@@ -1262,7 +1262,7 @@ The full template tree that `guardian init` scaffolds:
 │   └── project.md             ← Project facts template
 ├── domain/
 │   └── exploration.md         ← DDD exploration output
-├── extensions/                ← 19 Pi TypeScript extensions
+├── extensions/                ← 20 Pi TypeScript extensions
 │   ├── architect.ts
 │   ├── pipeline.ts
 │   ├── goal-loop.ts
@@ -1280,11 +1280,12 @@ The full template tree that `guardian init` scaffolds:
 │   ├── hooks.ts
 │   ├── config-reload.ts
 │   ├── read-only-mode.ts
+│   ├── ask-user-question.ts
 │   ├── slash-commands.ts
 │   └── validation-runner.ts
 ├── github/
 │   └── copilot-instructions.md ← GitHub Copilot export
-├── prompts/                   ← 22 workflow prompt templates
+├── prompts/                   ← 21 workflow prompt templates
 │   ├── feature-development.md
 │   ├── bug-fix.md
 │   ├── hotfix.md
@@ -1301,8 +1302,8 @@ The full template tree that `guardian init` scaffolds:
 │   ├── pattern-extract.md
 │   ├── scope-analyzer.md
 │   ├── plan-to-issues.md
-│   └── ... (22 total)
-├── scripts/                   ← Validator shell scripts (50+)
+│   └── ... (21 total)
+├── scripts/                   ← Validator shell scripts (74)
 │   ├── validate-ci.sh
 │   ├── validate-tests.sh
 │   ├── validate-security.sh
@@ -1316,7 +1317,7 @@ The full template tree that `guardian init` scaffolds:
 │   ├── git/                   ← 5 Git management scripts
 │   └── languages/             ← Language-specific validators
 ├── skills/
-│   ├── agents/                ← 15 agent definitions
+│   ├── agents/                ← 27 agent definitions
 │   └── validators/            ← 10 validator skill definitions
 ├── validators/                ← TOML declarative validation filters
 │   ├── default.toml           ← Built-in validators with inline tests
