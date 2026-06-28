@@ -1055,7 +1055,7 @@ bash .pi/scripts/categorize-issues.sh                     # Categorize by compon
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `guardian init` | Scaffold framework | `guardian init` |
+| `guardian init` | Scaffold framework interactively | `guardian init` |
 | `guardian project create` | Generate source from architecture | `guardian project create --lang java --buildTool maven` |
 | `guardian domain --explore` | DDD exploration | `guardian domain --explore "Payment system"` |
 | `guardian domain --save-result` | Save exploration JSON | `guardian domain --save-result <id> <json>` |
@@ -1068,6 +1068,253 @@ bash .pi/scripts/categorize-issues.sh                     # Categorize by compon
 | `guardian info` | Show manifest | `guardian info` |
 | `guardian stats` | Token analytics | `guardian stats --days 7` |
 | `guardian uninstall` | Remove Guardian-managed files | `guardian uninstall --dryRun` |
+
+### init — Detailed Flow
+
+**Usage:**
+```bash
+guardian init [options]
+```
+
+**Interactive prompt sequence:**
+
+1. Check for existing framework → ask: overwrite, merge, or cancel
+2. Project name (text input)
+3. Project version (text input, default: 0.1.0)
+4. Repository (owner/repo, e.g., my-org/my-project)
+5. Git repository tool (GitHub CLI `gh` or GitLab `glab`)
+6. AI tools (multi-select: pi, claude, opencode, agents, github)
+7. Language (select: typescript, rust, python, go, java)
+8. Build tool (for Java: maven or gradle)
+9. Validators (multi-select: ci, tests, operations, security, integration, architecture, canonical)
+10. Workflows (multi-select: feature-development, bug-fix, hotfix, refactoring)
+11. Confirmation summary
+
+**Non-interactive mode flags:**
+
+| Flag | Default | Notes |
+|------|---------|-------|
+| `-l, --lang` | Required | Language: typescript, rust, python, go, java |
+| `-t, --tool` | pi | AI tools: pi, claude, opencode, agents, github |
+| `--buildTool` | (auto) | Build tool for Java (maven, gradle) |
+| `--groupId` | com.<name> | Package prefix |
+| `--validators` | ci | Comma-separated validator list |
+| `--workflows` | (none) | Comma-separated workflow list |
+| `--nonInteractive` | false | Skip all prompts (requires `--lang`) |
+
+**Scaffold process:**
+
+1. Copy `templates/pi/` to `.pi/` in target directory
+2. Render templates with project context (name, version, language, etc.)
+3. Apply language selection — copy patterns file for chosen language
+4. Apply validator selection — filter scripts to only included validators
+5. Apply workflow selection — filter prompts to only included workflows
+6. Write `guardian-manifest.json` with file checksums and config
+7. Generate exports for selected tools
+
+### generate — Detailed Flow
+
+**Usage:**
+```bash
+guardian generate [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--tool <name>` | Single tool (claude, opencode, agents, github) or `all` |
+| `--dryRun` | Show what would change without writing |
+| `--force` | Overwrite existing export files |
+
+**Step-by-step flow:**
+
+```
+1. Validate prerequisites (.pi/ exists, manifest exists)
+
+2. If --dryRun:
+   a. Calculate all export mappings
+   b. Show file-by-file changes per export
+   c. Exit (no files written)
+
+3. Read .pi/ directory and manifest
+
+4. Determine target exports:
+   - --tool specified → that tool only
+   - --tool all → iterate over manifest.exports keys
+   - No --tool → all configured exports
+
+5. For each target export:
+   a. Apply pi → target file mappings
+   b. Check existing files:
+      - If --force: overwrite all
+      - Else: warn on conflicts, skip unchanged
+   c. Generate files (atomic writes per file)
+   d. On partial failure: keep successful files, report failed
+
+6. Update manifest timestamps and checksums
+
+7. Report summary: files generated, conflicts, failures
+```
+
+**Dry-run output example:**
+
+```
+$ guardian generate --dryRun --tool claude
+
+Calculating changes from .pi/ → .claude/...
+
+=== .claude/ (12 files) ===
+Changes:
+  + context/project.md        (new)
+  + context/patterns.md       (new)
+  ~ prompts/bug-fix.md        (modified, content changed)
+  = scripts/validate-ci.sh    (unchanged)
+  = scripts/validate-tests.sh (unchanged)
+
+Summary:
+  2 new files
+  1 modified file
+  9 unchanged files
+  Exit code: 0 (dry-run, no changes applied)
+```
+
+**Partial failure handling:**
+
+If one export fails (e.g., disk full), Guardian:
+- Keeps successfully generated exports intact (no rollback)
+- Reports which exports failed with error message
+- Updates manifest only for successful exports
+- Exits with code 2 (warning / partial success)
+
+### update — Detailed Flow
+
+**Usage:**
+```bash
+guardian update [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dryRun` | Show changes without applying |
+| `--force` | Overwrite user-editable files (dangerous) |
+| `--regenerate` | Also regenerate exports after update |
+
+**Merge strategy:**
+
+| File State | Action |
+|------------|--------|
+| New in templates, not in manifest | **Add** — render + write |
+| Unchanged framework file (hash matches) | **Update** — overwrite safely |
+| User-modified + has YAML front matter | **Merge** — keep user's config, replace body |
+| User-modified + no front matter | **Preserve** — don't touch |
+| Generated export file | **Regenerate** (if --regenerate) |
+| Removed from templates | **Orphan** — noted, not deleted |
+
+**Dry-run output:**
+
+```
+$ guardian update --dryRun
+
+Analyzing changes...
+
+  + .pi/prompts/blueprint-update.md     (new feature)
+  ~ .pi/agent/AGENTS.md                 (merge front matter + new body)
+  ~ .pi/scripts/validate-ci.sh          (update, hash matches)
+  → .pi/context/project.md             (preserved, user-modified)
+  ✓ .claude/CLAUDE.md                  (regenerate, generated)
+
+Summary:
+  1 file added
+  2 files updated
+  1 file preserved
+  1 file marked for regeneration
+```
+
+### .pi/ Source Structure
+
+The full template tree that `guardian init` scaffolds:
+
+```
+.pi/
+├── agent/
+│   └── AGENTS.md              ← Project instructions + YAML front matter config
+├── architecture/
+│   ├── CHANGELOG.md           ← Architecture change log template
+│   ├── decisions/
+│   │   └── ADR-template.md    ← ADR template
+│   ├── diagrams/
+│   │   └── system-overview.md ← System diagram template
+│   └── modules/
+│       └── module-template.md ← Module doc template
+├── context/
+│   ├── checklists.md          ← Validation checklists
+│   ├── output-formats.md      ← Report templates
+│   ├── patterns-base.md       ← Base patterns (all languages)
+│   ├── patterns.md            ← Language-specific patterns (overwritten)
+│   └── project.md             ← Project facts template
+├── domain/
+│   └── exploration.md         ← DDD exploration output
+├── extensions/                ← 19 Pi TypeScript extensions
+│   ├── architect.ts
+│   ├── pipeline.ts
+│   ├── goal-loop.ts
+│   ├── kanban.ts
+│   ├── domain-explorer.ts
+│   ├── project-scaffolder.ts
+│   ├── coordinator.ts
+│   ├── curator.ts
+│   ├── bash-guard.ts
+│   ├── filechanges.ts
+│   ├── plan-mode.ts
+│   ├── snippets.ts
+│   ├── session-persistence.ts
+│   ├── redaction.ts
+│   ├── hooks.ts
+│   ├── config-reload.ts
+│   ├── read-only-mode.ts
+│   ├── slash-commands.ts
+│   └── validation-runner.ts
+├── github/
+│   └── copilot-instructions.md ← GitHub Copilot export
+├── prompts/                   ← 22 workflow prompt templates
+│   ├── feature-development.md
+│   ├── bug-fix.md
+│   ├── hotfix.md
+│   ├── refactoring.md
+│   ├── epic-plan.md
+│   ├── issue-implementation-series.md
+│   ├── issue-closeout.md
+│   ├── issue-merge.md
+│   ├── issue-draft.md
+│   ├── blueprint-validate.md
+│   ├── blueprint-update.md
+│   ├── context-refresh.md
+│   ├── sync-check.md
+│   ├── pattern-extract.md
+│   ├── scope-analyzer.md
+│   ├── plan-to-issues.md
+│   └── ... (22 total)
+├── scripts/                   ← Validator shell scripts (50+)
+│   ├── validate-ci.sh
+│   ├── validate-tests.sh
+│   ├── validate-security.sh
+│   ├── validate-operations.sh
+│   ├── validate-architecture.sh
+│   ├── validate-integration.sh
+│   ├── validate-canonical.sh
+│   ├── validate-architecture-readiness.sh
+│   ├── validate-ubiquitous-language.sh
+│   ├── ci/                    ← 17 CI stage scripts
+│   ├── git/                   ← 5 Git management scripts
+│   └── languages/             ← Language-specific validators
+├── skills/
+│   ├── agents/                ← 15 agent definitions
+│   └── validators/            ← 10 validator skill definitions
+├── validators/                ← TOML declarative validation filters
+│   ├── default.toml           ← Built-in validators with inline tests
+│   └── spring.toml            ← Spring Boot annotation enforcement
+├── INDEX.md                   ← Quick reference
+└── README.md                  ← Framework docs
+```
 
 ### Common Flags
 
