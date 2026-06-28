@@ -1076,30 +1076,39 @@ bash .pi/scripts/categorize-issues.sh                     # Categorize by compon
 guardian init [options]
 ```
 
-**Interactive prompt sequence:**
+**Interactive prompt sequence (from `src/lib/prompts.ts`):**
 
 1. Check for existing framework → ask: overwrite, merge, or cancel
-2. Project name (text input)
-3. Project version (text input, default: 0.1.0)
-4. Repository (owner/repo, e.g., my-org/my-project)
-5. Git repository tool (GitHub CLI `gh` or GitLab `glab`)
-6. AI tools (multi-select: pi, claude, opencode, agents, github)
+2. Project name (text, validated: no spaces, required)
+3. Project version (text, default: `0.1.0`)
+4. Repository `owner/repo` (text, e.g., `my-org/my-project`)
+5. Git tool (select: GitHub CLI `gh` or GitLab CLI `glab`)
+6. AI tools (multi-select, `pi` pre-selected):
+   - `pi` — Full features: extensions, skills, prompts
+   - `claude` — Claude Code (static export)
+   - `github` — GitHub Copilot CLI
+   - `omp` — oh-my-pi
+   - `opencode` — OpenCode (static export)
+   - `agents` — Antigravity (static export)
 7. Language (select: typescript, rust, python, go, java)
-8. Build tool (for Java: maven or gradle)
-9. Validators (multi-select: ci, tests, operations, security, integration, architecture, canonical)
-10. Workflows (multi-select: feature-development, bug-fix, hotfix, refactoring)
-11. Confirmation summary
+8. Build tool (select, only for Java: maven or gradle)
+9. Architecture mode (select: strict hexagonal or simplified)
+10. Group/package prefix (text, default: `com.<projectName>`)
+11. Business domain description (text, optional — seeds domain exploration)
+12. Confirmation summary
+
+All validators and workflows are scaffolded by default — no selection needed.
 
 **Non-interactive mode flags:**
 
 | Flag | Default | Notes |
 |------|---------|-------|
 | `-l, --lang` | Required | Language: typescript, rust, python, go, java |
-| `-t, --tool` | pi | AI tools: pi, claude, opencode, agents, github |
-| `--buildTool` | (auto) | Build tool for Java (maven, gradle) |
+| `-t, --tool` | pi | AI tools: pi, claude, github, omp, opencode, agents |
+| `--buildTool` | (auto) | Build tool for Java: maven, gradle |
 | `--groupId` | com.<name> | Package prefix |
-| `--validators` | ci | Comma-separated validator list |
-| `--workflows` | (none) | Comma-separated workflow list |
+| `--validators` | (all) | Comma-separated (all scaffolded by default) |
+| `--workflows` | (all) | Comma-separated (all scaffolded by default) |
 | `--nonInteractive` | false | Skip all prompts (requires `--lang`) |
 
 **Scaffold process:**
