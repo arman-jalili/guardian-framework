@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🛡 Guardian</h1>
+  <h1>Guardian</h1>
   <p><strong>Architecture-First SDLC Framework for AI-Assisted Development</strong></p>
 
   <a href="https://www.npmjs.com/package/guardian-framework"><img src="https://img.shields.io/npm/v/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="npm version"/></a>
