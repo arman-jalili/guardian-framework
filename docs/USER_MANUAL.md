@@ -1,404 +1,853 @@
 # Guardian — Complete User Manual
 
-Guardian is organized into **workflow modes**. Each mode has a purpose, a starting command, and a flow that the agent follows using prompt templates.
+All workflows, commands, tools, and scripts — verified against source code.
+
+> **How to read this manual:** Each workflow is a complete flow the agent follows. You trigger workflows by telling the agent the workflow name or calling the relevant slash command. The agent reads the corresponding prompt file (in `.pi/prompts/`) and executes the steps.
 
 ---
 
-## Quick Reference
+## Table of Contents
 
-| Mode | Start With | Purpose |
-|------|-----------|---------|
-| Domain Mode | `/domain --explore` | Discover business domain → bounded contexts → glossary |
-| Epic-Plan Mode | `/epic-plan` | Read architecture → plan modules → slice into issues |
-| Architect Mode | `/architect --epic` | Create epic → auto-generate issues + pipeline |
-| Pipeline Mode | `/pipeline` | Execute work across multiple items step by step |
-| Goal Mode | `/goal` | Auto-iterate on a single objective until done |
-| Kanban Mode | `/kanban` | Track tasks with state machine + dependencies |
-| Project Mode | `/project create` | Generate source code from architecture |
-| Validate Mode | `/validate` | Run validation checks |
-| Plan Mode | `/plan` | Queue edits for batch review |
-| Snippet Mode | `/snippet` | Manage `#handle` token expansions |
-| Curator Mode | `/curator review` | Detect stale skills and archive |
+1. [Workflow Overview](#1-workflow-overview)
+2. [Feature Development](#2-feature-development)
+3. [Bug Fix](#3-bug-fix)
+4. [Hotfix (Production Emergency)](#4-hotfix-production-emergency)
+5. [Refactoring](#5-refactoring)
+6. [Epic Plan](#6-epic-plan)
+7. [Architect](#7-architect)
+8. [Issue Draft & Create](#8-issue-draft--create)
+9. [Issue Implementation Series](#9-issue-implementation-series)
+10. [Issue Closeout & Merge](#10-issue-closeout--merge)
+11. [Pipeline](#11-pipeline)
+12. [Goal Loop](#12-goal-loop)
+13. [Domain Exploration](#13-domain-exploration)
+14. [Blueprint Validate & Update](#14-blueprint-validate--update)
+15. [Context Refresh](#15-context-refresh)
+16. [Sync Check](#16-sync-check)
+17. [Pattern Extract](#17-pattern-extract)
+18. [Scope Analyzer](#18-scope-analyzer)
+19. [Plan to Issues](#19-plan-to-issues)
+20. [Kanban](#20-kanban)
+21. [Project Scaffolding](#21-project-scaffolding)
+22. [Curator](#22-curator)
+23. [Snippets](#23-snippets)
+24. [Plan Mode](#24-plan-mode)
+25. [Validate](#25-validate)
+26. [CI Scripts](#26-ci-scripts)
+27. [Git Scripts](#27-git-scripts)
+28. [CLI Commands Reference](#28-cli-commands-reference)
 
 ---
 
-## 1. Domain Mode
+## 1. Workflow Overview
 
-**Purpose:** Turn fuzzy business context into structured domain knowledge — bounded contexts, entities, events, ubiquitous language.
+Every workflow in Guardian is defined in `.pi/prompts/<name>.md`. The agent reads the prompt and executes the flow. You trigger a workflow by:
 
-**When to use:** At the start of every new project or feature area.
+1. **Telling the agent** what you want — e.g., "we have a bug in auth" → agent loads `bug-fix.md`
+2. **Calling a slash command** that triggers a workflow — e.g., `/architect --epic "Auth"` → agent loads `epic-template.md` and creates issues
+3. **Running a pipeline** that references a prompt — e.g., pipeline `implement` step uses `issue-implementation-series.md`
+
+### Scope-Based Validator Selection
+
+Every workflow has a scope that determines which validators run:
+
+| Scope | Criteria | Validators |
+|-------|----------|------------|
+| **Simple** | 1-2 files, < 50 lines | CI, tests |
+| **Moderate** | 3-10 files | CI, tests, operations |
+| **Complex** | Multi-module | CI, tests, operations, security, integration, architecture |
+| **Critical** | Breaking changes | All 7 categories |
+
+---
+
+## 2. Feature Development
+
+**Prompt:** `.pi/prompts/feature-development.md`
+**Scope:** Moderate, Complex, Critical
+**Agent:** `code-developer`
 
 ### Flow
 
 ```
-/domain --explore "Payment processing system"
+User Request
     │
     ▼
-Agent reads prompt → analyzes business context
+1. COORDINATOR: Classify scope
+   Load: context/project.md
+   Output: scope + validators
     │
     ▼
-Produces: actors, functional requirements, bounded contexts, entities,
-           domain events, assumptions, ubiquitous language
+2. ISSUE-CREATOR: Create GitHub/GitLab issue
+   Output: GitHub issue #N
     │
     ▼
-Saved to .pi/domain/exploration.md + .pi/domain/ubiquitous-language.md
+3. PLAN VALIDATORS (Parallel):
+   • architecture-validator (Moderate+)
+   • security-validator (Complex+)
+   Load: context/checklists.md (plan section)
+   Output: Validation Contract (signed)
+    │
+    ▼
+4. COORDINATOR: Synthesize plan
+   Output: Design Proposal
+   → User approval if Critical
+    │
+    ▼
+5. CODE-DEVELOPER: Implement
+   Input: Design Proposal + Contract
+   Load: context/patterns.md
+   Add: Canonical Reference Headers
+   Output: Code + tests
+    │
+    ▼
+6. POST-CODE: Automated Checks (NO LLM)
+   • bash .pi/scripts/validate-ci.sh
+   • bash .pi/scripts/validate-tests.sh
+   • bash .pi/scripts/validate-operations.sh
+   • bash .pi/scripts/validate-security.sh
+   • bash .pi/scripts/validate-canonical.sh
+   Output: Pass/Fail per check
+    │
+    ▼
+7. LLM VALIDATORS: Wiring Checks ONLY
+   • architecture-validator: callers, duplicates
+   • security-validator: manual review if flagged
+   Output: Final verdict
+    │
+    ▼
+8. CI-MR: Create PR + merge
+   Output: Merged PR
+```
+
+### How to Use
+
+```
+User: "Add user profile page with avatar upload"
+Agent: Loads feature-development.md → classifies scope → creates issue → validates plan → implements → validates → merges
 ```
 
 ### Commands
 
 ```bash
-# Start exploration (in pi session)
-/domain --explore "Payment processing system for e-commerce"
+# Run automated validators
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-operations.sh [src_dir]
+bash .pi/scripts/validate-security.sh [src_dir]
+bash .pi/scripts/validate-canonical.sh
 
-# Save structured analysis (agent uses this tool)
-domain_save_result
-
-# Validate against canonical glossary
-/domain --validate <session-id>
-
-# Generate architecture module docs from exploration
-/domain --architect-scaffold <session-id>
+# Validation cache
+bash .pi/scripts/validation-cache.sh init <task-id>
+bash .pi/scripts/validation-cache.sh summary <task-id>
 ```
-
-### How It Works
-
-1. You call `/domain --explore "description"`
-2. A session is created in `.pi/domain/exploration/` with a UUID
-3. A stub `exploration.md` is written with the context
-4. The agent reads this file and fills in: actors, requirements, bounded contexts, entities, domain events, assumptions, glossary
-5. The agent calls `domain_save_result` to persist
-6. You validate with `/domain --validate <session-id>`
-7. When the exploration is solid, you call `/domain --architect-scaffold <session-id>` to generate actual architecture module docs
-
-### Output Files
-
-| File | Content |
-|------|---------|
-| `.pi/domain/exploration.md` | Full domain analysis |
-| `.pi/domain/ubiquitous-language.md` | Shared terminology glossary |
-| `.pi/domain/exploration/<uuid>.md` | Session files (per exploration) |
-| `.pi/architecture/modules/<name>.md` | Generated module docs (after scaffold) |
-
-### Agent Tools
-
-| Tool | Purpose |
-|------|---------|
-| `domain_explore` | Create exploration prompt file |
-| `domain_save_result` | Save analysis as structured session |
-| `domain_validate` | Validate against canonical glossary |
 
 ---
 
-## 2. Epic-Plan Mode
+## 3. Bug Fix
 
-**Purpose:** Plan work across modules — read architecture documents, identify what needs building, and slice into epics.
+**Prompt:** `.pi/prompts/bug-fix.md`
+**Scope:** Simple, Moderate
+**Agent:** `code-developer`
 
-**When to use:** After domain exploration, when you have architecture module docs. Or when starting a major feature.
+### Flow
 
-### How It Works
+```
+Bug Report
+    │
+    ▼
+1. COORDINATOR: Classify scope
+   Most bugs = Simple/Moderate
+    │
+    ▼
+2. CODE-DEVELOPER: Fix bug
+   Load: context/patterns.md
+   Output: Fixed code + test
+    │
+    ▼
+3. AUTOMATED: Run validators
+   • bash .pi/scripts/validate-ci.sh
+   • bash .pi/scripts/validate-tests.sh
+    │
+    ▼
+4. CI-MR: Create PR + merge
+   Simple scope = ci-mr only
+```
 
-`/epic-plan` is **not a registered command** — it's an instruction the agent follows by reading the `epic-plan.md` prompt template. You type `/epic-plan --overview` and the agent loads the workflow definition.
+### How to Use
+
+```
+User: "There's a bug in src/auth/login.ts — null pointer when token is missing"
+Agent: Loads bug-fix.md → fixes → validates → merges
+```
+
+### Rules
+
+- **Simple bugs** (1 file, < 50 lines): Fix → automated checks → merge. No LLM validators.
+- **Moderate bugs** (2-5 files): Fix → automated checks → architecture-validator wiring check → merge.
+- **Complex bugs** (root cause in architecture): Escalate to Feature Development workflow.
+
+---
+
+## 4. Hotfix (Production Emergency)
+
+**Prompt:** `.pi/prompts/hotfix.md`
+**Scope:** Critical (production issue)
+**Agent:** `code-developer`
+
+### Flow
+
+```
+Production Issue Detected
+    │
+    ▼
+1. COORDINATOR: Assess severity
+   → If critical: hotfix path
+    │
+    ▼
+2. CODE-DEVELOPER: Fix ASAP
+   Minimal change, no refactor
+   Load: context/patterns.md
+    │
+    ▼
+3. ALL AUTOMATED VALIDATORS
+   • bash .pi/scripts/validate-ci.sh
+   • bash .pi/scripts/validate-tests.sh
+   • bash .pi/scripts/validate-operations.sh
+   • bash .pi/scripts/validate-security.sh
+    │
+    ▼
+4. SECURITY-VALIDATOR: Review
+   Hotfixes can introduce vulns
+   Manual review REQUIRED
+    │
+    ▼
+5. CI-MR: Fast-track merge
+   Skip normal review queue
+   Human approval still needed
+    │
+    ▼
+6. POST-MERGE: Full validation
+   Run complete validation suite
+   Create follow-up issue if
+   hotfix introduced tech debt
+```
+
+### How to Use
+
+```
+User: "CRITICAL: payments API returning 500 for all requests, need immediate fix"
+Agent: Loads hotfix.md → bypasses planning → fixes → validates → fast-track merge
+```
+
+### Rules
+
+- **NO planning phase** — fix first, validate after
+- **Minimal change** — fix the bug, do NOT refactor
+- **Security review mandatory**
+- **Post-merge cleanup** — create follow-up issue for tech debt
+
+---
+
+## 5. Refactoring
+
+**Prompt:** `.pi/prompts/refactoring.md`
+**Scope:** Moderate, Complex
+**Agent:** `code-developer`
+
+### Flow
+
+```
+Refactor Request
+    │
+    ▼
+1. COORDINATOR: Classify scope
+   Determine affected modules
+    │
+    ▼
+2. CODE-DEVELOPER: Baseline
+   Run all tests, record output
+   Run all validators, cache
+   bash .pi/scripts/validation-cache.sh init <task-id>
+    │
+    ▼
+3. ARCHITECTURE-VALIDATOR: Plan
+   Review refactor approach
+   Ensure patterns preserved
+    │
+    ▼
+4. CODE-DEVELOPER: Refactor
+   Small commits, one change at a time
+   Run tests after each change
+    │
+    ▼
+5. POST-REFACTOR:
+   Run all tests → compare with baseline
+   Run all validators → compare with baseline
+   Output must match EXACTLY (except performance)
+```
+
+### How to Use
+
+```
+User: "Refactor src/auth/ from Express to Fastify — keep all behavior identical"
+Agent: Loads refactoring.md → baselines tests → validates plan → refactors one file at a time → compares output
+```
+
+---
+
+## 6. Epic Plan
+
+**Prompt:** `.pi/prompts/epic-plan.md`
+**What it is:** A prompt template the agent reads to plan work across modules. Not a registered command — you tell the agent to plan an epic and it follows this workflow.
 
 ### Modes
 
+| Mode | Trigger | What It Does |
+|------|---------|-------------|
+| **Overview** | `"Plan epics across all modules"` | Discover all architecture modules → map dependencies → plan epics |
+| **Module Slice** | `"Plan next slice for auth module"` | Load one module → find planned components → slice into issues |
+| **Free-Form** | `"Plan Stripe integration"` | Plan a specific feature from description |
+
+### Overview Flow
+
 ```
-/epic-plan --overview
-    Plan ALL modules (backend + frontend + infra):
-    1. Discover all .pi/architecture/modules/*.md
-    2. Load each module's components
-    3. Map dependencies between modules
-    4. Plan epics for each module
-    5. Identify cross-cutting concerns
-
-/epic-plan --module auth-service
-    Plan ONE module:
-    1. Load auth-service architecture doc
-    2. Identify planned components
-    3. Slice into implementation issues
-
-/epic-plan "Add payment gateway"
-    Free-form: plan a specific feature
+1. Find all .pi/architecture/modules/*.md
+2. For each module:
+   a. Load architecture doc
+   b. Read component list and statuses
+   c. Identify planned components
+3. Map dependencies between modules
+4. Plan epics:
+   - Group related components into epics
+   - Order by dependency chain
+   - Estimate effort per epic
+5. Output: epic definitions with component lists
 ```
 
-### When to Use Which
+### How to Use
 
-| Mode | Example | Best For |
-|------|---------|----------|
-| `--overview` | First planning session | Greenfield projects, major releases |
-| `--module` | Auth system needs work | Single module iteration |
-| Free-form | "Add Stripe integration" | Well-understood small feature |
+```
+User: "Plan epics for all modules"
+Agent: Loads epic-plan.md → discovers modules → plans epics → presents results
 
-### Output
-
-The agent produces:
-- Epic definitions with scope and goals
-- Per-module issue lists
-- Dependencies between issues
-- Priority ordering
-
-You then take this output into the Architect to create tracked issues.
+User: "Plan the next slice for auth module"
+Agent: Loads epic-plan.md → reads auth-system.md → finds planned components → slices into issues
+```
 
 ---
 
-## 3. Architect Mode
+## 7. Architect
 
-**Purpose:** Turn an epic into tracked issues with a pipeline. The Architect reads architecture modules, creates issue markdown files, and starts a pipeline for execution.
-
-**When to use:** After you have architecture module docs and know what epic to tackle.
-
-### Flow
-
-```
-/architect --epic "Add payment processing"
-    │
-    ▼
-Discovers architecture modules in .pi/architecture/modules/
-    │
-    ▼
-Matches epic name to module OR picks module with planned components
-    │
-    ▼
-Creates 4+ issues in .pi/issues/:
-  ├── issue-contract-freeze.md     (Define interfaces)
-  ├── issue-<component-1>.md       (Implementation slice 1)
-  ├── issue-<component-2>.md       (Implementation slice 2)
-  ├── issue-proofing.md            (Validation + CI)
-  └── issue-architecture-readiness.md (Runbook, DR, docs)
-    │
-    ▼
-Auto-creates pipeline state in .pi/.guardian-pipeline-state.json
-  Steps: implement → validate → create-mr → merge
-    │
-    ▼
-Agent starts working through the pipeline
-```
+**Extension:** `.pi/extensions/architect.ts`
+**Slash command:** `/architect`
+**Agent tools:** `architect_status`, `architect_discover`
 
 ### Commands
 
-```bash
-/architect --epic "Add payment processing"                # Start new epic
-/architect --epic "Auth system" --tracking-issue 42       # Link to remote issue
-/architect status                                          # Current epic state
-/architect next-epic                                       # Find next logical slice
-/architect abort                                           # Cancel epic
+| Command | Description |
+|---------|-------------|
+| `/architect --epic "Epic Name"` | Start a new epic — creates issues + pipeline |
+| `/architect --epic "Name" --tracking-issue 42` | Link to existing remote issue |
+| `/architect status` | Show current epic state |
+| `/architect next-epic` | Find the next logical slice to implement |
+| `/architect abort` | Cancel current epic |
+
+### How It Works
+
+When you start an epic (`/architect --epic "Auth Module v1"`):
+
+1. Scans `.pi/architecture/modules/*.md` for components with `status: planned`
+2. Matches epic name to a module, or picks the first module with planned components
+3. Creates 4+ issues in `.pi/issues/`:
+   - `issue-contract-freeze.md` — Define interfaces, types, API contracts
+   - `issue-<component1>.md` — Implementation slice 1
+   - `issue-<component2>.md` — Implementation slice 2
+   - `issue-proofing.md` — Validation scripts, CI integration
+   - `issue-architecture-readiness.md` — Runbook, DR plan, docs
+4. If `gh`/`glab` authenticated: creates remote issues with labels (`epic,implementation`)
+5. Auto-creates a pipeline: `implement → validate → create-mr → merge`
+6. Starts the agent on the first issue
+
+### Architecture Module Format
+
+Your module files in `.pi/architecture/modules/*.md` must have this format:
+
+```markdown
+# Auth System
+
+## JWT Token Validation
+status: planned
+description: Validates JWT tokens, checks expiry, signature, claims.
+depends: none
+
+## OAuth2 Provider Integration
+status: planned
+description: Google, GitHub OAuth2 for SSO.
+depends: JWT Token Validation
+
+## Session Management
+status: implemented
+description: Redis-backed session storage.
+depends: JWT Token Validation
 ```
 
-### What Each Issue Covers
+### Status Values
 
-| Issue | Content | Goal |
-|-------|---------|------|
-| Contract Freeze | Interfaces, types, API contracts | Lock down what needs building |
-| Implementation N | Component from architecture | Build the actual code |
-| Proofing | Validation scripts + CI | Tests and integration |
-| Architecture Readiness | Runbook, docs, DR | Production readiness |
-
-### Agent Tools
-
-| Tool | Purpose |
-|------|---------|
-| `architect_status` | Show epic progress |
-| `architect_discover` | Show all modules + recommended next slice |
-
-### Remote Issue Tracking
-
-If `gh` or `glab` is authenticated, the Architect auto-creates remote issues on GitHub/GitLab and links them as dependencies.
+| Status | Meaning |
+|--------|---------|
+| `planned` | Not yet implemented — will appear in next epic |
+| `in-progress` | Currently being worked on |
+| `implemented` | Done, verified |
+| `deprecated` | Being phased out |
 
 ---
 
-## 4. Pipeline Mode
+## 8. Issue Draft & Create
 
-**Purpose:** Execute work across multiple items through identical steps. Each item goes through the same state machine.
-
-**When to use:** When you have multiple items that need the same process (e.g., close all P1 bugs, implement all issues in an epic).
+**Prompt:** `.pi/prompts/issue-draft.md`
+**Agent:** `issue-creator`
 
 ### Flow
 
 ```
-/pipeline "Sprint-47" --items "TK-0101,TK-0102" --steps "implement,validate,create-mr,merge"
+Approved Epic (from /epic-plan or /architect)
     │
     ▼
-State machine created:
-  Item    │ implement │ validate │ create-mr │ merge
-  ────────┼───────────┼──────────┼───────────┼──────
-  TK-0101 │ ▶ ACTIVE  │ pending  │ pending   │ pending
-  TK-0102 │ pending   │ pending  │ pending   │ pending
-    │
-    ▼
-Agent calls pipeline_next_task → gets full issue context
-    │
-    ▼
-Agent implements → calls pipeline_run_acceptance
-    │
-    ▼
-If passes → calls pipeline_advance
-If fails → calls pipeline_fail (with reason)
-    │
-    ▼
-Continues to next step/item until all done
+ISSUE-CREATOR agent:
+1. Reads approved epic proposal
+2. Creates draft issue files in .pi/issues/
+3. Each draft has: title, description, acceptance criteria,
+   architecture references, labels
+4. User reviews drafts
+5. On approval: publishes to GitHub/GitLab
 ```
+
+### How to Use
+
+```
+User: "Create issues from the epic plan"
+Agent: Loads issue-draft.md → creates draft issues → presents for review
+User: "Publish issue TK-0001 to GitHub"
+Agent: Creates GitHub issue with all details
+```
+
+### Related Prompts
+
+| Prompt | Purpose |
+|--------|---------|
+| `issue-draft.md` | Create draft issues from epic |
+| `issue-template.md` | Issue format template |
+| `issue-template-set.md` | Full template set for all issue types |
+| `git-issues.md` | Create epics and issues in GitHub/GitLab |
+
+---
+
+## 9. Issue Implementation Series
+
+**Prompt:** `.pi/prompts/issue-implementation-series.md`
+**Used by:** Pipeline `implement` step, Architect auto-pipeline
+
+### Flow
+
+```
+Phase 1: Fetch Issues
+   bash .pi/scripts/fetch-issues.sh
+   or gh issue list --state open
+
+Phase 2: Categorize Issues
+   Group by component, priority, dependency
+   Create batch groups for feature branches
+   ┌─────────────────────┬──────────────────────┬──────────────────────────┐
+   │ Component batch     │ Same module (2-5)    │ feature/{component}-{N}  │
+   │ Priority batch      │ All Critical/High    │ priority/critical-{date} │
+   │ Related batch       │ Dependencies linked  │ feature/{feature}-issues │
+   └─────────────────────┴──────────────────────┴──────────────────────────┘
+
+Phase 3: Implement Each Group
+   For each batch:
+     → Create feature branch
+     → Implement issues in order
+     → Run validators per issue
+     → Create MR per group
+     → Link issues to MR
+```
+
+### How to Use
+
+This is the default workflow for the pipeline's `implement` step. When a pipeline advances to `implement`, the agent loads this prompt and implements the current issue.
+
+---
+
+## 10. Issue Closeout & Merge
+
+### Issue Closeout
+
+**Prompt:** `.pi/prompts/issue-closeout.md`
+
+```
+Verify acceptance criteria → run all validators → check canonical references → create compliance MR
+```
+
+Commands after closeout:
+
+```bash
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-canonical.sh
+bash .pi/scripts/validate-integration.sh
+```
+
+### Issue Merge
+
+**Prompt:** `.pi/prompts/issue-merge.md`
+
+```
+CI passed ✓ → MR approved ✓ → Merge → Close issue → Update tracking → Close epic (if last)
+```
+
+### How to Use
+
+These are pipeline steps. When the pipeline reaches `create-mr`, agent loads `issue-closeout.md`. When it reaches `merge`, agent loads `issue-merge.md`.
+
+---
+
+## 11. Pipeline
+
+**Extension:** `.pi/extensions/pipeline.ts`
+**Slash command:** `/pipeline`
+**Agent tools:** `pipeline_status`, `pipeline_advance`, `pipeline_fail`, `pipeline_start`, `pipeline_next_task`, `pipeline_run_acceptance`
 
 ### Commands
 
 ```bash
 # Start a pipeline
-/pipeline "Sprint-47 cleanup" \
-  --items "ISSUE-1,ISSUE-2,ISSUE-3" \
-  --steps "implement,validate,create-mr,merge"
+/pipeline "Sprint-47" --items "TK-0101,TK-0102" --steps "implement,validate,create-mr,merge"
 
-# With auto-merge when valid
-/pipeline "Quick fixes" \
-  --items "TK-0101,TK-0102" \
-  --steps "implement,validate" \
-  --merge-on-valid
+# With auto-merge on valid
+/pipeline "Sprint-47" --items "TK-0101,TK-0102" --steps "implement,validate" --merge-on-valid
 
-# Manage pipeline
-/pipeline status            # Current progress
-/pipeline pause             # Pause execution
-/pipeline resume            # Resume
-/pipeline abort             # Cancel entirely
-/pipeline skip-step         # Skip current step for current item
-/pipeline retry-step        # Retry current step
+# Manage
+/pipeline status               # Show current state
+/pipeline pause                # Pause execution
+/pipeline resume               # Resume
+/pipeline abort                # Cancel
+/pipeline skip-step            # Skip current step
+/pipeline retry-step           # Retry current step
 ```
 
-### Step Acceptance Gates
+### How the Agent Uses It
 
-Each step can have different validation requirements:
+```
+Current: Item TK-0101 → Step: implement
+    │
+    ▼
+Agent calls pipeline_next_task
+    → Gets issue TK-0101 context
+    → Loads issue-implementation-series.md
+    → Implements the issue
+    │
+    ▼
+Agent calls pipeline_run_acceptance
+    → Runs validators (CI, tests, security)
+    → If PASS: pipeline_advance
+    → If FAIL: pipeline_fail("reason")
+    │
+    ▼
+Continues to next step/item
+```
 
-| Step | Prompt Used | Validator | Requires |
-|------|-------------|-----------|----------|
-| implement | `issue-implementation-series.md` | CI | Code compiles |
-| validate | — | CI, tests, security | All checks pass |
-| create-mr | `issue-closeout.md` | None | Description written |
-| merge | `issue-merge.md` | CI, canonical | Branch mergable |
+### Default Steps
 
-### Agent Tools
-
-| Tool | What It Does | When Agent Calls It |
-|------|-------------|-------------------|
-| `pipeline_next_task` | Load full context for current item+step | At start of each item |
-| `pipeline_run_acceptance` | Run validators for current step | After implementing |
-| `pipeline_advance` | Mark step passed, move to next | When acceptance passes |
-| `pipeline_fail` | Mark step failed, skip to next | When acceptance fails |
-| `pipeline_status` | Show overall progress | Any time |
-
-### Pipeline vs Goal
-
-| Aspect | Pipeline | Goal |
-|--------|----------|------|
-| **Items** | Multiple (same process) | Single objective |
-| **Steps** | Fixed sequence per item | Auto-iterate until complete |
-| **Acceptance** | Per-step gates | One final condition |
-| **Best for** | "Close all 15 P1 bugs" | "Fix auth module" |
+| Step | Prompt | Validator |
+|------|--------|-----------|
+| implement | `issue-implementation-series.md` | CI |
+| validate | — | CI, tests, security |
+| create-mr | `issue-closeout.md` | None |
+| merge | `issue-merge.md` | CI, canonical |
 
 ---
 
-## 5. Goal Mode
+## 12. Goal Loop
 
-**Purpose:** Set a single objective and let the agent auto-iterate across turns until it's done.
-
-**When to use:** When you have one clear task that requires multiple turns.
-
-### Flow
-
-```
-/goal "Fix all TypeScript strict mode errors in src/"
-    │
-    ▼
-Agent reads current state → identifies type errors
-    │
-    ▼
-Turn 1: Fixes first batch → runs tsc
-Turn 2: Fixes more → runs tsc
-Turn N: All fixed → tsc passes
-    │
-    ▼
-Dual validation:
-  ✓ Validators pass (tsc, lint, tests)
-  ✓ LLM judge confirms (semantic check)
-    │
-    ▼
-Goal complete
-```
+**Extension:** `.pi/extensions/goal-loop.ts`
+**Slash commands:** `/goal`, `/subgoal`
+**Agent tool:** `guardian_goal_evaluate`
 
 ### Commands
 
 ```bash
-# Set a new goal
-/goal "Fix all TypeScript strict mode errors in src/"
+# Set and manage goals
+/goal "Fix all TypeScript strict mode errors"          # Set goal
+/goal "Fix all TypeScript strict mode errors" --validators=ci,tests,security  # With validators
+/goal status                                            # Show progress
+/goal pause                                             # Pause
+/goal resume                                            # Resume (turn resets)
+/goal clear                                             # Clear
+/goal validators                                        # List active validators
+/goal validators all                                    # Enable all validators
 
-# With specific validators to check
-/goal "Fix all TypeScript strict mode errors" --validators=ci,tests,security
-
-# Manage goal
-/goal status           # Show progress, remaining work
-/goal pause            # Pause (agent stops)
-/goal resume           # Resume (turn resets)
-/goal clear            # Clear current goal
-
-# Validator management
-/goal validators       # List active validators
-/goal validators all   # Enable all known validators
-```
-
-### Subgoals
-
-Break a goal into smaller steps:
-
-```bash
-/subgoal "Fix strict null checks in src/auth"
-/subgoal list          # Show all subgoals
-/subgoal remove 1      # Remove subgoal by number
-/subgoal clear         # Clear all subgoals
+# Subgoals
+/subgoal "Fix strict null checks in src/auth"          # Add sub-criteria
+/subgoal list                                           # List subgoals
+/subgoal remove 1                                       # Remove by number
+/subgoal clear                                          # Clear all subgoals
 ```
 
 ### Dual Validation
 
 A goal passes when **both** checks pass:
+1. **Validators** — automated: `tsc`, tests, lint (the ones you specify with `--validators=`)
+2. **LLM semantic judge** — `guardian_goal_evaluate` tool checks if objective is truly met
 
-1. **Automated validators** — `tsc` compiles, tests pass, lint clean (the ones you specify with `--validators=`)
-2. **LLM semantic judge** — evaluates whether the objective is truly met, not just technically passing
+### How It Works Per Turn
 
-### Goal Tool
-
-| Tool | Purpose |
-|------|---------|
-| `guardian_goal_evaluate` | Agent calls this to check goal progress |
+```
+Turn 1: Agent reads files → identifies errors → fixes some → runs tsc → fails
+Turn 2: Fixes more → runs tsc → passes → runs tests → fails
+Turn 3: Fixes tests → all pass → guardian_goal_evaluate confirms → Done ✓
+```
 
 ---
 
-## 6. Kanban Mode
+## 13. Domain Exploration
 
-**Purpose:** Track tasks with a durable state machine — create, show, complete, block, comment.
-
-**When to use:** For any task tracking that doesn't warrant a full epic. Also used internally by other features.
+**Extension:** `.pi/extensions/domain-explorer.ts`
+**Slash command:** `/domain`
+**Agent tools:** `domain_explore`, `domain_save_result`, `domain_validate`
 
 ### Commands
 
 ```bash
-/kanban status                     # Summary: triage: 3 | todo: 5 | done: 12
-/kanban create "Add login page"    # Create task (auto-assigned ID: TK-0001)
-/kanban list                       # All tasks
-/kanban list triage                # Filter by status
+# Start exploration (inside pi)
+/domain --explore "Payment processing system for e-commerce"
+
+# Validate against domain files
+/domain --validate <session-id>
+
+# Generate architecture modules from exploration
+/domain --architect-scaffold <session-id>
+```
+
+### CLI Version
+
+```bash
+guardian domain --explore "Payment processing system"
+guardian domain --save-result <session-id> <json>
+```
+
+### What It Produces
+
+When you call `/domain --explore "description"`:
+1. Session created in `.pi/domain/exploration/<uuid>.md`
+2. Agent fills in:
+   - Actors & Roles
+   - Functional Requirements
+   - Non-Functional Requirements
+   - Assumptions
+   - Bounded Contexts
+   - Entities & Value Objects
+   - Domain Events
+   - Aggregates
+   - Ubiquitous Language
+3. Saved to `.pi/domain/exploration.md` + `.pi/domain/ubiquitous-language.md`
+
+### Full Domain Workflow
+
+From `.pi/context/domain-workflow.md`:
+
+```
+/domain --explore "description"
+    → Agent fills domain analysis
+    → You validate with /domain --validate <session-id>
+    → If good: /domain --architect-scaffold <session-id>
+        → Generates architecture module docs from domain entities
+    → Then: /epic-plan --overview or /architect --epic "Name"
+    → Then: implement through pipeline
+```
+
+---
+
+## 14. Blueprint Validate & Update
+
+### Blueprint Validate
+
+**Prompt:** `.pi/prompts/blueprint-validate.md`
+
+Validates that the `.pi/` blueprint is complete and properly structured before starting implementation.
+
+**When to use:** Before starting any implementation work.
+
+```
+Checks:
+1. Architecture modules exist with proper format
+2. ADRs have status and context fields
+3. Script files are present and executable
+4. Extension files are well-formed
+5. No broken canonical references
+
+Output: Pass/Fail with specific issues
+```
+
+### Blueprint Update
+
+**Prompt:** `.pi/prompts/blueprint-update.md`
+
+Reverse-sync implementation changes back to the blueprint. When code evolves, the `.pi/` docs need to reflect reality.
+
+**When to use:** After implementation, when architecture has drifted.
+
+```
+1. Compare implemented code with blueprint
+2. Identify drift: new patterns, changed interfaces, removed components
+3. Update architecture module docs
+4. Update ADRs if decisions changed
+5. Update context files
+6. Mark implemented components as status: implemented
+```
+
+---
+
+## 15. Context Refresh
+
+**Prompt:** `.pi/prompts/context-refresh.md`
+
+Analyze the current codebase and update `.pi/context/` files to reflect actual patterns, commands, and facts.
+
+**When to use:** When the project has evolved and context files are stale.
+
+```
+1. Scan source code for:
+   - Build commands (package.json, pom.xml, Cargo.toml)
+   - Test commands
+   - Lint/format commands
+   - Directory structure
+   - Import patterns
+2. Compare with current .pi/context/project.md
+3. Update out-of-date sections
+4. Add new patterns to .pi/context/patterns.md
+```
+
+---
+
+## 16. Sync Check
+
+**Prompt:** `.pi/prompts/sync-check.md`
+
+Verify that generated exports (`.claude/`, `.opencode/`, `.agents/`) are in sync with the `.pi/` blueprint.
+
+**When to use:** When exports seem stale, or before CI.
+
+```
+1. Run guardian generate --dryRun
+2. Compare hashes of .pi/ source vs export files
+3. Report out-of-sync files
+4. Suggest: "Run guardian generate to sync"
+```
+
+---
+
+## 17. Pattern Extract
+
+**Prompt:** `.pi/prompts/pattern-extract.md`
+
+Extract code patterns from implementation and add to `.pi/context/patterns.md`.
+
+**When to use:** When you notice reusable patterns in implementation.
+
+```
+1. Read implementation code
+2. Identify patterns (error handling, logging, middleware, etc.)
+3. Create generalized pattern description
+4. Add to .pi/context/patterns.md
+5. Include example code snippets
+```
+
+---
+
+## 18. Scope Analyzer
+
+**Prompt:** `.pi/prompts/scope-analyzer.md`
+
+Automatically determine scope classification from proposed changes.
+
+**When to use:** Built into coordinator — the agent runs this automatically before any work.
+
+```
+Input: git diff, branch, or description
+Output: scope (simple/moderate/complex/critical) + recommended validators
+
+Algorithm:
+  - Files changed: 1-2 → Simple, 3-10 → Moderate, 11+ → Complex
+  - Breaking changes detected → Critical
+  - Public API changes → Complex+
+  - Config/infra changes → Moderate+
+```
+
+---
+
+## 19. Plan to Issues
+
+**Prompt:** `.pi/prompts/plan-to-issues.md`
+
+Convert a superpowers plan file into GitHub/GitLab issues with epics and tracking.
+
+**When to use:** When you have a plan document (e.g., from a product manager) and need to create issues.
+
+```
+Input: docs/superpowers/plans/*.md
+Format:
+  # Plan Title
+  ## Milestone 1 (priority)
+  ### Task 1
+  - [ ] Step 1: description
+  - [ ] Step 2: description
+
+Output: GitHub/GitLab issues with:
+  - Epics per milestone
+  - Issues per task
+  - Labels for priority
+  - Dependencies between issues
+```
+
+---
+
+## 20. Kanban
+
+**Extension:** `.pi/extensions/kanban.ts`
+**Slash command:** `/kanban`
+**Agent tools:** `kanban_create`, `kanban_list`, `kanban_show`, `kanban_complete`, `kanban_block`, `kanban_comment`
+
+### Commands
+
+```bash
+/kanban status                       # Summary: triage: 3 | todo: 5 | done: 12
+/kanban create "Add login page"      # Create task (gets ID: TK-0001)
+/kanban list                         # All tasks
+/kanban list triage                  # Filter by status
 ```
 
 ### Agent Tools
 
-| Tool | Purpose |
-|------|---------|
-| `kanban_create` | Create a task with title, body, priority |
-| `kanban_list` | List tasks, optionally filtered by status |
-| `kanban_show` | Show full task with comments |
-| `kanban_complete` | Mark task as done |
-| `kanban_block` | Block a task with a reason |
-| `kanban_comment` | Add a comment to a task |
+| Tool | Parameters | Purpose |
+|------|-----------|---------|
+| `kanban_create` | title, body, assignee, priority | Create task |
+| `kanban_list` | status (optional) | List tasks |
+| `kanban_show` | id | Full task with comments |
+| `kanban_complete` | id | Mark done |
+| `kanban_block` | id, reason | Block a task |
+| `kanban_comment` | id, text | Add comment |
+
+### Statuses
+
+triage → todo → ready → running → blocked → done → archived
 
 ---
 
-## 7. Project Scaffolding Mode
+## 21. Project Scaffolding
 
-**Purpose:** Generate source code from architecture modules.
-
-**When to use:** After you have architecture docs and want to generate the actual project source tree.
+**Extension:** `.pi/extensions/project-scaffolder.ts`
+**Slash command:** `/project`
+**CLI:** `guardian project create`
 
 ### Commands
 
@@ -409,7 +858,7 @@ guardian project create --lang java --buildTool maven --groupId com.mycompany
 # From pi session
 /project create --lang java --buildTool maven --groupId com.mycompany
 
-# Dry run (preview)
+# Preview
 /project create --lang typescript --validators ci,tests,security --dryRun
 
 # Check status
@@ -420,138 +869,187 @@ guardian project create --lang java --buildTool maven --groupId com.mycompany
 
 | Flag | Description |
 |------|-------------|
-| `--lang` | Language (required): java, typescript |
+| `--lang` | java, typescript (required) |
 | `--buildTool` | maven, gradle |
-| `--groupId` | Package prefix |
-| `--validators` | Comma-separated (default: ci, tests) |
+| `--groupId` | Package prefix (default: com.example) |
+| `--validators` | Comma-separated (default: ci,tests) |
 | `--dryRun` | Preview without writing |
 | `--force` | Override existing project |
 
-### What It Creates
+---
 
-```
-src/main/java/com/mycompany/
-  Application.java
-  config/
-  controller/
-  service/
-  repository/
-  model/
+## 22. Curator
+
+**Extension:** `.pi/extensions/curator.ts`
+**Slash command:** `/curator`
+**Agent tools:** `curator_review`, `curator_pin`, `curator_unpin`
+
+### Commands
+
+```bash
+/curator status                # Show curator report
+/curator review                # Detect + archive stale skills
+/curator review --dry-run      # Preview only
+/curator pin "skill-name"      # Protect from archival
+/curator unpin "skill-name"    # Allow archival
 ```
 
-Architecture modules are mapped to package structure with canonical reference headers.
+### How It Works
+
+Tracks skill usage (reads, tool calls, patches). Skills unused for 30 days flagged as stale. Skills unused for 90 days archived.
 
 ---
 
-## 8. Validate Mode
+## 23. Snippets
 
-**Purpose:** Run validation checks — from quick preflight to full multi-category validation.
+**Extension:** `.pi/extensions/snippets.ts`
+**Slash command:** `/snippet`
 
-**When to use:** Before pushing, during CI, or whenever you need to check conformance.
-
-### CLI
+### Commands
 
 ```bash
-guardian validate                    # All validators
-guardian validate --filter tests     # Single category
-guardian validate --verify           # Run inline tests only
-guardian validate --verbose          # Detailed output
+/snippet list                    # Show all snippets
+/snippet add my-handle <content> # Register a snippet
+/snippet remove my-handle        # Delete
+/snippet edit my-handle <content> # Update
 ```
 
-### Inside Pi
+### Usage
+
+Register a snippet, then type `#my-handle` in any message. The agent expands it to the full content. Token savings: 70–90%.
+
+---
+
+## 24. Plan Mode
+
+**Extension:** `.pi/extensions/plan-mode.ts`
+**Slash commands:** `/plan`, `/plan-apply`
+
+### Commands
 
 ```bash
+/plan              # Enter plan mode — queue changes for review
+/plan-apply        # Apply all queued changes
+```
+
+### How It Works
+
+In plan mode, the agent proposes edits without applying them. You review the plan, then call `/plan-apply` to execute all changes at once. Best for: large refactors where you want to review before mutation.
+
+---
+
+## 25. Validate
+
+**Extension:** `.pi/extensions/validation-runner.ts`
+**Slash command:** `/validate`
+**CLI:** `guardian validate`
+
+### Commands
+
+```bash
+# CLI
+guardian validate                    # All validators
+guardian validate --filter tests     # Single category
+guardian validate --verify           # Inline tests only
+guardian validate --verbose          # Detailed output
+
+# Inside pi
 /validate                            # Run all validators
 ```
 
-### Shell Scripts
+### Validator Categories
+
+| Validator | Purpose |
+|-----------|---------|
+| ci | CI pipeline configuration, script health |
+| tests | Test structure, coverage flags |
+| operations | Observability, logging, error handling |
+| security | Injection, auth bypass, secret leakage |
+| integration | Component wiring, interface contracts |
+| architecture | Module boundaries, dependency direction |
+| canonical | Architecture reference headers in code |
+
+### Shell Scripts (by category)
 
 ```bash
-# Quick local preflight
-bash .pi/scripts/ci/run_preflight.sh
+bash .pi/scripts/validate-ci.sh
+bash .pi/scripts/validate-tests.sh
+bash .pi/scripts/validate-operations.sh [src_dir]
+bash .pi/scripts/validate-security.sh [src_dir]
+bash .pi/scripts/validate-integration.sh
+bash .pi/scripts/validate-architecture.sh
+bash .pi/scripts/validate-canonical.sh
+bash .pi/scripts/validate-architecture-readiness.sh
+bash .pi/scripts/validate-ubiquitous-language.sh
+```
 
-# Specific stage
+---
+
+## 26. CI Scripts
+
+Located in `.pi/scripts/ci/` — run individual CI stages locally.
+
+### Commands
+
+```bash
+bash .pi/scripts/ci/run_preflight.sh                    # Quick local preflight
+
+bash .pi/scripts/ci/run_stage.sh docs_policy            # Individual stage
 bash .pi/scripts/ci/run_stage.sh architecture_conformance
+bash .pi/scripts/ci/run_stage.sh lint
+bash .pi/scripts/ci/run_stage.sh build
+bash .pi/scripts/ci/run_stage.sh unit
+bash .pi/scripts/ci/run_stage.sh test
+bash .pi/scripts/ci/run_stage.sh integration
 bash .pi/scripts/ci/run_stage.sh security
+bash .pi/scripts/ci/run_stage.sh static_analysis
+bash .pi/scripts/ci/run_stage.sh package_build
 bash .pi/scripts/ci/run_stage.sh release_readiness
+bash .pi/scripts/ci/run_stage.sh migration_verify
+bash .pi/scripts/ci/run_stage.sh remaining
 
-# Validate agent output
-bash .pi/scripts/ci/validate_agent_output.sh \
+bash .pi/scripts/ci/run_hardening_stages.sh             # Run all hardening stages
+
+bash .pi/scripts/ci/validate_agent_output.sh \           # Validate agent output
   --input=validator_output.md \
   --schema=architecture-validator
-
-# Canonical reference check
-bash .pi/scripts/validate-canonical.sh
 ```
-
-### Available Scripts
-
-| Script | What It Validates |
-|--------|------------------|
-| `validate-canonical.sh` | Architecture reference headers in code |
-| `validate-architecture.sh` | Module boundary compliance |
-| `validate-security.sh` | Security scanning |
-| `validate-integration.sh` | Component wiring |
-| `validate-operations.sh` | Logging, error handling |
-| `validate-tests.sh` | Test coverage |
-| `validate-ci.sh` | CI pipeline health |
-| `validate-ubiquitous-language.sh` | Terminology consistency |
 
 ---
 
-## 9. Other Modes
+## 27. Git Scripts
 
-### Plan Mode
+Located in `.pi/scripts/git/` and `.pi/scripts/`.
 
-Queue edits for batch review, then apply all at once.
-
-```bash
-/plan                 # Enter plan mode
-/plan-apply           # Apply all queued changes
-```
-
-Best for: Large refactors where you want to review changes before they land.
-
-### Snippet Mode
-
-Manage `#handle` tokens that expand into full text blocks (70–90% token savings).
+### Branch & MR
 
 ```bash
-/snippet list                       # Show all snippets
-/snippet add my-handle <content>    # Register a snippet
-/snippet remove my-handle           # Delete a snippet
-/snippet edit my-handle <content>   # Update a snippet
+bash .pi/scripts/create-feature-branch.sh <branch-name>
+bash .pi/scripts/create-mr.sh [issue-number] [title]
+bash .pi/scripts/merge-mr.sh [mr-id]
+bash .pi/scripts/mr-validation.sh                        # Validate MR before merge
 ```
 
-Usage: Type `#my-handle` in a message, and the agent expands it to the full content.
-
-### Curator Mode
-
-Detect stale/unused skills and manage skill lifecycle.
+### Issue/Epic Management
 
 ```bash
-/curator status                           # Show curator report
-/curator review                           # Review and archive stale skills
-/curator review --dry-run                 # Preview only
-/curator pin "skill-name"                # Protect from archival
-/curator unpin "skill-name"              # Allow archival
+bash .pi/scripts/git/create-tracking-issue.sh <epic-name>
+bash .pi/scripts/git/link-issue-to-epic.sh <issue-id> <epic-id>
+bash .pi/scripts/git/close-issue.sh <issue-id>
+bash .pi/scripts/git/update-tracking-issue.sh <issue-id>
+bash .pi/scripts/git/close-epic.sh <epic-id>
 ```
 
-Best for: Monthly maintenance — keeps your skill directory clean.
+### Fetch & Categorize
 
-### Other Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/sessions` | Session history (list, switch, fork) |
-| `/hooks` | List all registered lifecycle hooks |
-| `/redact` | Manually trigger secret redaction |
-| `/reload-config` | Hot-reload AGENTS.md config |
-| `/read-only` | Enter safe exploration mode (no mutations) |
+```bash
+bash .pi/scripts/fetch-issues.sh                          # Fetch open issues
+bash .pi/scripts/categorize-issues.sh                     # Categorize by component
+```
 
 ---
 
-## 10. CLI Reference
+## 28. CLI Commands Reference
 
 ### Commands
 
@@ -560,16 +1058,16 @@ Best for: Monthly maintenance — keeps your skill directory clean.
 | `guardian init` | Scaffold framework | `guardian init` |
 | `guardian project create` | Generate source from architecture | `guardian project create --lang java --buildTool maven` |
 | `guardian domain --explore` | DDD exploration | `guardian domain --explore "Payment system"` |
-| `guardian domain --save-result` | Save exploration result | `guardian domain --save-result <id> <json>` |
+| `guardian domain --save-result` | Save exploration JSON | `guardian domain --save-result <id> <json>` |
 | `guardian generate` | Regenerate exports from `.pi/` | `guardian generate --tool claude` |
 | `guardian update` | Smart merge template updates | `guardian update --dryRun` |
 | `guardian upgrade` | Major version migration | `guardian upgrade` |
 | `guardian validate` | Run validators | `guardian validate --filter tests` |
 | `guardian verify` | File integrity check | `guardian verify` |
-| `guardian trust` | Manage trusted configs | `guardian trust` |
+| `guardian trust` | Manage trusted TOML configs | `guardian trust` |
 | `guardian info` | Show manifest | `guardian info` |
 | `guardian stats` | Token analytics | `guardian stats --days 7` |
-| `guardian uninstall` | Remove Guardian | `guardian uninstall --dryRun` |
+| `guardian uninstall` | Remove Guardian-managed files | `guardian uninstall --dryRun` |
 
 ### Common Flags
 
@@ -579,7 +1077,7 @@ Best for: Monthly maintenance — keeps your skill directory clean.
 | `-v, --version` | All | Show version |
 | `-h, --help` | All | Show help |
 | `--dryRun` | project, generate, update, uninstall | Preview without changes |
-| `--force` | init, project, update, generate, uninstall | Skip confirmations |
+| `--force` | init, project, generate, update, uninstall | Skip confirmations |
 | `--nonInteractive` | init | Skip interactive prompts |
 
 ### Exit Codes
@@ -595,48 +1093,40 @@ Best for: Monthly maintenance — keeps your skill directory clean.
 
 ---
 
-## 11. Complete Example Workflow
+## Index: File Locations
 
-Here's how a real project flows through all modes:
+All features map to real files in the repository:
 
-```bash
-# ── DISCOVERY ──
-guardian domain --explore "Multi-tenant SaaS platform"
-# Agent produces bounded contexts: Auth, Billing, Workspace, Analytics
-
-# ── ARCHITECTURE ──
-/domain --architect-scaffold <session-id>
-# Creates: auth-system.md, billing-system.md, workspace-management.md in architecture/modules/
-
-/manually create ADRs: ADR-001 (multi-tenancy strategy), ADR-002 (auth approach)
-
-# ── EPIC PLAN ──
-/epic-plan --overview
-# Agent reads all modules, plans epics across them
-
-# ── ARCHITECT ──
-/architect --epic "Multi-tenant auth system"
-# Creates issues: contract-freeze → auth implementation → proofing → readiness
-# Creates pipeline: implement → validate → create-mr → merge
-
-# ── PIPELINE EXECUTION ──
-# Agent works through each issue automatically:
-#   1. pipeline_next_task → reads issue contract-freeze.md
-#   2. Implements interfaces
-#   3. pipeline_run_acceptance → validates
-#   4. pipeline_advance → moves to next step
-#   ... continues through all issues
-
-# ── KANBAN (for ad-hoc work) ──
-/kanban create "Document API endpoints"
-/kanban create "Review auth PR"
-/kanban complete TK-0001
-
-# ── VALIDATION ──
-guardian validate --filter security
-bash .pi/scripts/ci/run_preflight.sh
-
-# ── UPDATE ──
-guardian update --dryRun   # When new Guardian version drops
-guardian update            # Apply
-```
+| Feature | Location |
+|---------|----------|
+| Bug fix workflow | `.pi/prompts/bug-fix.md` |
+| Feature development workflow | `.pi/prompts/feature-development.md` |
+| Hotfix workflow | `.pi/prompts/hotfix.md` |
+| Refactoring workflow | `.pi/prompts/refactoring.md` |
+| Epic plan workflow | `.pi/prompts/epic-plan.md` |
+| Issue implementation series | `.pi/prompts/issue-implementation-series.md` |
+| Issue closeout | `.pi/prompts/issue-closeout.md` |
+| Issue merge | `.pi/prompts/issue-merge.md` |
+| Issue draft | `.pi/prompts/issue-draft.md` |
+| Blueprint validate | `.pi/prompts/blueprint-validate.md` |
+| Blueprint update | `.pi/prompts/blueprint-update.md` |
+| Context refresh | `.pi/prompts/context-refresh.md` |
+| Sync check | `.pi/prompts/sync-check.md` |
+| Pattern extract | `.pi/prompts/pattern-extract.md` |
+| Scope analyzer | `.pi/prompts/scope-analyzer.md` |
+| Plan to issues | `.pi/prompts/plan-to-issues.md` |
+| Architect extension | `.pi/extensions/architect.ts` |
+| Pipeline extension | `.pi/extensions/pipeline.ts` |
+| Goal loop extension | `.pi/extensions/goal-loop.ts` |
+| Domain explorer extension | `.pi/extensions/domain-explorer.ts` |
+| Kanban extension | `.pi/extensions/kanban.ts` |
+| Curator extension | `.pi/extensions/curator.ts` |
+| Project scaffolder extension | `.pi/extensions/project-scaffolder.ts` |
+| Validation runner extension | `.pi/extensions/validation-runner.ts` |
+| Plan mode extension | `.pi/extensions/plan-mode.ts` |
+| Snippets extension | `.pi/extensions/snippets.ts` |
+| CI scripts | `.pi/scripts/ci/` |
+| Git scripts | `.pi/scripts/git/` |
+| Language validators | `.pi/scripts/languages/{lang}/` |
+| Agent definitions | `.pi/skills/agents/` |
+| Validator definitions | `.pi/skills/validators/` |
