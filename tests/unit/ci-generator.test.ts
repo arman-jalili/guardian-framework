@@ -24,7 +24,7 @@ describe("generateCiPipeline — GitHub Actions", () => {
 		const ciFile = result.files.find((f) => f.path.includes("ci.yml"));
 		expect(ciFile).toBeDefined();
 		expect(ciFile?.content).toContain("maven:3.9-eclipse-temurin-21");
-		expect(ciFile?.content).toContain("run_hardening_stages.sh");
+		expect(ciFile?.content).toContain("local-ci.sh");
 	});
 
 	test("generates .github/workflows/ci.yml for TypeScript", () => {

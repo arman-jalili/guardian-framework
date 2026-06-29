@@ -77,7 +77,7 @@ describe("E2E: Java Maven project create", () => {
 
 		// Verify CI pipeline
 		const ciContent = readFileSync(join(dir, ".github/workflows/ci.yml"), "utf-8");
-		expect(ciContent).toContain("run_hardening_stages.sh");
+		expect(ciContent).toContain("local-ci.sh");
 
 		// Verify placeholder file has canonical reference
 		const placeholder = readFileSync(
