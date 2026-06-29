@@ -49,14 +49,14 @@ Every workflow in Guardian is defined in `.pi/prompts/<name>.md`. The agent read
 
 ### Scope-Based Validator Selection
 
-Every workflow has a scope that determines which validators run:
+The coordinator classifies every change and selects validators automatically. Classification logic is in `classifyScope()` at `coordinator.ts:70-75`; the validator map is at `coordinator.ts:230-243`.
 
-| Scope | Criteria | Validators |
-|-------|----------|------------|
-| **Simple** | 1-2 files, < 50 lines | CI, tests |
-| **Moderate** | 3-10 files | CI, tests, operations |
-| **Complex** | Multi-module | CI, tests, operations, security, integration, architecture |
-| **Critical** | Breaking changes | All 7 categories |
+| Scope | Files | Lines | Validators Triggered |
+|-------|-------|-------|---------------------|
+| **Simple** | 1-2 | <= 50 | CI, canonical |
+| **Moderate** | 3-5 | 51-200 | CI, architecture, canonical |
+| **Complex** | 6-15 | 201-500 | CI, architecture, security, tests, integration, canonical |
+| **Critical** | 16+ | 501+ | CI, architecture, security, operations, tests, integration, canonical |
 
 ---
 
@@ -182,8 +182,8 @@ Agent: Loads bug-fix.md → fixes → validates → merges
 
 ### Rules
 
-- **Simple bugs** (1 file, < 50 lines): Fix → automated checks → merge. No LLM validators.
-- **Moderate bugs** (2-5 files): Fix → automated checks → architecture-validator wiring check → merge.
+- **Simple bugs** (1-2 files, <= 50 lines): Fix → automated checks → merge. No LLM validators.
+- **Moderate bugs** (3-5 files, 51-200 lines): Fix → automated checks → architecture-validator wiring check → merge.
 - **Complex bugs** (root cause in architecture): Escalate to Feature Development workflow.
 
 ---
@@ -776,11 +776,23 @@ Automatically determine scope classification from proposed changes.
 Input: git diff, branch, or description
 Output: scope (simple/moderate/complex/critical) + recommended validators
 
-Algorithm:
-  - Files changed: 1-2 → Simple, 3-10 → Moderate, 11+ → Complex
-  - Breaking changes detected → Critical
-  - Public API changes → Complex+
-  - Config/infra changes → Moderate+
+Algorithm (from `classifyScope()` in coordinator.ts):
+
+```
+if (fileCount > 15 || lineChanges > 500) return "critical";
+if (fileCount > 5 || lineChanges > 200) return "complex";
+if (fileCount > 2 || lineChanges > 50) return "moderate";
+return "simple";
+```
+
+Validator selection (from `validatorMap` in coordinator.ts):
+
+| Scope | Validators |
+|-------|-----------|
+| simple | ci, canonical |
+| moderate | ci, architecture, canonical |
+| complex | ci, architecture, security, tests, integration, canonical |
+| critical | ci, architecture, security, operations, tests, integration, canonical |
 ```
 
 ---
