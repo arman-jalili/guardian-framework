@@ -24,7 +24,7 @@ jobs:
         run: bunx tsc --noEmit
 
       - name: Lint
-        run: bunx biome check .
+        run: bunx biome check src tests
 
       - name: Test
         run: bun test

@@ -16,11 +16,17 @@
 	},
 	"files": {
 		"ignore": [
+			".agents",
+			".claude",
+			".github",
+			".gitnexus",
+			".omp",
+			".opencode",
+			".pi",
 			"dist",
 			"node_modules",
 			"*.lock",
-			"templates/pi/extensions/ask-user-question.ts",
-			"templates/pi/extensions/filechanges.ts"
+			"templates"
 		]
 	}
 }

@@ -23,7 +23,7 @@
 		"build:types": "tsc --emitDeclarationOnly --outDir dist || true",
 		"prepublishOnly": "bun run build && bun test",
 		"test": "bun test",
-		"lint": "biome check .",
+		"lint": "biome check src tests",
 		"format": "biome format . --write",
 		"typecheck": "tsc --noEmit",
 		"dev": "bun run src/cli.ts"

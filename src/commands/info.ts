@@ -112,7 +112,7 @@ export async function runInfo(targetDir: string): Promise<void> {
 │ Source:            ${manifest.source.padEnd(38)}│
 │ Repository Tool:   ${manifest.repoTool.padEnd(38)}│
 │ Language:          ${manifest.language.padEnd(38)}│
-│ Build Tool:        ${((manifest.templateContext as any)?.buildTool ?? "N/A").padEnd(38)}│
+│ Build Tool:        ${(manifest.templateContext?.buildTool ?? "N/A").padEnd(38)}│
 │ Tools:             ${manifest.tools.join(", ").padEnd(38)}│
 │ Validators:        ${manifest.validators.join(", ").padEnd(38)}│
 │ Workflows:         ${(manifest.workflows.length > 0 ? manifest.workflows.join(", ") : "none").padEnd(38)}│

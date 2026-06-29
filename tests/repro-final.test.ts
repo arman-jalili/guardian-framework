@@ -16,6 +16,8 @@ fs.mkdirSync(dir, { recursive: true });
 // with ALL the user's selected validators
 import { generateExport } from "../src/commands/generate";
 import { createManifest } from "../src/lib/manifest";
+import type { FileCategory } from "../src/lib/manifest";
+import type { Tool } from "../src/lib/templates";
 
 const piDir = path.join(dir, ".pi");
 
@@ -122,14 +124,14 @@ const manifest = createManifest({
 	workflows: workflows,
 });
 
-const generatedFiles: Record<string, any> = {};
+const generatedFiles: Record<string, { category: FileCategory; content: string }> = {};
 
 console.log("Testing claude export...");
-generateExport(path.join(dir, ".claude"), "claude" as any, piDir, manifest as any, generatedFiles);
+generateExport(path.join(dir, ".claude"), "claude" as Tool, piDir, manifest, generatedFiles);
 console.log("Claude OK");
 
 console.log("Testing omp export...");
-generateExport(path.join(dir, ".omp"), "omp" as any, piDir, manifest as any, generatedFiles);
+generateExport(path.join(dir, ".omp"), "omp" as Tool, piDir, manifest, generatedFiles);
 console.log("OMP OK");
 
 // Check results
