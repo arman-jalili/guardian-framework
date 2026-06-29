@@ -39,9 +39,9 @@ export async function runInitPrompts(): Promise<InitOptions | null> {
 	const projectName = await text({
 		message: "What is your project name?",
 		placeholder: "my-project",
-		validate: (value: string) => {
-			if (!value.trim()) return "Project name is required";
-			if (value.includes(" ")) return "Use dashes instead of spaces";
+		validate: (value: string | undefined) => {
+			if (!value?.trim()) return "Project name is required";
+			if (value?.includes(" ")) return "Use dashes instead of spaces";
 			return undefined;
 		},
 	});
