@@ -56,12 +56,12 @@ describe("E2E: Java Maven project create", () => {
 		});
 
 		// Verify directory structure
-		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/domain/.gitkeep"))).toBe(true);
-		expect(existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/http/.gitkeep"))).toBe(
+		expect(existsSync(join(dir, "src/main/java/com/myapp/Billing/domain/.gitkeep"))).toBe(true);
+		expect(existsSync(join(dir, "src/main/java/com/myapp/Billing/interfaces/http/.gitkeep"))).toBe(
 			true,
 		);
 		expect(
-			existsSync(join(dir, "src/main/java/com/myapp/billing/interfaces/messaging/.gitkeep")),
+			existsSync(join(dir, "src/main/java/com/myapp/Billing/interfaces/messaging/.gitkeep")),
 		).toBe(true);
 		expect(existsSync(join(dir, "src/main/java/com/myapp/Shared/domain/.gitkeep"))).toBe(true);
 		expect(existsSync(join(dir, "src/main/java/com/myapp/Shared/interfaces/http/.gitkeep"))).toBe(
@@ -81,7 +81,7 @@ describe("E2E: Java Maven project create", () => {
 
 		// Verify placeholder file has canonical reference
 		const placeholder = readFileSync(
-			join(dir, "src/main/java/com/myapp/billing/domain/Billing_domain.java"),
+			join(dir, "src/main/java/com/myapp/Billing/domain/Billing_domain.java"),
 			"utf-8",
 		);
 		expect(placeholder).toContain("Canonical Reference");

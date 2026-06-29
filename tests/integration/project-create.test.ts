@@ -42,7 +42,7 @@ describe("Project create integration", () => {
 		expect(structure.layers).toContain("interfaces/http");
 		expect(structure.layers).toContain("interfaces/messaging");
 
-		const httpGitkeep = join(dir, "src/main/java/com/example/billing/interfaces/http/.gitkeep");
+		const httpGitkeep = join(dir, "src/main/java/com/example/Billing/interfaces/http/.gitkeep");
 		expect(existsSync(httpGitkeep)).toBe(true);
 
 		// Step 2: Build config
