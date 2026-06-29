@@ -6,6 +6,8 @@
   <a href="https://github.com/arman-jalili/guardian-framework/actions"><img src="https://img.shields.io/github/actions/workflow/status/arman-jalili/guardian-framework/ci.yml?style=flat&colorA=222&colorB=00bcd4" alt="CI status"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/npm/l/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="license"/></a>
   <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?style=flat&colorA=222" alt="Bun"/></a>
+  <br/>
+  <a href="https://github.com/arman-jalili/rigorix-oss"><img src="https://img.shields.io/badge/reference_implementation-Rigorix-00bcd4?style=flat&colorA=222" alt="Rigorix reference implementation"/></a>
 </div>
 
 ---
@@ -73,7 +75,7 @@ The canonical validator is the linchpin: every implementation file carries a hea
 
 ## Proven in Practice
 
-Guardian was used to build **Rigorix** — a deterministic coding-agent runtime comprising 146,312 lines of Rust across 30 modules, 3 crates, and 580 commits — written by a single developer over 11 active days.
+Guardian was used to build **[Rigorix](https://github.com/arman-jalili/rigorix-oss)** — a deterministic coding-agent runtime comprising 146,312 lines of Rust across 30 modules, 3 crates, and 580 commits — written by a single developer over 11 active days.
 
 During that build:
 
@@ -83,7 +85,7 @@ During that build:
 - 7 validator scripts ran on every merge
 - Architecture violations were detected in CI, reducing reliance on manual code review
 
-Rigorix serves as the public reference implementation demonstrating Guardian's workflow in practice. The architecture defined in `.pi/` was continuously validated against implementation — divergence was detected automatically before it reached the main branch.
+[Rigorix](https://github.com/arman-jalili/rigorix-oss) serves as the public reference implementation demonstrating Guardian's workflow in practice. The architecture defined in `.pi/` was continuously validated against implementation — divergence was detected automatically before it reached the main branch.
 
 ---
 
@@ -457,5 +459,5 @@ MIT
 ## Links
 
 - **Source:** https://github.com/arman-jalili/guardian-framework
-- **Reference Implementation:** Rigorix — deterministic coding-agent runtime built with Guardian (146K LOC Rust, 30 modules, 580 commits, 11 active days)
+- **Reference Implementation:** [Rigorix](https://github.com/arman-jalili/rigorix-oss) — deterministic coding-agent runtime built with Guardian (146K LOC Rust, 30 modules, 580 commits, 11 active days)
 - **Pi Framework:** https://github.com/earendil-works/pi
