@@ -2,9 +2,9 @@
   <h1>Guardian</h1>
   <p><strong>Architecture Enforcement Framework for AI-Assisted Development</strong></p>
 
-  <a href="https://www.npmjs.com/package/guardian-framework"><img src="https://img.shields.io/npm/v/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="npm version"/></a>
+  <a href="https://github.com/arman-jalili/guardian-framework/blob/main/package.json"><img src="https://img.shields.io/github/package-json/v/arman-jalili/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="version"/></a>
   <a href="https://github.com/arman-jalili/guardian-framework/actions"><img src="https://img.shields.io/github/actions/workflow/status/arman-jalili/guardian-framework/ci.yml?style=flat&colorA=222&colorB=00bcd4" alt="CI status"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/npm/l/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="license"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/arman-jalili/guardian-framework?style=flat&colorA=222&colorB=00bcd4" alt="license"/></a>
   <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?style=flat&colorA=222" alt="Bun"/></a>
   <br/>
   <a href="https://github.com/arman-jalili/rigorix-oss"><img src="https://img.shields.io/badge/reference_implementation-Rigorix-00bcd4?style=flat&colorA=222" alt="Rigorix reference implementation"/></a>
