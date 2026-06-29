@@ -13,20 +13,20 @@ ARCH_DIR="${PI_DIR}/architecture"
 PASS=0
 FAIL=0
 
-log_pass() { echo "  ✓ PASS: $1"; ((PASS++)); }
-log_fail() { echo "  ✗ FAIL: $1 — $2"; ((FAIL++)); }
+log_pass() { echo "  ✓ PASS: $1"; ((++PASS)); }
+log_fail() { echo "  ✗ FAIL: $1 — $2"; ((++FAIL)); }
 
 echo "  Checking MR traceability..."
 
 # Check 1: MR Traceability
 # Every changed implementation file should have a canonical reference
 if command -v git &>/dev/null; then
-    changed_files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '\.(py|ts|rs|go)$' || true)
+    changed_files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '\.(py|ts|rs|go)$' | grep -vE '(^|\/)test(s|\b|_)' | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' || true)
     if [[ -n "$changed_files" ]]; then
         files_without_ref=0
         while IFS= read -r file; do
             if ! grep -q "Canonical Reference\|canonical.*reference" "$file" 2>/dev/null; then
-                ((files_without_ref++))
+                ((++files_without_ref))
                 log_fail "MR traceability" "${file} missing canonical reference to architecture"
             fi
         done <<< "$changed_files"

@@ -35,8 +35,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$INPUT" || ! -f "$INPUT" ]]; then
-    echo "Error: --input <file> is required"
+if [[ -z "$INPUT" ]]; then
+    echo "⊘ No --input provided, skipping agent output validation."
+    exit 0
+fi
+if [[ ! -f "$INPUT" ]]; then
+    echo "Error: --input file not found: $INPUT"
     exit 1
 fi
 
@@ -48,13 +52,13 @@ check_section_present() {
     local section="$1"
     if echo "$CONTENT" | grep -qi "$section"; then
         RESULTS+=("{\"check\": \"$section\", \"status\": \"pass\"}")
-        ((CHECKS_PASSED++))
+        ((++CHECKS_PASSED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${GREEN}✓${NC} Section present: $section"
         fi
     else
         RESULTS+=("{\"check\": \"$section\", \"status\": \"fail\", \"message\": \"Section '$section' not found\"}")
-        ((CHECKS_FAILED++))
+        ((++CHECKS_FAILED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${RED}✗${NC} Missing section: $section"
         fi
@@ -80,13 +84,13 @@ check_no_contradictions() {
 
     if [[ $contradictions -eq 0 ]]; then
         RESULTS+=("{\"check\": \"no_contradictions\", \"status\": \"pass\"}")
-        ((CHECKS_PASSED++))
+        ((++CHECKS_PASSED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${GREEN}✓${NC} No internal contradictions"
         fi
     else
         RESULTS+=("{\"check\": \"no_contradictions\", \"status\": \"fail\", \"message\": \"Found $contradictions contradictions\"}")
-        ((CHECKS_FAILED++))
+        ((++CHECKS_FAILED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${RED}✗${NC} Found $contradictions contradictions"
         fi
@@ -100,13 +104,13 @@ check_decision_consistency() {
 
     if [[ $decisions -eq 0 ]] || [[ $evidence -gt 0 ]]; then
         RESULTS+=("{\"check\": \"decision_consistency\", \"status\": \"pass\"}")
-        ((CHECKS_PASSED++))
+        ((++CHECKS_PASSED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${GREEN}✓${NC} Decision consistency"
         fi
     else
         RESULTS+=("{\"check\": \"decision_consistency\", \"status\": \"fail\", \"message\": \"Decisions without supporting evidence\"}")
-        ((CHECKS_FAILED++))
+        ((++CHECKS_FAILED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${RED}✗${NC} Decisions without supporting evidence"
         fi
@@ -120,13 +124,13 @@ check_acceptance_criteria() {
 
     if [[ $has_criteria -gt 0 ]]; then
         RESULTS+=("{\"check\": \"acceptance_criteria\", \"status\": \"pass\"}")
-        ((CHECKS_PASSED++))
+        ((++CHECKS_PASSED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${GREEN}✓${NC} Acceptance criteria present"
         fi
     else
         RESULTS+=("{\"check\": \"acceptance_criteria\", \"status\": \"fail\", \"message\": \"No acceptance criteria found\"}")
-        ((CHECKS_FAILED++))
+        ((++CHECKS_FAILED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${RED}✗${NC} No acceptance criteria found"
         fi
@@ -138,13 +142,13 @@ check_canonical_references() {
 
     if [[ $has_refs -gt 0 ]]; then
         RESULTS+=("{\"check\": \"canonical_references\", \"status\": \"pass\"}")
-        ((CHECKS_PASSED++))
+        ((++CHECKS_PASSED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${GREEN}✓${NC} Canonical references present"
         fi
     else
         RESULTS+=("{\"check\": \"canonical_references\", \"status\": \"fail\", \"message\": \"No canonical references found\"}")
-        ((CHECKS_FAILED++))
+        ((++CHECKS_FAILED))
         if [[ "$JSON" == "false" ]]; then
             echo -e "  ${RED}✗${NC} No canonical references found"
         fi

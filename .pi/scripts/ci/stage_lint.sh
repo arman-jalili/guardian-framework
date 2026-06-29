@@ -11,8 +11,8 @@ set -euo pipefail
 FAIL=0
 PASS=0
 
-log_pass() { echo "  ✓ PASS: $1"; ((PASS++)); }
-log_fail() { echo "  ✗ FAIL: $1 — $2"; ((FAIL++)); }
+log_pass() { echo "  ✓ PASS: $1"; ((++PASS)); }
+log_fail() { echo "  ✗ FAIL: $1 — $2"; ((++FAIL)); }
 
 echo "  Running lint checks..."
 
@@ -30,7 +30,7 @@ else
     exit 0
 fi
 
-case "C.UTF-8" in
+case "$LANG" in
     python)
         echo "  Linting: Python"
         if command -v ruff &>/dev/null; then

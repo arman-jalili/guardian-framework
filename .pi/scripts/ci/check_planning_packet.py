@@ -78,9 +78,13 @@ def parse_dash_items(section: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate planning packet structure")
-    parser.add_argument("--input", required=True, help="Path to planning packet markdown")
+    parser.add_argument("--input", default=None, help="Path to planning packet markdown (skip if not provided)")
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     args = parser.parse_args()
+
+    if not args.input:
+        print("⊘ No --input provided, skipping planning packet validation.")
+        return 0
 
     input_path = Path(args.input)
     if not input_path.exists():

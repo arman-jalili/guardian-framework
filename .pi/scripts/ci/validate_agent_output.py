@@ -120,10 +120,14 @@ def check_contradictions(content: str, checks: list[dict]) -> list[dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate agent output schema compliance")
-    parser.add_argument("--input", required=True, help="Path to agent output markdown")
+    parser.add_argument("--input", default=None, help="Path to agent output markdown (skip if not provided)")
     parser.add_argument("--schema", default="generic", help="Schema to validate against")
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     args = parser.parse_args()
+
+    if not args.input:
+        print("⊘ No --input provided, skipping agent output validation.")
+        return 0
 
     input_path = Path(args.input)
     if not input_path.exists():

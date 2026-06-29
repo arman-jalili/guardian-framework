@@ -31,3 +31,6 @@ jobs:
 
       - name: Build
         run: bun run build
+
+      - name: Guardian hardening pipeline
+        run: bash .pi/scripts/local-ci.sh

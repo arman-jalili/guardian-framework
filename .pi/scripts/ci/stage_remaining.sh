@@ -13,24 +13,24 @@ PI_DIR=".pi"
 FAIL=0
 PASS=0
 
-log_pass() { echo "  ✓ PASS: $1"; ((PASS++)); }
-log_fail() { echo "  ✗ FAIL: $1 — $2"; ((FAIL++)); }
+log_pass() { echo "  ✓ PASS: $1"; ((++PASS)); }
+log_fail() { echo "  ✗ FAIL: $1 — $2"; ((++FAIL)); }
 
 STAGE="${1:-all}"
 
 run_stage_6_integration() {
     echo "  Running integration tests..."
-    if command -v pytest &>/dev/null && [[ -d "tests/integration" ]]; then
-        if pytest tests/integration -v 2>/dev/null; then
-            log_pass "integration tests"
-        else
-            log_fail "integration tests" "Integration test failures"
-        fi
-    elif command -v bun &>/dev/null && [[ -d "tests/integration" ]]; then
+    if [[ -f "package.json" ]] && command -v bun &>/dev/null && [[ -d "tests/integration" ]]; then
         if bun test tests/integration 2>/dev/null; then
             log_pass "integration tests (bun)"
         else
             log_fail "integration tests (bun)" "Integration test failures"
+        fi
+    elif command -v pytest &>/dev/null && [[ -d "tests/integration" ]]; then
+        if pytest tests/integration -v 2>/dev/null; then
+            log_pass "integration tests"
+        else
+            log_fail "integration tests" "Integration test failures"
         fi
     elif command -v cargo &>/dev/null; then
         if cargo test --test integration 2>/dev/null; then

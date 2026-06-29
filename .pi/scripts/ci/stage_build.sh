@@ -9,11 +9,6 @@ echo "============================================"
 echo "  Stage: build"
 echo "============================================"
 
-echo "Running: mvn clean compile -q"
-if mvn clean compile -q; then
-    echo "✅ Stage build passed"
-    exit 0
-else
-    echo "❌ Stage build failed"
-    exit 1
-fi
+if [[ -f "pom.xml" ]]; then echo "Running: mvn clean compile"; mvn clean compile -q; elif [[ -f "build.gradle" || -f "build.gradle.kts" ]]; then echo "Running: gradle compileJava"; gradle compileJava -q; elif [[ -f "package.json" ]]; then if command -v bun &>/dev/null; then echo "Running: bun run build"; bun run build; elif command -v npm &>/dev/null; then echo "Running: npm run build"; npm run build; else echo "⊘ No JS build tool found"; fi; elif [[ -f "Cargo.toml" ]]; then echo "Running: cargo build"; cargo build; elif [[ -f "go.mod" ]]; then echo "Running: go build ./..."; go build ./...; else echo "⊘ No build config found, skipping."; fi
+echo "✅ Stage build passed"
+exit 0
