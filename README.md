@@ -92,9 +92,18 @@ During that build:
 ## Installation
 
 ```bash
-npx guardian-framework init     # Scaffold in current directory
+# CLI tool — scaffold in any project
+npx guardian-framework init
 npm install -g guardian-framework
 ```
+
+**Pi package** — load extensions, skills, and prompts directly into a [pi](https://github.com/badlogic/pi-mono) session:
+
+```bash
+pi install npm:guardian-framework
+```
+
+This makes all Guardian slash commands (`/architect`, `/pipeline`, `/goal`, `/domain`, etc.) available inside pi without running `guardian init` first. Run `/guardian-status` after install to check availability.
 
 **Prerequisites:** [Bun](https://bun.sh) >= 1.0.0
 

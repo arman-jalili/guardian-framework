@@ -1,6 +1,6 @@
 {
 	"name": "guardian-framework",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Token-optimized agentic framework scaffolder with pi-first architecture",
 	"type": "module",
 	"main": "dist/exports.js",
@@ -14,7 +14,7 @@
 	"bin": {
 		"guardian-framework": "./dist/cli.js"
 	},
-	"files": ["dist/", "templates/"],
+	"files": ["dist/", "templates/", "pi-package/"],
 	"engines": {
 		"bun": ">=1.0.0"
 	},
@@ -27,6 +27,14 @@
 		"format": "biome format . --write",
 		"typecheck": "tsc --noEmit",
 		"dev": "bun run src/cli.ts"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"pi": {
+		"extensions": ["./pi-package/extensions"],
+		"skills": ["./pi-package/skills"],
+		"prompts": ["./pi-package/prompts"]
 	},
 	"repository": {
 		"type": "git",
@@ -54,7 +62,8 @@
 		"pi-first",
 		"token-optimized",
 		"claude-code",
-		"github-copilot"
+		"github-copilot",
+		"pi-package"
 	],
 	"author": "Arman Wolkensteiner-Jalili",
 	"license": "MIT"
