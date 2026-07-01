@@ -1,6 +1,6 @@
 {
 	"name": "guardian-framework",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Token-optimized agentic framework scaffolder with pi-first architecture",
 	"type": "module",
 	"main": "dist/exports.js",
