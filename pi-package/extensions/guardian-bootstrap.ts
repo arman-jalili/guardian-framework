@@ -7,10 +7,9 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
 
 const PI_DIR = ".pi";
-const PACKAGE_VERSION = "0.1.0";
+const PACKAGE_VERSION = "0.1.1";
 
 export default function (pi: any) {
 	pi.on("session_start", async (_event: any, ctx: any) => {
@@ -24,7 +23,7 @@ export default function (pi: any) {
 			);
 		} else {
 			ctx.ui.notify(
-				`Guardian Framework v${PACKAGE_VERSION} loaded. ${isScaffolded ? "Project scaffolded." : ""}`,
+				`Guardian Framework v${PACKAGE_VERSION} loaded — ${isScaffolded ? "project scaffolded" : ""}`,
 				"info",
 			);
 		}
@@ -32,7 +31,7 @@ export default function (pi: any) {
 
 	pi.registerCommand("guardian-init", {
 		description:
-			"Scaffold Guardian framework (.pi/ + exports for AI tools)",
+			"Show instructions to scaffold Guardian framework (.pi/ + exports)",
 		handler: async (_args: string, ctx: any) => {
 			const piDir = join(ctx.cwd, PI_DIR);
 			if (existsSync(piDir)) {
@@ -40,22 +39,31 @@ export default function (pi: any) {
 				return;
 			}
 
-			ctx.ui.notify("Scaffolding Guardian framework...", "info");
-			try {
-				const result = execSync("npx guardian-framework init --nonInteractive --lang typescript", {
-					cwd: ctx.cwd,
-					encoding: "utf-8",
-					timeout: 60000,
-					stdio: ["pipe", "pipe", "pipe"],
-				});
-				ctx.ui.notify("Guardian scaffolded successfully!", "success");
-				return result.trim();
-			} catch (e: any) {
-				ctx.ui.notify(
-					`Scaffolding failed. Run 'npx guardian-framework init' manually.\nError: ${e.message?.slice(0, 200) || e}`,
-					"error",
-				);
-			}
+			const msg = [
+				"## Scaffold Guardian Framework",
+				"",
+				"Run this in your terminal:",
+				"",
+				"```bash",
+				"npx guardian-framework init",
+				"```",
+				"",
+				"This will guide you through:",
+				"- Project name, version, repository",
+				"- Language (typescript, rust, python, go, java)",
+				"- AI tools (pi, claude, github, omp, opencode, agents)",
+				"- Architecture mode (strict or simplified)",
+				"",
+				"After scaffolding, restart pi to load all Guardian extensions.",
+				"Run `/guardian-status` to check availability.",
+				"",
+				"Full manual: https://github.com/arman-jalili/guardian-framework/blob/main/docs/USER_MANUAL.md",
+			].join("\n");
+
+			pi.sendMessage(
+				{ content: msg, display: true },
+				{ deliverAs: "followUp", triggerTurn: false },
+			);
 		},
 	});
 
@@ -99,11 +107,10 @@ export default function (pi: any) {
 				lines.push("### Getting Started");
 				lines.push("");
 				lines.push("Run one of:");
-				lines.push("- `/guardian-init` — interactive scaffold");
-				lines.push("- `npx guardian-framework init` — interactive CLI");
+				lines.push("- `/guardian-init` — shows setup instructions");
+				lines.push("- `npx guardian-framework init` — interactive CLI scaffold");
 				lines.push("");
 				lines.push("Or for detailed docs:");
-				lines.push("- `npx guardian-framework --help`");
 				lines.push("- https://github.com/arman-jalili/guardian-framework");
 			}
 
